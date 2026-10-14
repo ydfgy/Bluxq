@@ -14,16 +14,277 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pool: {
+        Row: {
+          fees_to_stakers: number
+          id: number
+          platform_revenue: number
+          total_assets: number
+          total_reserved: number
+          total_shares: number
+        }
+        Insert: {
+          fees_to_stakers?: number
+          id?: number
+          platform_revenue?: number
+          total_assets?: number
+          total_reserved?: number
+          total_shares?: number
+        }
+        Update: {
+          fees_to_stakers?: number
+          id?: number
+          platform_revenue?: number
+          total_assets?: number
+          total_reserved?: number
+          total_shares?: number
+        }
+        Relationships: []
+      }
+      positions: {
+        Row: {
+          borrowed: number
+          closed_at: string | null
+          entry_price: number
+          exit_price: number | null
+          fee: number | null
+          id: string
+          leverage: number
+          liq_price: number
+          margin: number
+          opened_at: string
+          payout: number | null
+          pnl: number | null
+          qty: number
+          reserved: number
+          side: string
+          status: string
+          symbol: string
+          user_id: string
+        }
+        Insert: {
+          borrowed: number
+          closed_at?: string | null
+          entry_price: number
+          exit_price?: number | null
+          fee?: number | null
+          id?: string
+          leverage: number
+          liq_price: number
+          margin: number
+          opened_at?: string
+          payout?: number | null
+          pnl?: number | null
+          qty: number
+          reserved: number
+          side: string
+          status?: string
+          symbol: string
+          user_id: string
+        }
+        Update: {
+          borrowed?: number
+          closed_at?: string | null
+          entry_price?: number
+          exit_price?: number | null
+          fee?: number | null
+          id?: string
+          leverage?: number
+          liq_price?: number
+          margin?: number
+          opened_at?: string
+          payout?: number | null
+          pnl?: number | null
+          qty?: number
+          reserved?: number
+          side?: string
+          status?: string
+          symbol?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          balance: number
+          created_at: string
+          email: string | null
+          id: string
+          roblox_display_name: string | null
+          roblox_user_id: number | null
+          roblox_username: string
+          verified: boolean
+          verify_phrase: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          balance?: number
+          created_at?: string
+          email?: string | null
+          id: string
+          roblox_display_name?: string | null
+          roblox_user_id?: number | null
+          roblox_username: string
+          verified?: boolean
+          verify_phrase: string
+        }
+        Update: {
+          avatar_url?: string | null
+          balance?: number
+          created_at?: string
+          email?: string | null
+          id?: string
+          roblox_display_name?: string | null
+          roblox_user_id?: number | null
+          roblox_username?: string
+          verified?: boolean
+          verify_phrase?: string
+        }
+        Relationships: []
+      }
+      stakes: {
+        Row: {
+          deposited: number
+          shares: number
+          user_id: string
+        }
+        Insert: {
+          deposited?: number
+          shares?: number
+          user_id: string
+        }
+        Update: {
+          deposited?: number
+          shares?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          reviewed_at: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          reviewed_at?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      fn_close_position: {
+        Args: {
+          _force_liq?: boolean
+          _id: string
+          _price: number
+          _user: string
+        }
+        Returns: Json
+      }
+      fn_open_position: {
+        Args: {
+          _lev: number
+          _margin: number
+          _price: number
+          _side: string
+          _symbol: string
+          _user: string
+        }
+        Returns: string
+      }
+      fn_request_withdraw: {
+        Args: { _amount: number; _user: string }
+        Returns: undefined
+      }
+      fn_review_deposit: {
+        Args: { _approve: boolean; _id: string }
+        Returns: undefined
+      }
+      fn_review_withdraw: {
+        Args: { _id: string; _paid: boolean }
+        Returns: undefined
+      }
+      fn_stake: { Args: { _amount: number; _user: string }; Returns: undefined }
+      fn_unstake: {
+        Args: { _amount: number; _user: string }
+        Returns: undefined
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "user"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +411,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "user"],
+    },
   },
 } as const
