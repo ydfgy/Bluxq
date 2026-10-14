@@ -75,7 +75,7 @@ export const openPosition = createServerFn({ method: "POST" })
       _side: data.side,
       _margin: data.margin,
       _lev: data.leverage,
-      _price: prices[data.symbol],
+      _price: prices[data.symbol] ?? 0,
     });
     rpcError(error);
     return { id, price: prices[data.symbol] };
@@ -97,7 +97,7 @@ export const closePosition = createServerFn({ method: "POST" })
     const { data: res, error } = await sb.rpc("fn_close_position", {
       _user: context.userId,
       _id: data.id,
-      _price: prices[pos.symbol],
+      _price: prices[pos.symbol] ?? 0,
       _force_liq: false,
     });
     rpcError(error);
