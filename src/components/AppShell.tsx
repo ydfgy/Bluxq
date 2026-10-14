@@ -1,0 +1,112 @@
+import { Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, type ReactNode } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth, useIsAdmin, useProfile } from "@/hooks/use-auth";
+import { Button } from "@/components/ui/button";
+import { fmt } from "@/lib/markets";
+
+export function Logo() {
+  return (
+    <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
+      <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-gold-foreground glow-gold font-mono">B$</span>
+      <span>Blux<span className="text-primary">Trade</span></span>
+    </Link>
+  );
+}
+
+export function Navbar() {
+  const { session } = useAuth();
+  const { data: profile } = useProfile();
+  const { data: isAdmin } = useIsAdmin();
+  const nav = useNavigate();
+  const qc = useQueryClient();
+  const link = "text-sm text-muted-foreground hover:text-foreground transition-colors";
+  const active = { className: "text-sm text-foreground font-semibold" };
+
+  async function signOut() {
+    await qc.cancelQueries();
+    qc.clear();
+    await supabase.auth.signOut();
+    nav({ to: "/auth", replace: true });
+  }
+
+  return (
+    <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
+      <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
+        <Logo />
+        {session && (
+          <nav className="hidden md:flex items-center gap-5">
+            <Link to="/trade" className={link} activeProps={active}>Trade</Link>
+            <Link to="/wallet" className={link} activeProps={active}>Carteira</Link>
+            <Link to="/stake" className={link} activeProps={active}>Stake</Link>
+            {isAdmin && <Link to="/admin" className={link} activeProps={active}>Admin</Link>}
+          </nav>
+        )}
+        <div className="ml-auto flex items-center gap-3">
+          {session && profile ? (
+            <>
+              <Link to="/wallet" className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-sm text-gold">
+                B$ {fmt(profile.balance)}
+              </Link>
+              <div className="hidden sm:flex items-center gap-2">
+                {profile.avatar_url ? (
+                  <img src={profile.avatar_url} alt="" className="h-8 w-8 rounded-full bg-muted" />
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-muted" />
+                )}
+                <span className="text-sm">{profile.roblox_username}</span>
+              </div>
+              <Button size="sm" variant="ghost" onClick={signOut}>Sair</Button>
+            </>
+          ) : (
+            <>
+              <Button asChild size="sm" variant="ghost"><Link to="/auth">Entrar</Link></Button>
+              <Button asChild size="sm"><Link to="/auth" search={{ mode: "signup" }}>Criar conta</Link></Button>
+            </>
+          )}
+        </div>
+      </div>
+      {session && (
+        <nav className="flex md:hidden items-center justify-around border-t py-2">
+          <Link to="/trade" className={link} activeProps={active}>Trade</Link>
+          <Link to="/wallet" className={link} activeProps={active}>Carteira</Link>
+          <Link to="/stake" className={link} activeProps={active}>Stake</Link>
+          {isAdmin && <Link to="/admin" className={link} activeProps={active}>Admin</Link>}
+        </nav>
+      )}
+    </header>
+  );
+}
+
+/** Protege a página: exige login e (opcionalmente) Roblox verificado. */
+export function Protected({ children, requireVerified = true }: { children: ReactNode; requireVerified?: boolean }) {
+  const { session, ready } = useAuth();
+  const { data: profile, isLoading } = useProfile();
+  const nav = useNavigate();
+  useEffect(() => {
+    if (ready && !session) nav({ to: "/auth", replace: true });
+    else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
+  }, [ready, session, profile, requireVerified, nav]);
+  if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {
+    return <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Carregando…</div>;
+  }
+  return <>{children}</>;
+}
+
+export function CoinRain({ show }: { show: number }) {
+  if (!show) return null;
+  return (
+    <div key={show} className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+      {Array.from({ length: 28 }).map((_, i) => (
+        <span
+          key={i}
+          className="animate-coin absolute grid h-7 w-7 place-items-center rounded-full bg-gold text-[10px] font-bold text-gold-foreground glow-gold"
+          style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 7) * 0.08}s`, top: "-5vh" }}
+        >
+          B$
+        </span>
+      ))}
+    </div>
+  );
+}
