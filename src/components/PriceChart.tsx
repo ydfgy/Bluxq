@@ -11,7 +11,7 @@ export function PriceChart({ symbol, interval, lines, onPrice }: { symbol: strin
   cb.current = onPrice;
 
   useEffect(() => {
-    let chart: any; let ws: WebSocket | null = null; let dead = false; let ro: ResizeObserver | null = null;
+    let chart: any; let ws: WebSocket | null = null; let dead = false; 
     (async () => {
       const { createChart, CrosshairMode } = await import("lightweight-charts");
       if (dead || !el.current) return;
@@ -38,7 +38,7 @@ export function PriceChart({ symbol, interval, lines, onPrice }: { symbol: strin
         cb.current(+d.c);
       };
     })();
-    return () => { dead = true; ws?.close(); ro?.disconnect(); chart?.remove(); seriesRef.current = null; priceLines.current = []; };
+    return () => { dead = true; ws?.close(); chart?.remove(); seriesRef.current = null; priceLines.current = []; };
   }, [symbol, interval]);
 
   useEffect(() => {
