@@ -2,38 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { SYMBOLS } from "./markets";
-
-const BINANCE = "https://data-api.binance.vision/api/v3";
-
-async function getPrices(symbols: string[]): Promise<Record<string, number>> {
-  if (!symbols.length) return {};
-  const sources = [
-    `${BINANCE}/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`,
-    ...symbols.map((symbol) => `${BINANCE}/ticker/price?symbol=${encodeURIComponent(symbol)}`),
-    ...symbols.map((symbol) => `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
-    ...symbols.map((symbol) => `https://api1.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
-    ...symbols.map((symbol) => `https://api2.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
-    ...symbols.map((symbol) => `https://api3.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
-  ];
-  let lastError = "Preço indisponível";
-  for (const url of sources) {
-    try {
-      const res = await fetch(url, {
-        signal: AbortSignal.timeout(8000),
-        headers: { Accept: "application/json", "User-Agent": "BluxTrade/1.0 market-data" },
-      });
-      if (!res.ok) { lastError = `Fonte de preço respondeu ${res.status}`; continue; }
-      const raw = await res.json();
-      const data = (Array.isArray(raw) ? raw : [raw]) as { symbol: string; price: string }[];
-      const prices = Object.fromEntries(data.map((d) => [d.symbol, Number(d.price)]).filter(([, price]) => Number.isFinite(price) && price > 0));
-      if (symbols.every((symbol) => prices[symbol])) return prices;
-      lastError = "A Binance não retornou um preço válido";
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : lastError;
-    }
-  }
-  throw new Error(`Não foi possível obter o preço agora (${lastError})`);
-}
+import { getBinancePrices } from "./market-data";
 
 async function admin() {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
@@ -58,7 +27,7 @@ async function runLiquidations() {
     .eq("status", "open")
     .limit(500);
   if (!open?.length) return;
-  const prices = await getPrices([...new Set(open.map((p) => p.symbol))]);
+  const prices = await getBinancePrices([...new Set(open.map((p) => p.symbol))]);
   for (const p of open) {
     const px = prices[p.symbol];
     if (!px) continue;
@@ -88,7 +57,7 @@ export const openPosition = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     await runLiquidations();
-    const prices = await getPrices([data.symbol]);
+    const prices = await getBinancePrices([data.symbol]);
     const sb = await admin();
     const { data: id, error } = await sb.rpc("fn_open_position", {
       _user: context.userId,
@@ -113,7 +82,7 @@ export const closePosition = createServerFn({ method: "POST" })
       .eq("status", "open")
       .maybeSingle();
     if (!pos) throw new Error("Posição não encontrada");
-    const prices = await getPrices([pos.symbol]);
+    const prices = await getBinancePrices([pos.symbol]);
     const sb = await admin();
     const { data: res, error } = await sb.rpc("fn_close_position", {
       _user: context.userId,

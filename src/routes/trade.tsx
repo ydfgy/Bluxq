@@ -9,6 +9,7 @@ import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { openPosition, closePosition, syncPositions } from "@/lib/blux.functions";
 import { MARKETS, fmt, fmtPrice, calcPnl, FEE_RATE, PROFIT_CAP, LIQ_LOSS, MIN_LEVERAGE, MAX_LEVERAGE } from "@/lib/markets";
+import { getBinanceTickers } from "@/lib/market-data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -25,10 +26,7 @@ function useTickers() {
     queryKey: ["tickers"],
     refetchInterval: 10000,
     queryFn: async () => {
-      const syms = JSON.stringify(MARKETS.map((m) => m.symbol));
-      const r = await fetch(`https://data-api.binance.vision/api/v3/ticker/24hr?symbols=${encodeURIComponent(syms)}`);
-      const d = (await r.json()) as { symbol: string; lastPrice: string; priceChangePercent: string; highPrice: string; lowPrice: string; quoteVolume: string }[];
-      return Object.fromEntries(d.map((x) => [x.symbol, x]));
+      return getBinanceTickers(MARKETS.map((m) => m.symbol));
     },
   });
 }
@@ -62,9 +60,11 @@ function Trade() {
   });
   const openPos = positions.filter((p) => p.status === "open");
   const history = positions.filter((p) => p.status !== "open");
+  const t = tickers?.[symbol];
+  const currentPrice = price || Number(t?.lastPrice ?? 0);
 
   // preços ao vivo de todas as moedas com posição aberta
-  const livePx = (s: string) => (s === symbol && price ? price : Number(tickers?.[s]?.lastPrice ?? 0));
+  const livePx = (s: string) => (s === symbol && currentPrice ? currentPrice : Number(tickers?.[s]?.lastPrice ?? 0));
 
   useEffect(() => {
     const t = setInterval(() => { sync().catch(() => {}); }, 15000);
@@ -77,8 +77,8 @@ function Trade() {
   const poolMaxLev = m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
-  const liqLong = price * (1 - LIQ_LOSS / lev);
-  const liqShort = price * (1 + LIQ_LOSS / lev);
+  const liqLong = currentPrice * (1 - LIQ_LOSS / lev);
+  const liqShort = currentPrice * (1 + LIQ_LOSS / lev);
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -108,7 +108,6 @@ function Trade() {
     } catch (e: any) { toast.error(e.message); }
   }
 
-  const t = tickers?.[symbol];
   const chg = Number(t?.priceChangePercent ?? 0);
   const unreal = openPos.reduce((a, p) => a + calcPnl(p.side, Number(p.qty), Number(p.entry_price), livePx(p.symbol), Number(p.margin)), 0);
 
@@ -137,7 +136,7 @@ function Trade() {
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
         <div className="rounded-xl border bg-card p-3 flex flex-wrap items-center gap-x-6 gap-y-1">
           <div className="flex items-center gap-2 text-lg font-bold"><MarketIcon base={MARKETS.find((mk) => mk.symbol === symbol)?.icon ?? symbol.replace("USDT", "").toLowerCase()} size="md" />{symbol.replace("USDT", "")}/USDT</div>
-          <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>{price ? fmtPrice(price) : "…"}</div>
+          <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>{currentPrice ? fmtPrice(currentPrice) : "…"}</div>
           <Stat k="24h" v={`${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`} />
           <Stat k="Máx 24h" v={t ? fmtPrice(Number(t.highPrice)) : "—"} />
           <Stat k="Mín 24h" v={t ? fmtPrice(Number(t.lowPrice)) : "—"} />
@@ -223,16 +222,16 @@ function Trade() {
         </div>
         <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
           <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
-          <Row k="Quantidade" v={price ? `${(size / price).toPrecision(5)} ${symbol.replace("USDT", "")}` : "—"} />
-          <Row k="Liquidação Long" v={price ? fmtPrice(liqLong) : "—"} cls="text-bull" />
-          <Row k="Liquidação Short" v={price ? fmtPrice(liqShort) : "—"} cls="text-bear" />
+          <Row k="Quantidade" v={currentPrice ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}` : "—"} />
+          <Row k="Liquidação Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
+          <Row k="Liquidação Short" v={currentPrice ? fmtPrice(liqShort) : "—"} cls="text-bear" />
           <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
           <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
           <Row k="Taxa" v={`${FEE_RATE * 100}% do lucro`} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Button disabled={busy || !price || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("long")} className="bg-bull text-bull-foreground hover:bg-bull/90">Long ↑</Button>
-          <Button disabled={busy || !price || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("short")} className="bg-bear text-bear-foreground hover:bg-bear/90">Short ↓</Button>
+          <Button disabled={busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("long")} className="bg-bull text-bull-foreground hover:bg-bull/90">Long ↑</Button>
+          <Button disabled={busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("short")} className="bg-bear text-bear-foreground hover:bg-bear/90">Short ↓</Button>
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
           Preços reais da Binance. Alavancagem mínima: {MIN_LEVERAGE}x. O máximo varia conforme a liquidez livre da pool, até {MAX_LEVERAGE}x. Você é liquidado quando perde {LIQ_LOSS * 100}% da margem. O lucro é pago pela pool e limitado a {PROFIT_CAP}x a margem.
