@@ -202,7 +202,7 @@ function Trade() {
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-xs"><span className="text-muted-foreground">Alavancagem</span><span className="font-mono font-bold text-primary">{lev}x</span></div>
-          <Slider min={1} max={50} step={1} value={[lev]} onValueChange={(v) => setLev(v[0])} />
+          <Slider min={1} max={50} step={1} value={[lev]} onValueChange={(v) => setLev(v[0] ?? 1)} />
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono"><span>1x</span><span>10x</span><span>25x</span><span>50x</span></div>
         </div>
         <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
