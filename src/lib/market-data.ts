@@ -18,7 +18,7 @@ const SPOT_BASES = [
 ];
 
 const FUTURES_BASE = "https://fapi.binance.com/fapi/v1";
-const REQUEST_TIMEOUT_MS = 6000;
+const REQUEST_TIMEOUT_MS = 2500;
 const COINGECKO_IDS: Record<string, string> = {
   BTCUSDT: "bitcoin",
   ETHUSDT: "ethereum",
@@ -94,26 +94,27 @@ export async function getBinancePrices(symbols: string[]): Promise<Record<string
   if (!symbols.length) return {};
   const uniqueSymbols = [...new Set(symbols)];
 
-  for (const base of [...SPOT_BASES, FUTURES_BASE]) {
-    const prices = await getPricesFromSource(uniqueSymbols, base);
-    if (prices) return prices;
-  }
+  const bases = [...SPOT_BASES, FUTURES_BASE];
+  const batchResults = await Promise.all(
+    bases.map((base) => getPricesFromSource(uniqueSymbols, base)),
+  );
+  const batchPrices = batchResults.find((prices) => prices !== null);
+  if (batchPrices) return batchPrices;
 
-  // Se um endpoint em lote for bloqueado, tenta cada par individualmente em paralelo.
+  // Se a consulta em lote falhar, tenta todos os endpoints individuais ao mesmo tempo.
   const prices: Record<string, number> = {};
   await Promise.all(
     uniqueSymbols.map(async (symbol) => {
       const encoded = encodeURIComponent(symbol);
-      for (const base of [...SPOT_BASES, FUTURES_BASE]) {
-        try {
-          const parsed = asPriceMap(await requestJson(`${base}/ticker/price?symbol=${encoded}`));
-          if (parsed[symbol]) {
-            prices[symbol] = parsed[symbol];
-            return;
-          }
-        } catch {
-          // Continua para o próximo endpoint.
-        }
+      const attempts = bases.map(async (base) => {
+        const parsed = asPriceMap(await requestJson(`${base}/ticker/price?symbol=${encoded}`));
+        if (!parsed[symbol]) throw new Error("Preço inválido");
+        return parsed[symbol];
+      });
+      try {
+        prices[symbol] = await Promise.any(attempts);
+      } catch {
+        // Todas as fontes falharam para este símbolo; usa a contingência abaixo.
       }
     }),
   );
@@ -131,16 +132,20 @@ export async function getBinanceTickers(symbols: string[]): Promise<Record<strin
   const uniqueSymbols = [...new Set(symbols)];
   const encodedSymbols = encodeURIComponent(JSON.stringify(uniqueSymbols));
 
-  for (const base of [...SPOT_BASES, FUTURES_BASE]) {
-    try {
-      const tickers = asTickerMap(
-        await requestJson(`${base}/ticker/24hr?symbols=${encodedSymbols}`),
-      );
-      if (uniqueSymbols.every((symbol) => tickers[symbol])) return tickers;
-    } catch {
-      // Continua para o próximo endpoint.
-    }
-  }
+  const tickerResults = await Promise.all(
+    [...SPOT_BASES, FUTURES_BASE].map(async (base) => {
+      try {
+        const tickers = asTickerMap(
+          await requestJson(`${base}/ticker/24hr?symbols=${encodedSymbols}`),
+        );
+        return uniqueSymbols.every((symbol) => tickers[symbol]) ? tickers : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  const tickers = tickerResults.find((result) => result !== null);
+  if (tickers) return tickers;
 
   const fallbackPrices = await getCoinGeckoPrices(uniqueSymbols);
   return Object.fromEntries(
