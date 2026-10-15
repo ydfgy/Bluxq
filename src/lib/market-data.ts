@@ -19,6 +19,18 @@ const SPOT_BASES = [
 
 const FUTURES_BASE = "https://fapi.binance.com/fapi/v1";
 const REQUEST_TIMEOUT_MS = 6000;
+const COINGECKO_IDS: Record<string, string> = {
+  BTCUSDT: "bitcoin",
+  ETHUSDT: "ethereum",
+  SOLUSDT: "solana",
+  BNBUSDT: "binancecoin",
+  XRPUSDT: "ripple",
+  DOGEUSDT: "dogecoin",
+  ADAUSDT: "cardano",
+  AVAXUSDT: "avalanche-2",
+  LINKUSDT: "chainlink",
+  TONUSDT: "the-open-network",
+};
 
 async function requestJson(url: string): Promise<unknown> {
   const response = await fetch(url, {
@@ -56,6 +68,28 @@ async function getPricesFromSource(symbols: string[], base: string) {
   return null;
 }
 
+async function getCoinGeckoPrices(symbols: string[]): Promise<Record<string, number>> {
+  const pairs = symbols
+    .map((symbol) => [symbol, COINGECKO_IDS[symbol]] as const)
+    .filter((entry): entry is readonly [string, string] => Boolean(entry[1]));
+  if (pairs.length !== symbols.length) return {};
+
+  const ids = encodeURIComponent(pairs.map(([, id]) => id).join(","));
+  try {
+    const raw = (await requestJson(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${ids}&vs_currencies=usd`,
+    )) as Record<string, { usd?: number }>;
+    const prices = Object.fromEntries(
+      pairs
+        .map(([symbol, id]) => [symbol, Number(raw[id]?.usd)] as const)
+        .filter(([, price]) => Number.isFinite(price) && price > 0),
+    );
+    return symbols.every((symbol) => prices[symbol]) ? prices : {};
+  } catch {
+    return {};
+  }
+}
+
 export async function getBinancePrices(symbols: string[]): Promise<Record<string, number>> {
   if (!symbols.length) return {};
   const uniqueSymbols = [...new Set(symbols)];
@@ -85,8 +119,10 @@ export async function getBinancePrices(symbols: string[]): Promise<Record<string
   );
 
   if (uniqueSymbols.every((symbol) => prices[symbol])) return prices;
+  const fallbackPrices = await getCoinGeckoPrices(uniqueSymbols);
+  if (uniqueSymbols.every((symbol) => fallbackPrices[symbol])) return fallbackPrices;
   throw new Error(
-    "Não foi possível obter o preço agora. A Binance bloqueou temporariamente as fontes públicas (403). Tente novamente em alguns segundos.",
+    "Não foi possível obter o preço agora. Binance e a fonte de contingência estão indisponíveis. Tente novamente em alguns segundos.",
   );
 }
 
@@ -106,5 +142,23 @@ export async function getBinanceTickers(symbols: string[]): Promise<Record<strin
     }
   }
 
-  return {};
+  const fallbackPrices = await getCoinGeckoPrices(uniqueSymbols);
+  return Object.fromEntries(
+    uniqueSymbols
+      .filter((symbol) => fallbackPrices[symbol])
+      .map((symbol) => {
+        const price = fallbackPrices[symbol];
+        return [
+          symbol,
+          {
+            symbol,
+            lastPrice: String(price),
+            priceChangePercent: "0",
+            highPrice: String(price),
+            lowPrice: String(price),
+            quoteVolume: "0",
+          },
+        ];
+      }),
+  );
 }
