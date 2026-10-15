@@ -7,11 +7,26 @@ const BINANCE = "https://data-api.binance.vision/api/v3";
 
 async function getPrices(symbols: string[]): Promise<Record<string, number>> {
   if (!symbols.length) return {};
-  const url = `${BINANCE}/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`;
-  const res = await fetch(url);
-  if (!res.ok) throw new Error("Não foi possível obter o preço agora");
-  const data = (await res.json()) as { symbol: string; price: string }[];
-  return Object.fromEntries(data.map((d) => [d.symbol, Number(d.price)]));
+  const sources = [
+    `${BINANCE}/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`,
+    ...symbols.map((symbol) => `${BINANCE}/ticker/price?symbol=${encodeURIComponent(symbol)}`),
+    ...symbols.map((symbol) => `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
+  ];
+  let lastError = "Preço indisponível";
+  for (const url of sources) {
+    try {
+      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
+      if (!res.ok) { lastError = `Binance respondeu ${res.status}`; continue; }
+      const raw = await res.json();
+      const data = (Array.isArray(raw) ? raw : [raw]) as { symbol: string; price: string }[];
+      const prices = Object.fromEntries(data.map((d) => [d.symbol, Number(d.price)]).filter(([, price]) => Number.isFinite(price) && price > 0));
+      if (symbols.every((symbol) => prices[symbol])) return prices;
+      lastError = "A Binance não retornou um preço válido";
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : lastError;
+    }
+  }
+  throw new Error(`Não foi possível obter o preço agora (${lastError})`);
 }
 
 async function admin() {

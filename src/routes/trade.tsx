@@ -8,7 +8,7 @@ import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { openPosition, closePosition, syncPositions } from "@/lib/blux.functions";
-import { MARKETS, fmt, fmtPrice, calcPnl, FEE_RATE, PROFIT_CAP, LIQ_LOSS } from "@/lib/markets";
+import { MARKETS, fmt, fmtPrice, calcPnl, FEE_RATE, PROFIT_CAP, LIQ_LOSS, MIN_LEVERAGE, MAX_LEVERAGE } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -41,11 +41,16 @@ function Trade() {
   const [interval, setIntervalV] = useState("15m");
   const [price, setPrice] = useState(0);
   const [margin, setMargin] = useState("100");
-  const [lev, setLev] = useState(10);
+  const [lev, setLev] = useState(MIN_LEVERAGE);
   const [busy, setBusy] = useState(false);
   const [rain, setRain] = useState(0);
   const [tab, setTab] = useState<"open" | "history">("open");
   const { data: tickers } = useTickers();
+  const { data: pool } = useQuery({
+    queryKey: ["pool"],
+    refetchInterval: 5000,
+    queryFn: async () => (await supabase.from("pool").select("total_assets,total_reserved").single()).data,
+  });
   const open = useServerFn(openPosition);
   const close = useServerFn(closePosition);
   const sync = useServerFn(syncPositions);
@@ -67,9 +72,17 @@ function Trade() {
   }, [sync]);
 
   const m = Number(margin) || 0;
+  const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
+  // A posição reserva margem * (alavancagem + 4): dívida + lucro máximo garantido.
+  const poolMaxLev = m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4) + 1) : MAX_LEVERAGE;
+  const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
   const liqLong = price * (1 - LIQ_LOSS / lev);
   const liqShort = price * (1 + LIQ_LOSS / lev);
+
+  useEffect(() => {
+    if (pool && lev > sliderMax) setLev(sliderMax);
+  }, [pool, sliderMax, lev]);
 
   const lines = useMemo<Line[]>(() => openPos.filter((p) => p.symbol === symbol).flatMap((p) => [
     { price: Number(p.entry_price), color: p.side === "long" ? "#22c55e" : "#ef4444", title: `${p.side === "long" ? "LONG" : "SHORT"} ${p.leverage}x entrada` },
@@ -79,6 +92,8 @@ function Trade() {
   async function go(side: "long" | "short") {
     setBusy(true);
     try {
+      if (poolMaxLev < MIN_LEVERAGE) throw new Error(`A pool tem liquidez para no máximo ${Math.max(poolMaxLev, 0)}x nesta margem. Reduza a margem ou aguarde novos stakes.`);
+      if (lev > poolMaxLev) throw new Error(`A alavancagem máxima disponível agora é ${poolMaxLev}x.`);
       const r = await open({ data: { symbol, side, margin: m, leverage: lev } });
       toast.success(`${side === "long" ? "Long" : "Short"} aberto a ${fmtPrice(r.price ?? 0)}`);
       qc.invalidateQueries();
@@ -202,8 +217,9 @@ function Trade() {
         </div>
         <div className="space-y-2">
           <div className="flex justify-between text-xs"><span className="text-muted-foreground">Alavancagem</span><span className="font-mono font-bold text-primary">{lev}x</span></div>
-          <Slider min={1} max={50} step={1} value={[lev]} onValueChange={(v) => setLev(v[0] ?? 1)} />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono"><span>1x</span><span>10x</span><span>25x</span><span>50x</span></div>
+          <Slider min={MIN_LEVERAGE} max={sliderMax} step={1} value={[Math.min(lev, sliderMax)]} onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)} />
+          <div className="flex justify-between text-[10px] text-muted-foreground font-mono"><span>{MIN_LEVERAGE}x mín.</span><span>25x</span><span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span></div>
+          <div className="text-[11px] text-muted-foreground">Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span></div>
         </div>
         <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
           <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
@@ -215,11 +231,11 @@ function Trade() {
           <Row k="Taxa" v={`${FEE_RATE * 100}% do lucro`} />
         </div>
         <div className="grid grid-cols-2 gap-2">
-          <Button disabled={busy || !price || m < 10} onClick={() => go("long")} className="bg-bull text-bull-foreground hover:bg-bull/90">Long ↑</Button>
-          <Button disabled={busy || !price || m < 10} onClick={() => go("short")} className="bg-bear text-bear-foreground hover:bg-bear/90">Short ↓</Button>
+          <Button disabled={busy || !price || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("long")} className="bg-bull text-bull-foreground hover:bg-bull/90">Long ↑</Button>
+          <Button disabled={busy || !price || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev} onClick={() => go("short")} className="bg-bear text-bear-foreground hover:bg-bear/90">Short ↓</Button>
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Preços reais da Binance. Você é liquidado quando perde {LIQ_LOSS * 100}% da margem. O lucro é pago pela pool de stake e limitado a {PROFIT_CAP}x a margem.
+          Preços reais da Binance. Alavancagem mínima: {MIN_LEVERAGE}x. O máximo varia conforme a liquidez livre da pool, até {MAX_LEVERAGE}x. Você é liquidado quando perde {LIQ_LOSS * 100}% da margem. O lucro é pago pela pool e limitado a {PROFIT_CAP}x a margem.
         </p>
       </aside>
     </main>
