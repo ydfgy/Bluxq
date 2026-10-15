@@ -34,7 +34,6 @@ function AuthPage() {
     setBusy(true);
     try {
       if (signup) {
-        if (!/^[A-Za-z0-9_]{3,20}$/.test(rbx)) throw new Error("Nome de usuário Roblox inválido");
         const { data, error } = await supabase.auth.signUp({
           email,
           password: pw,
@@ -55,8 +54,10 @@ function AuthPage() {
         if (error) throw error;
         nav({ to: "/verify" });
       }
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error: unknown) {
+      toast.error(
+        error instanceof Error ? error.message : "Não foi possível concluir a autenticação.",
+      );
     } finally {
       setBusy(false);
     }

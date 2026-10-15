@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import type { Database } from "@/integrations/supabase/types";
 import { SYMBOLS } from "./markets";
 import { getBinancePrices } from "./market-data";
 
@@ -9,30 +11,56 @@ async function admin() {
   return supabaseAdmin;
 }
 
-function rpcError(error: { message: string } | null) {
-  if (error) throw new Error(error.message.replace(/^.*?ERROR:\s*/, ""));
+function rpcError(error: { message: string; code?: string } | null) {
+  if (!error) return;
+  const clean = error.message.replace(/^.*?ERROR:\s*/, "").trim();
+  const internal =
+    /permission denied|relation .* does not exist|column .* does not exist|syntax error|postgres/i.test(
+      clean,
+    );
+  throw new Error(
+    !clean || clean.length > 240 || internal ? "Não foi possível concluir a operação." : clean,
+  );
 }
 
-async function assertAdmin(supabase: any, userId: string) {
-  const { data } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+function constantTimeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
+  const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
+  rpcError(error);
   if (!data) throw new Error("Apenas administradores");
 }
 
 /** Liquida todas as posições abertas cujo preço atual cruzou a liquidação. */
 async function runLiquidations() {
   const sb = await admin();
-  const { data: open } = await sb
+  const { data: open, error } = await sb
     .from("positions")
     .select("id, symbol, side, liq_price")
     .eq("status", "open")
     .limit(500);
+  rpcError(error);
   if (!open?.length) return;
   const prices = await getBinancePrices([...new Set(open.map((p) => p.symbol))]);
   for (const p of open) {
     const px = prices[p.symbol];
     if (!px) continue;
     const hit = p.side === "long" ? px <= Number(p.liq_price) : px >= Number(p.liq_price);
-    if (hit) await sb.rpc("fn_close_position", { _user: null as any, _id: p.id, _price: px, _force_liq: true });
+    if (hit) {
+      await sb.rpc("fn_close_position", {
+        _user: null as never,
+        _id: p.id,
+        _price: px,
+        _force_liq: true,
+      });
+    }
   }
 }
 
@@ -45,12 +73,12 @@ export const syncPositions = createServerFn({ method: "POST" })
 
 export const openPosition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) =>
+  .validator((d) =>
     z
       .object({
         symbol: z.string().refine((s) => SYMBOLS.includes(s)),
         side: z.enum(["long", "short"]),
-        margin: z.number().min(10).max(10_000_000),
+        margin: z.number().finite().min(10).max(10_000_000),
         leverage: z.number().int().min(1).max(50),
       })
       .parse(d),
@@ -73,14 +101,15 @@ export const openPosition = createServerFn({ method: "POST" })
 
 export const closePosition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .validator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    const { data: pos } = await context.supabase
+    const { data: pos, error: positionError } = await context.supabase
       .from("positions")
       .select("symbol")
       .eq("id", data.id)
       .eq("status", "open")
       .maybeSingle();
+    rpcError(positionError);
     if (!pos) throw new Error("Posição não encontrada");
     const prices = await getBinancePrices([pos.symbol]);
     const sb = await admin();
@@ -94,63 +123,104 @@ export const closePosition = createServerFn({ method: "POST" })
     return res as { status: string; pnl: number; fee: number; payout: number };
   });
 
-const amount = z.object({ amount: z.number().positive().max(100_000_000) });
+const amount = z.object({ amount: z.number().finite().positive().max(100_000_000) });
 
 export const stake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => amount.parse(d))
+  .validator((d) => amount.parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await (await admin()).rpc("fn_stake", { _user: context.userId, _amount: data.amount });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_stake", { _user: context.userId, _amount: data.amount });
     rpcError(error);
     return { ok: true };
   });
 
 export const unstake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => amount.parse(d))
+  .validator((d) => amount.parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await (await admin()).rpc("fn_unstake", { _user: context.userId, _amount: data.amount });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_unstake", { _user: context.userId, _amount: data.amount });
     rpcError(error);
     return { ok: true };
   });
 
 export const requestDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ amount: z.number().int().min(10).max(10_000_000) }).parse(d))
+  .validator((d) => z.object({ amount: z.number().int().min(10).max(10_000_000) }).parse(d))
   .handler(async ({ data, context }) => {
-    const sb = await admin();
-    const { data: p } = await sb.from("profiles").select("verified").eq("id", context.userId).single();
-    if (!p?.verified) throw new Error("Verifique sua conta Roblox primeiro");
-    const { count } = await sb
-      .from("deposits")
-      .select("id", { count: "exact", head: true })
-      .eq("user_id", context.userId)
-      .eq("status", "pending");
-    if ((count ?? 0) >= 3) throw new Error("Você já tem 3 depósitos aguardando confirmação");
-    const { error } = await sb.from("deposits").insert({ user_id: context.userId, amount: data.amount });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_request_deposit", {
+      _user: context.userId,
+      _amount: data.amount,
+    });
     rpcError(error);
     return { ok: true };
   });
 
 export const requestWithdraw = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => amount.parse(d))
+  .validator((d) => amount.parse(d))
   .handler(async ({ data, context }) => {
-    const { error } = await (await admin()).rpc("fn_request_withdraw", { _user: context.userId, _amount: data.amount });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_request_withdraw", { _user: context.userId, _amount: data.amount });
     rpcError(error);
     return { ok: true };
   });
 
 /* ---------- Roblox verification ---------- */
+export const getVerificationChallenge = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const { data: profile, error: profileError } = await sb
+      .from("profiles")
+      .select("verified")
+      .eq("id", context.userId)
+      .single();
+    rpcError(profileError);
+    if (profile?.verified) return { phrase: null, verified: true };
+
+    const { data: challenge, error } = await sb
+      .from("profile_challenges")
+      .select("verify_phrase")
+      .eq("user_id", context.userId)
+      .single();
+    rpcError(error);
+    if (!challenge) throw new Error("Desafio de verificação não encontrado");
+    return { phrase: challenge.verify_phrase, verified: false };
+  });
 
 export const setRobloxUsername = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ username: z.string().trim().regex(/^[A-Za-z0-9_]{3,20}$/) }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        username: z
+          .string()
+          .trim()
+          .regex(/^[A-Za-z0-9_]{3,20}$/),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const sb = await admin();
-    const { data: p } = await sb.from("profiles").select("verified").eq("id", context.userId).single();
+    const { data: p, error: profileError } = await sb
+      .from("profiles")
+      .select("verified")
+      .eq("id", context.userId)
+      .single();
+    rpcError(profileError);
     if (p?.verified) throw new Error("Conta já verificada");
-    await sb.from("profiles").update({ roblox_username: data.username }).eq("id", context.userId);
+    const { error } = await sb
+      .from("profiles")
+      .update({ roblox_username: data.username })
+      .eq("id", context.userId);
+    rpcError(error);
     return { ok: true };
   });
 
@@ -158,44 +228,75 @@ export const verifyRoblox = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = await admin();
-    const { data: p } = await sb.from("profiles").select("*").eq("id", context.userId).single();
+    const { data: p, error: profileError } = await sb
+      .from("profiles")
+      .select("id, roblox_username, verified")
+      .eq("id", context.userId)
+      .single();
+    rpcError(profileError);
     if (!p) throw new Error("Perfil não encontrado");
     if (p.verified) return { verified: true };
 
+    const { data: challenge, error: challengeError } = await sb
+      .from("profile_challenges")
+      .select("verify_phrase")
+      .eq("user_id", context.userId)
+      .single();
+    rpcError(challengeError);
+    if (!challenge) throw new Error("Desafio de verificação não encontrado");
+
     const r1 = await fetch("https://users.roblox.com/v1/usernames/users", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
       body: JSON.stringify({ usernames: [p.roblox_username], excludeBannedUsers: true }),
+      signal: AbortSignal.timeout(8000),
     });
+    if (!r1.ok)
+      throw new Error("O Roblox não respondeu à consulta. Tente novamente em alguns segundos.");
     const j1 = (await r1.json()) as { data?: { id: number; name: string; displayName: string }[] };
     const user = j1.data?.[0];
-    if (!user) throw new Error(`Usuário Roblox "${p.roblox_username}" não encontrado`);
+    if (!user) throw new Error("Usuário Roblox não encontrado");
 
-    const r2 = await fetch(`https://users.roblox.com/v1/users/${user.id}`);
+    const r2 = await fetch(`https://users.roblox.com/v1/users/${user.id}`, {
+      headers: { Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!r2.ok)
+      throw new Error(
+        "Não foi possível ler o perfil Roblox agora. Tente novamente em alguns segundos.",
+      );
     const j2 = (await r2.json()) as { description?: string };
     const bio = (j2.description ?? "").toLowerCase();
-    if (!bio.includes(p.verify_phrase.toLowerCase())) {
-      throw new Error("Frase não encontrada na sua bio do Roblox. Salve a bio e tente de novo em alguns segundos.");
+    if (!bio.includes(challenge.verify_phrase.toLowerCase())) {
+      throw new Error(
+        "Frase não encontrada na sua bio do Roblox. Salve a bio e tente de novo em alguns segundos.",
+      );
     }
 
-    const { data: taken } = await sb
+    const { data: taken, error: takenError } = await sb
       .from("profiles")
       .select("id")
       .eq("roblox_user_id", user.id)
       .neq("id", context.userId)
       .maybeSingle();
+    rpcError(takenError);
     if (taken) throw new Error("Essa conta Roblox já está ligada a outro usuário");
 
     let avatar: string | null = null;
     try {
       const r3 = await fetch(
         `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=150x150&format=Png`,
+        { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) },
       );
-      const j3 = (await r3.json()) as { data?: { imageUrl?: string }[] };
-      avatar = j3.data?.[0]?.imageUrl ?? null;
-    } catch {}
+      if (r3.ok) {
+        const j3 = (await r3.json()) as { data?: { imageUrl?: string }[] };
+        avatar = j3.data?.[0]?.imageUrl ?? null;
+      }
+    } catch {
+      // The avatar is decorative; verification must not fail when thumbnails are down.
+    }
 
-    await sb
+    const { error } = await sb
       .from("profiles")
       .update({
         verified: true,
@@ -205,18 +306,21 @@ export const verifyRoblox = createServerFn({ method: "POST" })
         avatar_url: avatar,
       })
       .eq("id", context.userId);
+    rpcError(error);
     return { verified: true };
   });
 
 /* ---------- Admin ---------- */
-
 export const claimAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
-    const sb = await admin();
-    const { count } = await sb.from("user_roles").select("id", { count: "exact", head: true }).eq("role", "admin");
-    if ((count ?? 0) > 0) throw new Error("Já existe um administrador");
-    await sb.from("user_roles").insert({ user_id: context.userId, role: "admin" });
+  .validator((d) => z.object({ bootstrapSecret: z.string().min(32).max(256) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const expected = process.env["ADMIN_BOOTSTRAP_SECRET"] ?? "";
+    if (!expected || !constantTimeEqual(data.bootstrapSecret, expected)) {
+      throw new Error("Chave de inicialização inválida");
+    }
+    const { error } = await (await admin()).rpc("fn_claim_admin", { _user: context.userId });
+    rpcError(error);
     return { ok: true };
   });
 
@@ -230,11 +334,18 @@ export const adminOverview = createServerFn({ method: "POST" })
       sb.from("withdrawals").select("*").eq("status", "pending").order("created_at"),
       sb.from("pool").select("*").single(),
     ]);
+    rpcError(d.error);
+    rpcError(w.error);
+    rpcError(pool.error);
     const ids = [...new Set([...(d.data ?? []), ...(w.data ?? [])].map((x) => x.user_id))];
-    const { data: profs } = ids.length
+    const { data: profs, error: profileError } = ids.length
       ? await sb.from("profiles").select("id, roblox_username, roblox_user_id").in("id", ids)
-      : { data: [] as any[] };
-    const map = Object.fromEntries((profs ?? []).map((p: any) => [p.id, p]));
+      : {
+          data: [] as { id: string; roblox_username: string; roblox_user_id: number | null }[],
+          error: null,
+        };
+    rpcError(profileError);
+    const map = Object.fromEntries((profs ?? []).map((p) => [p.id, p]));
     return {
       deposits: (d.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       withdrawals: (w.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
@@ -244,20 +355,24 @@ export const adminOverview = createServerFn({ method: "POST" })
 
 export const reviewDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid(), approve: z.boolean() }).parse(d))
+  .validator((d) => z.object({ id: z.string().uuid(), approve: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { error } = await (await admin()).rpc("fn_review_deposit", { _id: data.id, _approve: data.approve });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_review_deposit", { _id: data.id, _approve: data.approve });
     rpcError(error);
     return { ok: true };
   });
 
 export const reviewWithdraw = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d) => z.object({ id: z.string().uuid(), paid: z.boolean() }).parse(d))
+  .validator((d) => z.object({ id: z.string().uuid(), paid: z.boolean() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
-    const { error } = await (await admin()).rpc("fn_review_withdraw", { _id: data.id, _paid: data.paid });
+    const { error } = await (
+      await admin()
+    ).rpc("fn_review_withdraw", { _id: data.id, _paid: data.paid });
     rpcError(error);
     return { ok: true };
   });

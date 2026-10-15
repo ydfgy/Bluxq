@@ -5,6 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 
 type Ctx = { session: Session | null; ready: boolean };
 const AuthCtx = createContext<Ctx>({ session: null, ready: false });
+const PROFILE_COLUMNS =
+  "id,roblox_username,roblox_user_id,roblox_display_name,avatar_url,verified,balance,created_at";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -34,7 +36,12 @@ export function useProfile() {
     enabled: !!session,
     refetchInterval: 5000,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("*").eq("id", session!.user.id).single();
+      const { data, error } = await supabase
+        .from("profiles")
+        .select(PROFILE_COLUMNS)
+        .eq("id", session!.user.id)
+        .single();
+      if (error) throw error;
       return data;
     },
   });
@@ -46,7 +53,11 @@ export function useIsAdmin() {
     queryKey: ["is-admin", session?.user.id],
     enabled: !!session,
     queryFn: async () => {
-      const { data } = await supabase.rpc("has_role", { _user_id: session!.user.id, _role: "admin" });
+      const { data, error } = await supabase.rpc("has_role", {
+        _user_id: session!.user.id,
+        _role: "admin",
+      });
+      if (error) throw error;
       return !!data;
     },
   });

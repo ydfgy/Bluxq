@@ -68,6 +68,24 @@ export type Database = {
         }
         Relationships: []
       }
+      profile_challenges: {
+        Row: {
+          created_at: string
+          user_id: string
+          verify_phrase: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+          verify_phrase: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+          verify_phrase?: string
+        }
+        Relationships: []
+      }
       positions: {
         Row: {
           borrowed: number
@@ -238,6 +256,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      fn_claim_admin: {
+        Args: { _user: string }
+        Returns: undefined
+      }
+      fn_request_deposit: {
+        Args: { _amount: number; _user: string }
+        Returns: undefined
+      }
       fn_close_position: {
         Args: {
           _force_liq?: boolean
