@@ -25,7 +25,7 @@ begin
   select * into pl from public.pool where id = 1 for update;
   v_available := greatest(pl.total_assets - pl.total_reserved, 0);
   -- Reserva: margem * (alavancagem - 1) de dívida + margem * 5 de lucro máximo.
-  v_max_lev := least(50, floor(v_available / _margin - 4)::int + 1);
+  v_max_lev := least(50, floor(v_available / _margin - 4)::int);
   if v_max_lev < 5 then
     raise exception 'Liquidez insuficiente: esta margem permite no máximo %x (disponível: B$%)', greatest(v_max_lev, 0), round(v_available, 2);
   end if;

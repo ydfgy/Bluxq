@@ -74,7 +74,7 @@ function Trade() {
   const m = Number(margin) || 0;
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // A posição reserva margem * (alavancagem + 4): dívida + lucro máximo garantido.
-  const poolMaxLev = m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4) + 1) : MAX_LEVERAGE;
+  const poolMaxLev = m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
   const liqLong = price * (1 - LIQ_LOSS / lev);

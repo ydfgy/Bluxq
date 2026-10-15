@@ -20,7 +20,7 @@ export const FEE_RATE = 0.1; // 10% sobre o lucro
 export const STAKER_SHARE = 0.7; // 70% da taxa vai para quem faz stake
 export const PROFIT_CAP = 5; // lucro máximo = 5x a margem (reservado na pool)
 export const LIQ_LOSS = 0.9; // liquida ao perder 90% da margem
-export const MIN_LEVERAGE = 5;
+export const MIN_LEVERAGE = 1;
 export const MAX_LEVERAGE = 50;
 
 export const fmt = (n: number | string | null | undefined, d = 2) =>

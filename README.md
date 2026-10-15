@@ -8,7 +8,7 @@ Plataforma de trading com Robux/Blux, dados de mercado em tempo real, gráficos 
 - Dados de preço e mercado da Binance.
 - Intervalos de 1 minuto, 5 minutos, 15 minutos, 1 hora, 4 horas e 1 dia.
 - Operações Long e Short.
-- Alavancagem mínima de 5x e máxima dinâmica conforme a liquidez livre da pool, limitada a 50x.
+- Alavancagem mínima de 1x e máxima dinâmica conforme a liquidez livre da pool, limitada a 50x.
 - Carteira de depósitos e saques.
 - Stake de Blux para fornecer liquidez.
 - Verificação de conta Roblox.

@@ -11,12 +11,18 @@ async function getPrices(symbols: string[]): Promise<Record<string, number>> {
     `${BINANCE}/ticker/price?symbols=${encodeURIComponent(JSON.stringify(symbols))}`,
     ...symbols.map((symbol) => `${BINANCE}/ticker/price?symbol=${encodeURIComponent(symbol)}`),
     ...symbols.map((symbol) => `https://api.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
+    ...symbols.map((symbol) => `https://api1.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
+    ...symbols.map((symbol) => `https://api2.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
+    ...symbols.map((symbol) => `https://api3.binance.com/api/v3/ticker/price?symbol=${encodeURIComponent(symbol)}`),
   ];
   let lastError = "Preço indisponível";
   for (const url of sources) {
     try {
-      const res = await fetch(url, { signal: AbortSignal.timeout(8000) });
-      if (!res.ok) { lastError = `Binance respondeu ${res.status}`; continue; }
+      const res = await fetch(url, {
+        signal: AbortSignal.timeout(8000),
+        headers: { Accept: "application/json", "User-Agent": "BluxTrade/1.0 market-data" },
+      });
+      if (!res.ok) { lastError = `Fonte de preço respondeu ${res.status}`; continue; }
       const raw = await res.json();
       const data = (Array.isArray(raw) ? raw : [raw]) as { symbol: string; price: string }[];
       const prices = Object.fromEntries(data.map((d) => [d.symbol, Number(d.price)]).filter(([, price]) => Number.isFinite(price) && price > 0));
