@@ -2,6 +2,18 @@ import { useEffect, useRef, useState } from "react";
 
 export type Line = { price: number; color: string; title: string };
 
+/** O canvas do Lightweight Charts 4.x não aceita a sintaxe oklch do tema. */
+function chartColor(variable: string, fallback: string) {
+  const raw = getComputedStyle(document.documentElement).getPropertyValue(variable).trim();
+  if (!raw) return fallback;
+  const probe = document.createElement("span");
+  probe.style.color = raw;
+  document.body.appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved && !resolved.includes("oklch") && !resolved.includes("color(") ? resolved : fallback;
+}
+
 /** Gráfico de velas ao vivo (Binance), carregado só no navegador. */
 export function PriceChart({ symbol, interval, lines, onPrice }: { symbol: string; interval: string; lines: Line[]; onPrice: (p: number) => void }) {
   const el = useRef<HTMLDivElement>(null);
@@ -20,11 +32,10 @@ export function PriceChart({ symbol, interval, lines, onPrice }: { symbol: strin
       try {
         const { createChart, CrosshairMode } = await import("lightweight-charts");
         if (dead || !el.current) return;
-        const css = getComputedStyle(document.documentElement);
-        const c = (v: string) => css.getPropertyValue(v).trim() || undefined;
+        const muted = chartColor("--muted-foreground", "#94a3a0");
         chart = createChart(el.current, {
           autoSize: true,
-          layout: { background: { color: "transparent" }, textColor: c("--muted-foreground") ?? "#888" },
+          layout: { background: { color: "transparent" }, textColor: muted },
           grid: { vertLines: { color: "rgba(128,128,128,0.08)" }, horzLines: { color: "rgba(128,128,128,0.08)" } },
           crosshair: { mode: CrosshairMode.Normal },
           timeScale: { timeVisible: true, secondsVisible: false },
