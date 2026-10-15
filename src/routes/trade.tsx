@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { openPosition, closePosition, syncPositions } from "@/lib/blux.functions";
 import { MARKETS, fmt, fmtPrice, calcPnl, FEE_RATE, PROFIT_CAP, LIQ_LOSS, MIN_LEVERAGE, MAX_LEVERAGE } from "@/lib/markets";
 import { getBinanceTickers } from "@/lib/market-data";
+import { connectOrderBookStream, fetchOrderBook, type OrderBook } from "@/lib/order-book";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -31,6 +32,32 @@ function useTickers() {
   });
 }
 
+function useOrderBook(symbol: string) {
+  const [book, setBook] = useState<OrderBook | null>(null);
+
+  useEffect(() => {
+    let dead = false;
+    let socket: WebSocket | undefined;
+    setBook(null);
+    fetchOrderBook(symbol).then((next) => {
+      if (!dead) setBook(next);
+    }).catch(() => {});
+    try {
+      socket = connectOrderBookStream(symbol, (next) => {
+        if (!dead) setBook(next);
+      }, () => {});
+    } catch {
+      // O snapshot REST continua disponível mesmo se o stream estiver indisponível.
+    }
+    return () => {
+      dead = true;
+      socket?.close();
+    };
+  }, [symbol]);
+
+  return book;
+}
+
 function Trade() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
@@ -42,8 +69,11 @@ function Trade() {
   const [lev, setLev] = useState(MIN_LEVERAGE);
   const [busy, setBusy] = useState(false);
   const [rain, setRain] = useState(0);
+  const [marketMenuOpen, setMarketMenuOpen] = useState(false);
+  const [leverageOpen, setLeverageOpen] = useState(false);
   const [tab, setTab] = useState<"open" | "history">("open");
   const { data: tickers } = useTickers();
+  const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
     queryKey: ["pool"],
     refetchInterval: 5000,
@@ -114,28 +144,44 @@ function Trade() {
   return (
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
       <CoinRain show={rain} />
-      {/* mercados */}
+      {/* livro de ordens */}
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
-        <div className="px-3 py-2 text-xs uppercase text-muted-foreground border-b">Mercados</div>
-        {MARKETS.map((mk) => {
-          const tk = tickers?.[mk.symbol]; const c = Number(tk?.priceChangePercent ?? 0);
-          return (
-            <button key={mk.symbol} title={mk.name} onClick={() => { setSymbol(mk.symbol); setPrice(0); }}
-              className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 ${symbol === mk.symbol ? "bg-muted" : ""}`}>
-              <span className="flex items-center gap-2 font-semibold"><MarketIcon base={mk.icon} />{mk.base}<span className="text-muted-foreground font-normal">/USDT</span></span>
-              <span className="text-right font-mono text-xs">
-                <div>{tk ? fmtPrice(Number(tk.lastPrice)) : "—"}</div>
-                <div className={c >= 0 ? "text-bull" : "text-bear"}>{c >= 0 ? "+" : ""}{c.toFixed(2)}%</div>
-              </span>
-            </button>
-          );
-        })}
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
+          <span className="text-[10px] text-muted-foreground">tempo real</span>
+        </div>
+        <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
+          <span>Preço (USDT)</span><span className="text-right">Qtd.</span><span className="text-right">Total</span>
+        </div>
+        <div className="px-2 font-mono text-[11px]">
+          <div className="space-y-0.5">
+            {(orderBook?.asks.slice().reverse() ?? []).map((row) => <OrderRow key={`ask-${row.price}`} row={row} side="ask" />)}
+          </div>
+          <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
+            <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
+            <span className="text-[10px] font-normal text-muted-foreground">{orderBook ? "● ao vivo" : "carregando"}</span>
+          </div>
+          <div className="space-y-0.5">
+            {(orderBook?.bids ?? []).map((row) => <OrderRow key={`bid-${row.price}`} row={row} side="bid" />)}
+          </div>
+          {!orderBook && <div className="py-6 text-center font-sans text-xs text-muted-foreground">Carregando ordens…</div>}
+        </div>
       </aside>
 
       {/* gráfico */}
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
         <div className="rounded-xl border bg-card p-3 flex flex-wrap items-center gap-x-6 gap-y-1">
-          <div className="flex items-center gap-2 text-lg font-bold"><MarketIcon base={MARKETS.find((mk) => mk.symbol === symbol)?.icon ?? symbol.replace("USDT", "").toLowerCase()} size="md" />{symbol.replace("USDT", "")}/USDT</div>
+          <div className="relative">
+            <button onClick={() => setMarketMenuOpen((open) => !open)} className="flex items-center gap-2 text-lg font-bold hover:text-primary">
+              <MarketIcon base={MARKETS.find((mk) => mk.symbol === symbol)?.icon ?? symbol.replace("USDT", "").toLowerCase()} size="md" />{symbol.replace("USDT", "")}/USDT <span className="text-xs text-muted-foreground">⌄</span>
+            </button>
+            {marketMenuOpen && <div className="absolute left-0 top-10 z-30 w-52 rounded-lg border bg-card p-1 shadow-xl">
+              {MARKETS.map((mk) => <button key={mk.symbol} onClick={() => { setSymbol(mk.symbol); setPrice(0); setMarketMenuOpen(false); }} className={`flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}>
+                <span className="flex items-center gap-2"><MarketIcon base={mk.icon} />{mk.base}/USDT</span>
+                <span className="font-mono text-xs text-muted-foreground">{tickers?.[mk.symbol]?.lastPrice ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice)) : "—"}</span>
+              </button>)}
+            </div>}
+          </div>
           <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>{currentPrice ? fmtPrice(currentPrice) : "…"}</div>
           <Stat k="24h" v={`${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`} />
           <Stat k="Máx 24h" v={t ? fmtPrice(Number(t.highPrice)) : "—"} />
@@ -215,8 +261,11 @@ function Trade() {
           </div>
         </div>
         <div className="space-y-2">
-          <div className="flex justify-between text-xs"><span className="text-muted-foreground">Alavancagem</span><span className="font-mono font-bold text-primary">{lev}x</span></div>
-          <Slider min={MIN_LEVERAGE} max={sliderMax} step={1} value={[Math.min(lev, sliderMax)]} onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)} />
+          <div className="flex items-center justify-between text-xs"><span className="text-muted-foreground">Alavancagem</span><button onClick={() => setLeverageOpen((open) => !open)} className="rounded border border-primary/40 px-2 py-1 font-mono font-bold text-primary hover:bg-primary/10">{lev}x⌄</button></div>
+          {leverageOpen && <div className="space-y-2 rounded-lg border border-primary/30 bg-background p-2 shadow-lg">
+            <div className="grid grid-cols-3 gap-1">{[1, 2, 5, 10, 25, 50].map((quick) => <button key={quick} disabled={quick > sliderMax} onClick={() => { setLev(quick); setLeverageOpen(false); }} className="rounded border py-1 text-xs disabled:cursor-not-allowed disabled:opacity-30 hover:bg-muted">{quick}x</button>)}</div>
+            <Slider min={MIN_LEVERAGE} max={sliderMax} step={1} value={[Math.min(lev, sliderMax)]} onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)} />
+          </div>}
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono"><span>{MIN_LEVERAGE}x mín.</span><span>25x</span><span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span></div>
           <div className="text-[11px] text-muted-foreground">Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span></div>
         </div>
@@ -239,6 +288,14 @@ function Trade() {
       </aside>
     </main>
   );
+}
+
+function OrderRow({ row, side }: { row: { price: number; quantity: number; total: number }; side: "ask" | "bid" }) {
+  return <div className={`grid grid-cols-3 gap-2 rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}>
+    <span>{fmtPrice(row.price)}</span>
+    <span className="text-right text-foreground">{row.quantity.toPrecision(5)}</span>
+    <span className="text-right text-foreground">{row.total.toPrecision(5)}</span>
+  </div>;
 }
 
 function Stat({ k, v }: { k: string; v: string }) {
