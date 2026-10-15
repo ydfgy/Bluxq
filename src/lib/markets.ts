@@ -1,14 +1,14 @@
 export const MARKETS = [
-  { symbol: "BTCUSDT", base: "BTC", name: "Bitcoin" },
-  { symbol: "ETHUSDT", base: "ETH", name: "Ethereum" },
-  { symbol: "SOLUSDT", base: "SOL", name: "Solana" },
-  { symbol: "BNBUSDT", base: "BNB", name: "BNB" },
-  { symbol: "XRPUSDT", base: "XRP", name: "XRP" },
-  { symbol: "DOGEUSDT", base: "DOGE", name: "Dogecoin" },
-  { symbol: "ADAUSDT", base: "ADA", name: "Cardano" },
-  { symbol: "AVAXUSDT", base: "AVAX", name: "Avalanche" },
-  { symbol: "LINKUSDT", base: "LINK", name: "Chainlink" },
-  { symbol: "TONUSDT", base: "TON", name: "Toncoin" },
+  { symbol: "BTCUSDT", base: "BTC", name: "Bitcoin", icon: "btc" },
+  { symbol: "ETHUSDT", base: "ETH", name: "Ethereum", icon: "eth" },
+  { symbol: "SOLUSDT", base: "SOL", name: "Solana", icon: "sol" },
+  { symbol: "BNBUSDT", base: "BNB", name: "BNB", icon: "bnb" },
+  { symbol: "XRPUSDT", base: "XRP", name: "XRP", icon: "xrp" },
+  { symbol: "DOGEUSDT", base: "DOGE", name: "Dogecoin", icon: "doge" },
+  { symbol: "ADAUSDT", base: "ADA", name: "Cardano", icon: "ada" },
+  { symbol: "AVAXUSDT", base: "AVAX", name: "Avalanche", icon: "avax" },
+  { symbol: "LINKUSDT", base: "LINK", name: "Chainlink", icon: "link" },
+  { symbol: "TONUSDT", base: "TON", name: "Toncoin", icon: "ton" },
 ] as const;
 
 export const SYMBOLS = MARKETS.map((m) => m.symbol) as string[];

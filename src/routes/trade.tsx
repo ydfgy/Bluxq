@@ -106,9 +106,9 @@ function Trade() {
         {MARKETS.map((mk) => {
           const tk = tickers?.[mk.symbol]; const c = Number(tk?.priceChangePercent ?? 0);
           return (
-            <button key={mk.symbol} onClick={() => { setSymbol(mk.symbol); setPrice(0); }}
+            <button key={mk.symbol} title={mk.name} onClick={() => { setSymbol(mk.symbol); setPrice(0); }}
               className={`flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-muted/50 ${symbol === mk.symbol ? "bg-muted" : ""}`}>
-              <span className="font-semibold">{mk.base}<span className="text-muted-foreground font-normal">/USDT</span></span>
+              <span className="flex items-center gap-2 font-semibold"><MarketIcon base={mk.icon} />{mk.base}<span className="text-muted-foreground font-normal">/USDT</span></span>
               <span className="text-right font-mono text-xs">
                 <div>{tk ? fmtPrice(Number(tk.lastPrice)) : "—"}</div>
                 <div className={c >= 0 ? "text-bull" : "text-bear"}>{c >= 0 ? "+" : ""}{c.toFixed(2)}%</div>
@@ -121,7 +121,7 @@ function Trade() {
       {/* gráfico */}
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
         <div className="rounded-xl border bg-card p-3 flex flex-wrap items-center gap-x-6 gap-y-1">
-          <div className="text-lg font-bold">{symbol.replace("USDT", "")}/USDT</div>
+          <div className="flex items-center gap-2 text-lg font-bold"><MarketIcon base={MARKETS.find((mk) => mk.symbol === symbol)?.icon ?? symbol.replace("USDT", "").toLowerCase()} size="md" />{symbol.replace("USDT", "")}/USDT</div>
           <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>{price ? fmtPrice(price) : "…"}</div>
           <Stat k="24h" v={`${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`} />
           <Stat k="Máx 24h" v={t ? fmtPrice(Number(t.highPrice)) : "—"} />
@@ -231,4 +231,20 @@ function Stat({ k, v }: { k: string; v: string }) {
 }
 function Row({ k, v, cls = "" }: { k: string; v: string; cls?: string }) {
   return <div className="flex justify-between"><span className="text-muted-foreground font-sans">{k}</span><span className={cls}>{v}</span></div>;
+}
+
+function MarketIcon({ base, size = "sm" }: { base: string; size?: "sm" | "md" }) {
+  return (
+    <span className={`relative grid shrink-0 place-items-center rounded-full bg-muted font-mono text-[9px] text-muted-foreground ${size === "md" ? "h-7 w-7" : "h-5 w-5"}`}>
+      <span aria-hidden="true">{base.slice(0, 1).toUpperCase()}</span>
+      <img
+        src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
+        alt=""
+        className={`${size === "md" ? "h-7 w-7" : "h-5 w-5"} rounded-full`}
+        loading="lazy"
+        onError={(event) => { event.currentTarget.style.display = "none"; }}
+      />
+      <span className="sr-only">{base}</span>
+    </span>
+  );
 }
