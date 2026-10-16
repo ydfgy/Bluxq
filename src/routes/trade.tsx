@@ -25,6 +25,7 @@ import {
   MAX_LEVERAGE,
 } from "@/lib/markets";
 import { getBinanceTickers } from "@/lib/market-data";
+import { connectOrderBookStream, fetchOrderBook, type OrderBook } from "@/lib/order-book";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -74,6 +75,36 @@ function useTickers() {
   });
 }
 
+function useOrderBook(symbol: string) {
+  const [book, setBook] = useState<OrderBook | null>(null);
+  useEffect(() => {
+    let dead = false;
+    let socket: WebSocket | undefined;
+    setBook(null);
+    fetchOrderBook(symbol, 5)
+      .then((next) => {
+        if (!dead) setBook(next);
+      })
+      .catch(() => {});
+    try {
+      socket = connectOrderBookStream(
+        symbol,
+        (next) => {
+          if (!dead) setBook({ ...next, asks: next.asks.slice(0, 5), bids: next.bids.slice(0, 5) });
+        },
+        () => {},
+      );
+    } catch {
+      // The REST snapshot remains available if the stream is unavailable.
+    }
+    return () => {
+      dead = true;
+      socket?.close();
+    };
+  }, [symbol]);
+  return book;
+}
+
 function Trade() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
@@ -89,6 +120,7 @@ function Trade() {
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const { data: tickers } = useTickers();
+  const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
     queryKey: ["pool"],
     refetchInterval: 5000,
@@ -279,11 +311,11 @@ function Trade() {
   return (
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
       <CoinRain show={rain} />
-      {/* order book interno da plataforma */}
+      {/* real market order book */}
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-          <span className="text-[10px] text-bull">● operações ao vivo</span>
+          <span className="text-[10px] text-bull">● mercado ao vivo</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
           <span>Preço</span>
@@ -292,44 +324,26 @@ function Trade() {
         </div>
         <div className="px-2 font-mono text-[11px]">
           <div className="space-y-0.5">
-            {platformPositions
-              .filter((position) => position.side === "short")
-              .slice()
-              .reverse()
-              .map((position) => (
-                <OrderRow
-                  key={position.id}
-                  row={{
-                    price: Number(position.entry_price),
-                    quantity: Number(position.qty),
-                    total: Number(position.entry_price) * Number(position.qty),
-                  }}
-                  side="ask"
-                />
-              ))}
+            {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
+              <OrderRow key={`ask-${row.price}`} row={row} side="ask" />
+            ))}
           </div>
           <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
             <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
-            <span className="text-[10px] font-normal text-muted-foreground">preço atual</span>
+            <span className="text-[10px] font-normal text-muted-foreground">
+              {orderBook
+                ? `atualizado ${new Date(orderBook.updatedAt).toLocaleTimeString("pt-BR")}`
+                : "carregando"}
+            </span>
           </div>
           <div className="space-y-0.5">
-            {platformPositions
-              .filter((position) => position.side === "long")
-              .map((position) => (
-                <OrderRow
-                  key={position.id}
-                  row={{
-                    price: Number(position.entry_price),
-                    quantity: Number(position.qty),
-                    total: Number(position.entry_price) * Number(position.qty),
-                  }}
-                  side="bid"
-                />
-              ))}
+            {(orderBook?.bids ?? []).map((row) => (
+              <OrderRow key={`bid-${row.price}`} row={row} side="bid" />
+            ))}
           </div>
-          {platformPositions.length === 0 && (
+          {!orderBook && (
             <div className="py-6 text-center font-sans text-xs text-muted-foreground">
-              Nenhuma operação aberta
+              Carregando níveis do mercado…
             </div>
           )}
         </div>
