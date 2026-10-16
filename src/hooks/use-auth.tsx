@@ -16,7 +16,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       if (nextSession?.expires_at && nextSession.expires_at * 1000 <= Date.now()) {
         setSession(null);
-        void supabase.auth.signOut({ scope: "local" });
       } else {
         setSession(nextSession);
       }
@@ -25,7 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
     supabase.auth.getSession().then(async ({ data }) => {
       if (data.session?.expires_at && data.session.expires_at * 1000 <= Date.now()) {
-        await supabase.auth.signOut({ scope: "local" });
+        // Do not call signOut here: a concurrent login could be cleared by this
+        // stale-session cleanup. A successful sign-in replaces the stored value.
         setSession(null);
       } else {
         setSession(data.session);
