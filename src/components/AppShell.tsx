@@ -9,8 +9,12 @@ import { fmt } from "@/lib/markets";
 export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-gold-foreground glow-gold font-mono">B$</span>
-      <span>Blux<span className="text-primary">Trade</span></span>
+      <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-gold-foreground glow-gold font-mono">
+        B$
+      </span>
+      <span>
+        Blux<span className="text-primary">Trade</span>
+      </span>
     </Link>
   );
 }
@@ -37,16 +41,32 @@ export function Navbar() {
         <Logo />
         {session && (
           <nav className="hidden md:flex items-center gap-5">
-            <Link to="/trade" className={link} activeProps={active}>Trade</Link>
-            <Link to="/wallet" className={link} activeProps={active}>Carteira</Link>
-            <Link to="/stake" className={link} activeProps={active}>Stake</Link>
-            {isAdmin && <Link to="/admin" className={link} activeProps={active}>Admin</Link>}
+            <Link to="/trade" className={link} activeProps={active}>
+              Trade
+            </Link>
+            <Link to="/wallet" className={link} activeProps={active}>
+              Wallet
+            </Link>
+            <Link to="/stake" className={link} activeProps={active}>
+              Stake
+            </Link>
+            <Link to="/referrals" className={link} activeProps={active}>
+              Referrals
+            </Link>
+            {isAdmin && (
+              <Link to="/admin" className={link} activeProps={active}>
+                Admin
+              </Link>
+            )}
           </nav>
         )}
         <div className="ml-auto flex items-center gap-3">
           {session && profile ? (
             <>
-              <Link to="/wallet" className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-sm text-gold">
+              <Link
+                to="/wallet"
+                className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-sm text-gold"
+              >
                 B$ {fmt(profile.balance)}
               </Link>
               <div className="hidden sm:flex items-center gap-2">
@@ -57,30 +77,57 @@ export function Navbar() {
                 )}
                 <span className="text-sm">{profile.roblox_username}</span>
               </div>
-              <Button size="sm" variant="ghost" onClick={signOut}>Sair</Button>
+              <Button size="sm" variant="ghost" onClick={signOut}>
+                Sign out
+              </Button>
             </>
           ) : (
             <>
-              <Button asChild size="sm" variant="ghost"><Link to="/auth">Entrar</Link></Button>
-              <Button asChild size="sm"><Link to="/auth" search={{ mode: "signup" }}>Criar conta</Link></Button>
+              <Button asChild size="sm" variant="ghost">
+                <Link to="/auth">Sign in</Link>
+              </Button>
+              <Button asChild size="sm">
+                <Link to="/auth" search={{ mode: "signup" }}>
+                  Create account
+                </Link>
+              </Button>
             </>
           )}
         </div>
       </div>
       {session && (
         <nav className="flex md:hidden items-center justify-around border-t py-2">
-          <Link to="/trade" className={link} activeProps={active}>Trade</Link>
-          <Link to="/wallet" className={link} activeProps={active}>Carteira</Link>
-          <Link to="/stake" className={link} activeProps={active}>Stake</Link>
-          {isAdmin && <Link to="/admin" className={link} activeProps={active}>Admin</Link>}
+          <Link to="/trade" className={link} activeProps={active}>
+            Trade
+          </Link>
+          <Link to="/wallet" className={link} activeProps={active}>
+            Wallet
+          </Link>
+          <Link to="/stake" className={link} activeProps={active}>
+            Stake
+          </Link>
+          <Link to="/referrals" className={link} activeProps={active}>
+            Referrals
+          </Link>
+          {isAdmin && (
+            <Link to="/admin" className={link} activeProps={active}>
+              Admin
+            </Link>
+          )}
         </nav>
       )}
     </header>
   );
 }
 
-/** Protege a página: exige login e (opcionalmente) Roblox verificado. */
-export function Protected({ children, requireVerified = true }: { children: ReactNode; requireVerified?: boolean }) {
+/** Protects the page: login and optional Roblox verification are required. */
+export function Protected({
+  children,
+  requireVerified = true,
+}: {
+  children: ReactNode;
+  requireVerified?: boolean;
+}) {
   const { session, ready } = useAuth();
   const { data: profile, isLoading } = useProfile();
   const nav = useNavigate();
@@ -89,7 +136,9 @@ export function Protected({ children, requireVerified = true }: { children: Reac
     else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
   }, [ready, session, profile, requireVerified, nav]);
   if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {
-    return <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Carregando…</div>;
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Loading…</div>
+    );
   }
   return <>{children}</>;
 }

@@ -11,10 +11,10 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/verify")({
   head: () => ({
     meta: [
-      { title: "Verificar Roblox — BluxTrade" },
-      { name: "description", content: "Verifique sua conta Roblox" },
-      { property: "og:title", content: "Verificar Roblox" },
-      { property: "og:description", content: "Verifique sua conta Roblox" },
+      { title: "Verify Roblox — BluxTrade" },
+      { name: "description", content: "Verify your Roblox account" },
+      { property: "og:title", content: "Verify Roblox" },
+      { property: "og:description", content: "Verify your Roblox account" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -49,23 +49,21 @@ function Verify() {
   if (!p)
     return (
       <main className="mx-auto max-w-md p-8" aria-busy="true">
-        Carregando verificação…
+        Loading verification…
       </main>
     );
   if (p.verified)
     return (
       <main className="mx-auto max-w-md p-8">
-        Conta Roblox <b>{p.roblox_username}</b> verificada.
+        Conta Roblox <b>{p.roblox_username}</b> verified.
       </main>
     );
 
   if (challengeError)
     return (
       <main className="mx-auto max-w-md space-y-4 px-4 py-12">
-        <h1 className="text-2xl font-bold">Verifique sua conta Roblox</h1>
-        <p className="text-muted-foreground">
-          Não foi possível carregar sua frase de verificação agora.
-        </p>
+        <h1 className="text-2xl font-bold">Verify your Roblox account</h1>
+        <p className="text-muted-foreground">Unable to load your verification phrase right now.</p>
         <Button className="w-full" onClick={() => retryChallenge()}>
           Tentar novamente
         </Button>
@@ -92,7 +90,7 @@ function Verify() {
       }
       toast.success("Frase copiada");
     } catch {
-      toast.error("Não foi possível copiar a frase");
+      toast.error("Unable to copy the phrase");
     } finally {
       setCopying(false);
     }
@@ -100,10 +98,10 @@ function Verify() {
 
   return (
     <main className="mx-auto max-w-md space-y-4 px-4 py-12">
-      <h1 className="text-2xl font-bold">Verifique sua conta Roblox</h1>
+      <h1 className="text-2xl font-bold">Verify your Roblox account</h1>
       <p className="text-muted-foreground">
-        Cole esta frase em Sobre no perfil Roblox <b>{p.roblox_username}</b> e clique em verificar.
-        A conferência é feita no servidor.
+        Paste this phrase into About on the Roblox profile <b>{p.roblox_username}</b> and click
+        verify. Verification is performed server-side.
       </p>
       <div
         className="rounded-lg border bg-card p-4 font-mono text-gold"
@@ -111,7 +109,7 @@ function Verify() {
         aria-busy={challengeLoading}
       >
         {challengeLoading
-          ? "Carregando frase…"
+          ? "Loading phrase…"
           : revealed
             ? challenge?.phrase
             : "•••• •••• •••••••••••••••••••••••••••••••••"}
@@ -139,9 +137,7 @@ function Verify() {
             toast.success("Verificado!");
             nav({ to: "/trade" });
           } catch (error: unknown) {
-            toast.error(
-              error instanceof Error ? error.message : "Não foi possível verificar agora.",
-            );
+            toast.error(error instanceof Error ? error.message : "Unable to verify right now.");
           } finally {
             setBusy(false);
           }

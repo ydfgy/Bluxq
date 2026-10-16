@@ -19,7 +19,7 @@ function rpcError(error: { message: string; code?: string } | null) {
       clean,
     );
   throw new Error(
-    !clean || clean.length > 240 || internal ? "Não foi possível concluir a operação." : clean,
+    !clean || clean.length > 240 || internal ? "Unable to complete the operation." : clean,
   );
 }
 
@@ -102,7 +102,9 @@ const verificationWords = [
 function createVerificationPhrase() {
   const random = new Uint32Array(4);
   crypto.getRandomValues(random);
-  return `invest with bluxtrade ${Array.from(random, (value) => verificationWords[value % verificationWords.length]).join(" ")}`;
+  return Array.from(random, (value) => verificationWords[value % verificationWords.length]).join(
+    " ",
+  );
 }
 
 async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
@@ -199,7 +201,7 @@ export const closePosition = createServerFn({ method: "POST" })
       .eq("status", "open")
       .maybeSingle();
     rpcError(positionError);
-    if (!pos) throw new Error("Posição não encontrada");
+    if (!pos) throw new Error("Position not found");
     const prices = await getBinancePrices([pos.symbol]);
     const sb = await admin();
     const { data: res, error } = await sb.rpc("fn_close_position", {
@@ -234,6 +236,18 @@ export const unstake = createServerFn({ method: "POST" })
     ).rpc("fn_unstake", { _user: context.userId, _amount: data.amount });
     rpcError(error);
     return { ok: true };
+  });
+
+export const claimAffiliate = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data: value, error } = await (
+      await admin()
+    ).rpc("fn_claim_affiliate", {
+      _user: context.userId,
+    });
+    rpcError(error);
+    return { amount: Number(value ?? 0) };
   });
 
 export const requestDeposit = createServerFn({ method: "POST" })
@@ -308,7 +322,7 @@ export const setRobloxUsername = createServerFn({ method: "POST" })
       .eq("id", context.userId)
       .single();
     rpcError(profileError);
-    if (p?.verified) throw new Error("Conta já verificada");
+    if (p?.verified) throw new Error("Account already verified");
     const { error } = await sb
       .from("profiles")
       .update({ roblox_username: data.username })
@@ -327,7 +341,7 @@ export const verifyRoblox = createServerFn({ method: "POST" })
       .eq("id", context.userId)
       .single();
     rpcError(profileError);
-    if (!p) throw new Error("Perfil não encontrado");
+    if (!p) throw new Error("Profile not found");
     if (p.verified) return { verified: true };
 
     const { data: challenge, error: challengeError } = await sb
@@ -336,7 +350,7 @@ export const verifyRoblox = createServerFn({ method: "POST" })
       .eq("user_id", context.userId)
       .single();
     rpcError(challengeError);
-    if (!challenge) throw new Error("Desafio de verificação não encontrado");
+    if (!challenge) throw new Error("Verification challenge not found");
 
     const r1 = await fetch("https://users.roblox.com/v1/usernames/users", {
       method: "POST",
@@ -344,25 +358,22 @@ export const verifyRoblox = createServerFn({ method: "POST" })
       body: JSON.stringify({ usernames: [p.roblox_username], excludeBannedUsers: true }),
       signal: AbortSignal.timeout(8000),
     });
-    if (!r1.ok)
-      throw new Error("O Roblox não respondeu à consulta. Tente novamente em alguns segundos.");
+    if (!r1.ok) throw new Error("Roblox did not respond. Try again in a few seconds.");
     const j1 = (await r1.json()) as { data?: { id: number; name: string; displayName: string }[] };
     const user = j1.data?.[0];
-    if (!user) throw new Error("Usuário Roblox não encontrado");
+    if (!user) throw new Error("Roblox user not found");
 
     const r2 = await fetch(`https://users.roblox.com/v1/users/${user.id}`, {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(8000),
     });
     if (!r2.ok)
-      throw new Error(
-        "Não foi possível ler o perfil Roblox agora. Tente novamente em alguns segundos.",
-      );
+      throw new Error("Unable to read the Roblox profile right now. Try again in a few seconds.");
     const j2 = (await r2.json()) as { description?: string };
     const bio = (j2.description ?? "").toLowerCase();
     if (!bio.includes(challenge.verify_phrase.toLowerCase())) {
       throw new Error(
-        "Frase não encontrada na sua bio do Roblox. Salve a bio e tente de novo em alguns segundos.",
+        "Phrase not found in your Roblox bio. Save the bio and try again in a few seconds.",
       );
     }
 
@@ -373,7 +384,7 @@ export const verifyRoblox = createServerFn({ method: "POST" })
       .neq("id", context.userId)
       .maybeSingle();
     rpcError(takenError);
-    if (taken) throw new Error("Essa conta Roblox já está ligada a outro usuário");
+    if (taken) throw new Error("This Roblox account is already linked to another user");
 
     const { error } = await sb
       .from("profiles")
@@ -395,7 +406,7 @@ export const claimAdmin = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const expected = process.env["ADMIN_BOOTSTRAP_SECRET"] ?? "";
     if (!expected || !constantTimeEqual(data.bootstrapSecret, expected)) {
-      throw new Error("Chave de inicialização inválida");
+      throw new Error("Invalid bootstrap key");
     }
     const { error } = await (await admin()).rpc("fn_claim_admin", { _user: context.userId });
     rpcError(error);

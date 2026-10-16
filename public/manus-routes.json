@@ -2,10 +2,11 @@
   "routes": [
     { "path": "/", "title": "Home" },
     { "path": "/admin", "title": "Admin" },
-    { "path": "/auth", "title": "Autenticação" },
+    { "path": "/auth", "title": "Authentication" },
+    { "path": "/referrals", "title": "Referrals" },
     { "path": "/stake", "title": "Stake" },
     { "path": "/trade", "title": "Trade" },
-    { "path": "/verify", "title": "Verificação Roblox" },
-    { "path": "/wallet", "title": "Carteira" }
+    { "path": "/verify", "title": "Roblox verification" },
+    { "path": "/wallet", "title": "Wallet" }
   ]
 }

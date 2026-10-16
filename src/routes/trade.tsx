@@ -168,7 +168,7 @@ function Trade() {
   const m = Number(margin) || 0;
   const openingFee = m * 0.1;
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
-  // A posição reserva margem * (alavancagem + 4): dívida + lucro máximo garantido.
+  // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
     m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
@@ -190,7 +190,7 @@ function Trade() {
             color: p.side === "long" ? "#22c55e" : "#ef4444",
             title: `${p.side === "long" ? "LONG" : "SHORT"} ${p.leverage}x entrada`,
           },
-          { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidação" },
+          { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidation" },
         ]),
     [JSON.stringify(openPos.map((p) => p.id)), symbol],
   );
@@ -200,16 +200,16 @@ function Trade() {
     try {
       if (poolMaxLev < MIN_LEVERAGE)
         throw new Error(
-          `A pool tem liquidez para no máximo ${Math.max(poolMaxLev, 0)}x nesta margem. Reduza a margem ou aguarde novos stakes.`,
+          `The pool has liquidity for at most ${Math.max(poolMaxLev, 0)}x on this margin. Reduce the margin or wait for more stakes.`,
         );
       if (lev > poolMaxLev)
-        throw new Error(`A alavancagem máxima disponível agora é ${poolMaxLev}x.`);
+        throw new Error(`The maximum leverage available now is ${poolMaxLev}x.`);
       const r = await open({ data: { symbol, side, margin: m, leverage: lev } });
       toast.success(`${side === "long" ? "Long" : "Short"} aberto a ${fmtPrice(r.price ?? 0)}`);
       await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
       await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível abrir a posição.");
+      toast.error(e instanceof Error ? e.message : "Unable to open the position.");
     } finally {
       setBusy(false);
     }
@@ -224,7 +224,7 @@ function Trade() {
       await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
       await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível fechar a posição.");
+      toast.error(e instanceof Error ? e.message : "Unable to close the position.");
     }
   }
 
@@ -240,7 +240,7 @@ function Trade() {
     return [
       "BluxTrade — resultado atual",
       `Pares abertos: ${openPos.length}`,
-      `Lucro/prejuízo: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} B$ (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
+      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} B$ (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
       `Atualizado em: ${new Date().toLocaleString("pt-BR")}`,
     ].join("\n");
   }
@@ -319,7 +319,7 @@ function Trade() {
           <span className="text-[10px] text-bull">● mercado ao vivo</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
-          <span>Preço</span>
+          <span>Price</span>
           <span className="text-right">Qtd.</span>
           <span className="text-right">Total</span>
         </div>
@@ -344,14 +344,14 @@ function Trade() {
           </div>
           {!orderBook && (
             <div className="py-6 text-center font-sans text-xs text-muted-foreground">
-              Carregando níveis do mercado…
+              Loading market levels…
             </div>
           )}
         </div>
         <div className="border-t px-2 py-2 font-mono text-[10px]">
           <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span>Operações abertas recentemente</span>
-            <span>5 últimas</span>
+            <span>Recently opened trades</span>
+            <span>Last 5</span>
           </div>
           <div className="space-y-0.5">
             {[...platformPositions]
@@ -388,7 +388,7 @@ function Trade() {
                 );
               })}
             {platformPositions.length === 0 && (
-              <div className="py-2 text-center text-muted-foreground">Nenhuma posição aberta</div>
+              <div className="py-2 text-center text-muted-foreground">No open positions</div>
             )}
           </div>
         </div>
@@ -472,7 +472,7 @@ function Trade() {
                 onClick={() => setTab(k)}
                 className={`py-2 text-sm ${tab === k ? "border-b-2 border-primary font-semibold" : "text-muted-foreground"}`}
               >
-                {k === "open" ? `Posições abertas (${openPos.length})` : "Histórico"}
+                {k === "open" ? `Open positions (${openPos.length})` : "History"}
               </button>
             ))}
             {tab === "open" && openPos.length > 0 && (
@@ -507,7 +507,7 @@ function Trade() {
                   <th>Tamanho</th>
                   <th>Entrada</th>
                   <th>{tab === "open" ? "Atual" : "Saída"}</th>
-                  <th>Liquidação</th>
+                  <th>Liquidation</th>
                   <th>PnL</th>
                   <th></th>
                 </tr>
@@ -580,7 +580,7 @@ function Trade() {
       {/* ordem */}
       <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Saldo</span>
+          <span className="text-muted-foreground">Balance</span>
           <span className="font-mono text-gold">B$ {fmt(profile?.balance)}</span>
         </div>
         <div className="space-y-1">
@@ -623,7 +623,7 @@ function Trade() {
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
             <span>{MIN_LEVERAGE}x mín.</span>
             <span>arraste para ajustar</span>
-            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
+            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "unavailable"}</span>
           </div>
           <div className="text-[11px] text-muted-foreground">
             Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
@@ -639,12 +639,12 @@ function Trade() {
                 : "—"
             }
           />
-          <Row k="Liquidação Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
-          <Row k="Liquidação Short" v={currentPrice ? fmtPrice(liqShort) : "—"} cls="text-bear" />
+          <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
+          <Row k="Liquidation Short" v={currentPrice ? fmtPrice(liqShort) : "—"} cls="text-bear" />
           <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-          <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
-          <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$ (10% da margem)`} />
-          <Row k="Saldo debitado" v={`${fmt(m + openingFee)} B$ (margem + taxa)`} />
+          <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} B$`} />
+          <Row k="Opening fee" v={`${fmt(openingFee)} B$ (10% da margem)`} />
+          <Row k="Balance debited" v={`${fmt(m + openingFee)} B$ (margem + taxa)`} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button
@@ -667,9 +667,10 @@ function Trade() {
           </Button>
         </div>
         <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Preços reais da Binance. Alavancagem mínima: {MIN_LEVERAGE}x. O máximo varia conforme a
-          liquidez livre da pool, até {MAX_LEVERAGE}x. Você é liquidado quando perde{" "}
-          {LIQ_LOSS * 100}% da margem. O lucro é pago pela pool e limitado a {PROFIT_CAP}x a margem.
+          Prices reais da Binance. Alavancagem mínima: {MIN_LEVERAGE}x. O máximo varia conforme a
+          liquidez livre da pool, até {MAX_LEVERAGE}x. You are liquidated when you lose{" "}
+          {LIQ_LOSS * 100}% of your margin. Profit is paid by the pool and capped at {PROFIT_CAP}x a
+          margem.
         </p>
       </aside>
       {selectedPosition && (
@@ -705,8 +706,8 @@ function Trade() {
               <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} B$`} />
               <Row k="Quantidade" v={Number(selectedPosition.qty).toPrecision(7)} />
               <Row k="Entrada" v={fmtPrice(Number(selectedPosition.entry_price))} />
-              <Row k="Preço atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
-              <Row k="Liquidação" v={fmtPrice(Number(selectedPosition.liq_price))} />
+              <Row k="Price atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
+              <Row k="Liquidation" v={fmtPrice(Number(selectedPosition.liq_price))} />
               <Row k="Aberta em" v={new Date(selectedPosition.opened_at).toLocaleString("pt-BR")} />
             </div>
             <div

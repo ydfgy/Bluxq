@@ -7,13 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s) => z.object({ mode: z.enum(["login", "signup"]).optional() }).parse(s),
+  validateSearch: (s) =>
+    z
+      .object({ mode: z.enum(["login", "signup"]).optional(), ref: z.string().max(10).optional() })
+      .parse(s),
   head: () => ({
     meta: [
-      { title: "Entrar — BluxTrade" },
-      { name: "description", content: "Entre ou crie sua conta BluxTrade" },
-      { property: "og:title", content: "Entrar — BluxTrade" },
-      { property: "og:description", content: "Entre ou crie sua conta" },
+      { title: "Sign in — BluxTrade" },
+      { name: "description", content: "Sign in or create your BluxTrade account" },
+      { property: "og:title", content: "Sign in — BluxTrade" },
+      { property: "og:description", content: "Sign in or create your account" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -22,12 +25,12 @@ export const Route = createFileRoute("/auth")({
 });
 
 function AuthPage() {
-  const { mode } = Route.useSearch();
+  const { mode, ref } = Route.useSearch();
   const [signup, setSignup] = useState(mode === "signup");
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [rbx, setRbx] = useState("");
-  const [referralCode, setReferralCode] = useState("");
+  const [referralCode, setReferralCode] = useState(ref?.toUpperCase() ?? "");
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
   async function submit(e: React.FormEvent) {
@@ -53,7 +56,7 @@ function AuthPage() {
           });
           if (loginError) throw loginError;
         }
-        toast.success("Conta criada com sucesso!");
+        toast.success("Account created successfully!");
         nav({ to: "/verify" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
@@ -61,16 +64,14 @@ function AuthPage() {
         nav({ to: "/verify" });
       }
     } catch (error: unknown) {
-      toast.error(
-        error instanceof Error ? error.message : "Não foi possível concluir a autenticação.",
-      );
+      toast.error(error instanceof Error ? error.message : "Unable to complete authentication.");
     } finally {
       setBusy(false);
     }
   }
   return (
     <main className="mx-auto max-w-sm px-4 py-16">
-      <h1 className="text-2xl font-bold">{signup ? "Criar conta" : "Entrar"}</h1>
+      <h1 className="text-2xl font-bold">{signup ? "Create account" : "Entrar"}</h1>
       <form onSubmit={submit} className="mt-6 space-y-3">
         <Input
           type="email"
@@ -81,7 +82,7 @@ function AuthPage() {
         />
         <Input
           type="password"
-          placeholder="Senha"
+          placeholder="Password"
           minLength={6}
           value={pw}
           onChange={(e) => setPw(e.target.value)}
@@ -90,13 +91,13 @@ function AuthPage() {
         {signup && (
           <>
             <Input
-              placeholder="Nome de usuário do Roblox"
+              placeholder="Roblox username"
               value={rbx}
               onChange={(e) => setRbx(e.target.value)}
               required
             />
             <Input
-              placeholder="Código de indicação (opcional)"
+              placeholder="Referral code (optional)"
               value={referralCode}
               onChange={(e) => setReferralCode(e.target.value)}
               maxLength={10}
@@ -104,11 +105,11 @@ function AuthPage() {
           </>
         )}
         <Button className="w-full" disabled={busy}>
-          {signup ? "Criar conta" : "Entrar"}
+          {signup ? "Create account" : "Entrar"}
         </Button>
       </form>
       <button className="mt-4 text-sm text-muted-foreground" onClick={() => setSignup(!signup)}>
-        {signup ? "Já tem conta? Entrar" : "Não tem conta? Criar"}
+        {signup ? "Already have an account? Sign in" : "Need an account? Create one"}
       </button>
     </main>
   );

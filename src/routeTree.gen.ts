@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as VerifyRouteImport } from './routes/verify'
@@ -30,6 +31,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ReferralsRoute = ReferralsRouteImport.update({
+  id: '/referrals',
+  path: '/referrals',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StakeRoute = StakeRouteImport.update({
@@ -57,6 +63,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
@@ -66,6 +73,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
@@ -76,6 +84,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
@@ -84,14 +93,30 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    '/' | '/admin' | '/auth' | '/stake' | '/trade' | '/verify' | '/wallet'
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/referrals'
+    | '/stake'
+    | '/trade'
+    | '/verify'
+    | '/wallet'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/admin' | '/auth' | '/stake' | '/trade' | '/verify' | '/wallet'
+  to:
+    | '/'
+    | '/admin'
+    | '/auth'
+    | '/referrals'
+    | '/stake'
+    | '/trade'
+    | '/verify'
+    | '/wallet'
   id:
     | '__root__'
     | '/'
     | '/admin'
     | '/auth'
+    | '/referrals'
     | '/stake'
     | '/trade'
     | '/verify'
@@ -102,6 +127,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  ReferralsRoute: typeof ReferralsRoute
   StakeRoute: typeof StakeRoute
   TradeRoute: typeof TradeRoute
   VerifyRoute: typeof VerifyRoute
@@ -129,6 +155,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/referrals': {
+      id: '/referrals'
+      path: '/referrals'
+      fullPath: '/referrals'
+      preLoaderRoute: typeof ReferralsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stake': {
@@ -166,6 +199,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  ReferralsRoute: ReferralsRoute,
   StakeRoute: StakeRoute,
   TradeRoute: TradeRoute,
   VerifyRoute: VerifyRoute,
