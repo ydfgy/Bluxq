@@ -23,12 +23,20 @@ function Index() {
           Acompanhe BTC, ETH, SOL e outros mercados com candles da Binance, Long/Short e alavancagem
           de até 50x.
         </p>
-        <Link
-          to="/trade"
-          className="mt-7 inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
-        >
-          Abrir terminal de trade
-        </Link>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/trade"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+          >
+            Abrir terminal de trade
+          </Link>
+          <Link
+            to="/terms"
+            className="inline-flex items-center justify-center rounded-md border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
+          >
+            Termos
+          </Link>
+        </div>
       </section>
     </main>
   );

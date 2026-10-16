@@ -93,9 +93,9 @@ function Wallet() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm">
-        <b>Importante:</b> BluxTrade é uma plataforma independente e não é afiliada,
-        patrocinada ou associada a nenhuma das plataformas, empresas, grupos ou marcas
-        mencionados aqui, incluindo Roblox, Robux, Binance e redes de criptoativos.
+        <b>Importante:</b> BluxTrade é uma plataforma independente e não é afiliada, patrocinada ou
+        associada à Roblox Corporation, Roblox ou qualquer outra empresa mencionada no site. Roblox
+        e Robux são referências do fluxo de pagamento.
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">

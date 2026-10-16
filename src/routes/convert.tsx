@@ -93,9 +93,9 @@ function Converter() {
       </section>
 
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm text-muted-foreground">
-        BluxTrade é independente e não é afiliada, patrocinada ou associada a Roblox, Robux,
-        Binance, redes blockchain, carteiras ou qualquer outra plataforma/empresa citada no site.
-        Roblox e Robux são marcas de seus respectivos proprietários.
+        BluxTrade é independente e não é afiliada, patrocinada ou associada à Roblox Corporation,
+        Roblox ou qualquer outra empresa citada no site. Roblox e Robux são marcas de seus
+        respectivos proprietários.
       </div>
     </main>
   );
