@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/referrals")({
   head: () => ({
     meta: [
-      { title: "Referrals — BluxTrade" },
-      { name: "description", content: "Earn commissions by referring traders to BluxTrade." },
+      { title: "Afiliados — BluxTrade" },
+      { name: "description", content: "Indique traders e acompanhe suas comissões na BluxTrade." },
     ],
   }),
   component: () => (
@@ -29,6 +29,7 @@ function Referrals() {
   const claim = useServerFn(claimAffiliate);
   const getSummary = useServerFn(getAffiliateSummary);
   const [copied, setCopied] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const uid = session?.user.id;
   const { data: summary, isLoading } = useQuery({
     queryKey: ["affiliate-summary", uid],
@@ -39,69 +40,109 @@ function Referrals() {
   const referralLink = summary?.referralCode
     ? `${window.location.origin}/auth?mode=signup&ref=${encodeURIComponent(summary.referralCode)}`
     : "";
+  const pending = summary?.pending ?? 0;
+  const recentClaims = summary?.recentClaims ?? [];
 
   async function copyLink() {
     if (!referralLink) return;
     await navigator.clipboard.writeText(referralLink);
     setCopied(true);
-    toast.success("Referral link copied");
+    toast.success("Link de convite copiado");
     window.setTimeout(() => setCopied(false), 1800);
   }
 
   async function doClaim() {
+    if (pending <= 0 || claiming) return;
+    setClaiming(true);
     try {
       const result = await claim({ data: undefined });
-      toast.success(`B$ ${fmt(result.amount)} added to your balance`);
-      await qc.invalidateQueries({ queryKey: ["affiliate-summary", uid] });
-      await qc.invalidateQueries({ queryKey: ["profile", uid] });
+      toast.success(`B$ ${fmt(result.amount)} adicionados ao seu saldo`);
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["affiliate-summary", uid] }),
+        qc.invalidateQueries({ queryKey: ["profile", uid] }),
+      ]);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Unable to claim affiliate earnings");
+      toast.error(error instanceof Error ? error.message : "Não foi possível resgatar a comissão.");
+    } finally {
+      setClaiming(false);
     }
   }
 
-  const pending = summary?.pending ?? 0;
   return (
     <main className="mx-auto max-w-3xl px-4 py-10">
       <div className="mb-8 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
-          Affiliate program
+          Programa de afiliados
         </p>
-        <h1 className="mt-2 text-3xl font-bold">Referral center</h1>
+        <h1 className="mt-2 text-3xl font-bold">Afiliados</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
-          Invite traders and earn 1% of the opening margin fee. Your commission stays pending until
-          you claim it.
+          Receba 1% da margem nas operações dos traders que você indicar.
         </p>
       </div>
 
       <section className="mx-auto max-w-xl rounded-2xl border bg-card p-6 text-center shadow-xl">
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-          Available to claim
+          Disponível para resgate
         </div>
-        <div className="mt-3 font-mono text-5xl font-bold text-primary">B$ {fmt(pending)}</div>
-        <Button className="mt-6 w-full" onClick={doClaim} disabled={pending <= 0 || isLoading}>
-          {pending > 0 ? `Claim B$ ${fmt(pending)}` : "Nothing to claim"}
+        <div className="mt-3 font-mono text-5xl font-bold text-primary">
+          B$ {isLoading ? "—" : fmt(pending)}
+        </div>
+        <Button
+          className="mt-6 w-full"
+          onClick={doClaim}
+          disabled={pending <= 0 || isLoading || claiming}
+        >
+          {claiming
+            ? "Resgatando…"
+            : pending > 0
+              ? `Resgatar B$ ${fmt(pending)}`
+              : "Nada para resgatar"}
         </Button>
-        <p className="mt-3 text-xs text-muted-foreground">
-          The button stays disabled until you have pending commission.
-        </p>
       </section>
 
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <Stat label="Invited traders" value={String(summary?.invitedCount ?? 0)} />
-        <Stat label="Total earned" value={`B$ ${fmt(summary?.total)}`} />
-        <Stat label="Recently claimed" value={`B$ ${fmt(summary?.claimed)}`} />
+      <div className="mt-6 grid gap-3 sm:grid-cols-2">
+        <Stat label="Convidados" value={String(summary?.invitedCount ?? 0)} />
+        <Stat label="Total ganho" value={`B$ ${fmt(summary?.total)}`} />
       </div>
+
+      <section className="mt-6 rounded-xl border bg-card p-5">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="font-semibold">Resgates recentes</h2>
+          <span className="text-xs text-muted-foreground">Últimos 3</span>
+        </div>
+        <div className="mt-3 divide-y border-t">
+          {recentClaims.map((item) => (
+            <div
+              key={item.claimedAt}
+              className="flex items-center justify-between gap-3 py-3 text-sm"
+            >
+              <span className="text-muted-foreground">
+                {new Date(item.claimedAt).toLocaleString("pt-BR", {
+                  timeZone: "America/Sao_Paulo",
+                  dateStyle: "short",
+                  timeStyle: "short",
+                })}
+              </span>
+              <span className="font-mono text-primary">+ B$ {fmt(item.amount)}</span>
+            </div>
+          ))}
+          {!isLoading && recentClaims.length === 0 && (
+            <p className="py-4 text-sm text-muted-foreground">Nenhum resgate realizado ainda.</p>
+          )}
+          {isLoading && <p className="py-4 text-sm text-muted-foreground">Carregando…</p>}
+        </div>
+      </section>
 
       <section className="mt-6 rounded-xl border bg-card p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-semibold">Your referral link</h2>
+            <h2 className="font-semibold">Seu link de convite</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              The referral is permanent after signup.
+              O convite fica vinculado no cadastro.
             </p>
           </div>
           <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-sm text-primary">
-            {summary?.referralCode ?? "Loading…"}
+            {summary?.referralCode ?? "Carregando…"}
           </span>
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -109,10 +150,10 @@ function Referrals() {
             readOnly
             value={referralLink}
             className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground"
-            aria-label="Referral link"
+            aria-label="Link de convite"
           />
           <Button onClick={copyLink} disabled={!referralLink}>
-            {copied ? "Copied" : "Copy link"}
+            {copied ? "Copiado" : "Copiar link"}
           </Button>
         </div>
       </section>

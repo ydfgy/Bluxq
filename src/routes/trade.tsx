@@ -3,6 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { ChevronDown } from "lucide-react";
 import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -166,8 +167,15 @@ function Trade() {
     return () => clearInterval(t);
   }, [sync]);
 
-  const m = Number(margin) || 0;
-  const openingFee = m * 0.1;
+  const balance = Number(profile?.balance ?? 0);
+  const rawMargin = Number(margin);
+  const m = Number.isFinite(rawMargin) ? Math.round(rawMargin * 100) / 100 : 0;
+  const marginInCents = Math.round(m * 100);
+  const openingFee = Math.round(marginInCents / 10) / 100;
+  const totalRequired = Math.round((m + openingFee) * 100) / 100;
+  const maxAffordableMargin = Math.floor((balance / 1.1 + Number.EPSILON) * 100) / 100;
+  const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
+  const shortfall = Math.max(0, Math.round((totalRequired - balance) * 100) / 100);
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
@@ -199,9 +207,12 @@ function Trade() {
   async function go(side: "long" | "short") {
     setBusy(true);
     try {
-      if (m + openingFee > Number(profile?.balance ?? 0)) {
+      if (!profile) {
+        throw new Error("Não foi possível carregar seu saldo. Tente novamente.");
+      }
+      if (!canAfford) {
         throw new Error(
-          `Insufficient balance. You need B$ ${fmt(m + openingFee)} including the opening fee.`,
+          `Saldo insuficiente: esta ordem exige B$ ${fmt(totalRequired)} (margem + taxa). Saldo: B$ ${fmt(balance)}.`,
         );
       }
       if (poolMaxLev < MIN_LEVERAGE)
@@ -586,14 +597,15 @@ function Trade() {
       {/* ordem */}
       <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Balance</span>
-          <span className="font-mono text-gold">B$ {fmt(profile?.balance)}</span>
+          <span className="text-muted-foreground">Saldo</span>
+          <span className="font-mono text-gold">B$ {fmt(balance)}</span>
         </div>
         <div className="space-y-1">
           <label className="text-xs text-muted-foreground">Margem (B$)</label>
           <Input
             type="number"
             min={10}
+            step="0.01"
             value={margin}
             onChange={(e) => setMargin(e.target.value)}
             className="font-mono"
@@ -602,7 +614,10 @@ function Trade() {
             {[0.1, 0.25, 0.5, 1].map((f) => (
               <button
                 key={f}
-                onClick={() => setMargin(String(Math.floor(Number(profile?.balance ?? 0) * f)))}
+                onClick={() => {
+                  const nextMargin = Math.floor(((balance * f) / 1.1 + Number.EPSILON) * 100) / 100;
+                  setMargin(nextMargin.toFixed(2));
+                }}
                 className="flex-1 rounded border py-1 text-xs hover:bg-muted"
               >
                 {f * 100}%
@@ -636,19 +651,33 @@ function Trade() {
           </div>
         </div>
         <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-          <span className="text-muted-foreground">Total required</span>
-          <span className="font-mono font-bold text-primary">B$ {fmt(m + openingFee)}</span>
+          <span className="text-muted-foreground">Total para abrir</span>
+          <span className="font-mono font-bold text-primary">B$ {fmt(totalRequired)}</span>
         </div>
+        {profile && m >= 10 && shortfall > 0 && (
+          <p role="status" className="text-xs leading-relaxed text-bear">
+            Saldo insuficiente: faltam B$ {fmt(shortfall)}. Margem máxima agora: B${" "}
+            {fmt(maxAffordableMargin)}.
+          </p>
+        )}
         <button
           type="button"
           className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
           onClick={() => setShowOrderDetails((value) => !value)}
+          aria-expanded={showOrderDetails}
+          aria-controls="order-details"
         >
-          <span>Operation details</span>
-          <span className="text-base">{showOrderDetails ? "⌃" : "⌄"}</span>
+          <span>Detalhes da operação</span>
+          <ChevronDown
+            aria-hidden="true"
+            className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
+          />
         </button>
         {showOrderDetails && (
-          <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
+          <div
+            id="order-details"
+            className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono"
+          >
             <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
             <Row
               k="Quantidade"
@@ -665,15 +694,19 @@ function Trade() {
               cls="text-bear"
             />
             <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} B$`} />
-            <Row k="Opening fee" v={`${fmt(openingFee)} B$ (10% da margem)`} />
-            <Row k="Total required" v={`${fmt(m + openingFee)} B$`} />
+            <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
+            <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$ (10% da margem)`} />
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
           <Button
             disabled={
-              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
+              busy ||
+              !currentPrice ||
+              m < 10 ||
+              !canAfford ||
+              poolMaxLev < MIN_LEVERAGE ||
+              lev > poolMaxLev
             }
             onClick={() => go("long")}
             className="bg-bull text-bull-foreground hover:bg-bull/90"
@@ -682,7 +715,12 @@ function Trade() {
           </Button>
           <Button
             disabled={
-              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
+              busy ||
+              !currentPrice ||
+              m < 10 ||
+              !canAfford ||
+              poolMaxLev < MIN_LEVERAGE ||
+              lev > poolMaxLev
             }
             onClick={() => go("short")}
             className="bg-bear text-bear-foreground hover:bg-bear/90"
