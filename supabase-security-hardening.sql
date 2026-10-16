@@ -526,7 +526,7 @@ begin
   end if;
 
   for i in 1..4 loop
-    phrase := phrase || ' ' || words[1 + (get_byte(gen_random_bytes(1), 0) % cardinality(words))];
+    phrase := phrase || ' ' || words[1 + (get_byte(extensions.gen_random_bytes(1), 0) % cardinality(words))];
   end loop;
 
   insert into public.profiles (id, email, roblox_username, verify_phrase)
