@@ -131,7 +131,7 @@ declare
     'velvet','vertex','violet','wave','whisper','willow','winter','zenith'
   ];
   username text;
-  phrase text := 'invest with bluxtrade';
+  phrase text := '';
   i integer;
 begin
   username := trim(coalesce(new.raw_user_meta_data->>'roblox_username', ''));
@@ -140,7 +140,7 @@ begin
   end if;
 
   for i in 1..4 loop
-    phrase := phrase || ' ' || words[1 + (get_byte(extensions.gen_random_bytes(1), 0) % cardinality(words))];
+    phrase := concat_ws(' ', nullif(phrase, ''), words[1 + (get_byte(extensions.gen_random_bytes(1), 0) % cardinality(words))]);
   end loop;
 
   insert into public.profiles (id, email, roblox_username, verify_phrase)
