@@ -75,9 +75,9 @@ begin
   if v_borrowed + v_reserved > (pl.total_assets - pl.total_reserved) then raise exception 'Insufficient pool liquidity'; end if;
   v_qty := (_margin * _lev) / _price;
   if _side = 'long' then v_liq := _price * (1 - 0.9 / _lev); else v_liq := _price * (1 + 0.9 / _lev); end if;
-  v_staker_fee := round(v_opening_fee * 0.04, 2);
-  v_affiliate_fee := round(v_opening_fee * 0.01, 2);
-  v_platform_fee := v_opening_fee - v_staker_fee - v_affiliate_fee;
+  v_staker_fee := round(v_opening_fee * 0.40, 2);
+  v_affiliate_fee := round(v_opening_fee * 0.10, 2);
+  v_platform_fee := round(v_opening_fee * 0.50, 2);
   select referred_by into v_affiliate from public.profiles where id = _user;
   if v_affiliate is null then v_platform_fee := v_platform_fee + v_affiliate_fee; v_affiliate_fee := 0; end if;
   update public.profiles set balance = balance - _margin - v_opening_fee where id = _user;
