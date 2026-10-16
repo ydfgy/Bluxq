@@ -25,7 +25,6 @@ import {
   MAX_LEVERAGE,
 } from "@/lib/markets";
 import { getBinanceTickers } from "@/lib/market-data";
-import { connectOrderBookStream, fetchOrderBook, type OrderBook } from "@/lib/order-book";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Slider } from "@/components/ui/slider";
@@ -75,38 +74,6 @@ function useTickers() {
   });
 }
 
-function useOrderBook(symbol: string) {
-  const [book, setBook] = useState<OrderBook | null>(null);
-
-  useEffect(() => {
-    let dead = false;
-    let socket: WebSocket | undefined;
-    setBook(null);
-    fetchOrderBook(symbol)
-      .then((next) => {
-        if (!dead) setBook(next);
-      })
-      .catch(() => {});
-    try {
-      socket = connectOrderBookStream(
-        symbol,
-        (next) => {
-          if (!dead) setBook(next);
-        },
-        () => {},
-      );
-    } catch {
-      // O snapshot REST continua disponível mesmo se o stream estiver indisponível.
-    }
-    return () => {
-      dead = true;
-      socket?.close();
-    };
-  }, [symbol]);
-
-  return book;
-}
-
 function Trade() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
@@ -122,7 +89,6 @@ function Trade() {
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const { data: tickers } = useTickers();
-  const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
     queryKey: ["pool"],
     refetchInterval: 5000,
@@ -148,7 +114,7 @@ function Trade() {
   });
   const { data: platformPositions = [] } = useQuery({
     queryKey: ["platform-open-positions"],
-    refetchInterval: 2000,
+    refetchInterval: 1000,
     queryFn: () => platformOpen(),
   });
   const openPos = positions.filter((p) => p.status === "open");
@@ -207,7 +173,8 @@ function Trade() {
         throw new Error(`A alavancagem máxima disponível agora é ${poolMaxLev}x.`);
       const r = await open({ data: { symbol, side, margin: m, leverage: lev } });
       toast.success(`${side === "long" ? "Long" : "Short"} aberto a ${fmtPrice(r.price ?? 0)}`);
-      qc.invalidateQueries();
+      await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
+      await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Não foi possível abrir a posição.");
     } finally {
@@ -221,7 +188,8 @@ function Trade() {
       toast[r.pnl >= 0 ? "success" : "error"](
         `Fechada: ${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)} B$ (taxa ${fmt(r.fee)})`,
       );
-      qc.invalidateQueries();
+      await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
+      await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Não foi possível fechar a posição.");
     }
@@ -317,61 +285,66 @@ function Trade() {
           <span className="text-xs uppercase text-muted-foreground">Ordens da BluxTrade</span>
           <span className="text-[10px] text-bull">● ao vivo</span>
         </div>
-        <div className="border-b px-2 py-2">
+        <div className="px-2 py-2">
           <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Posições abertas na plataforma</span>
+            <span>Posições internas abertas agora</span>
             <span>{platformPositions.length}</span>
           </div>
-          <div className="max-h-44 space-y-1 overflow-y-auto font-mono text-[10px]">
-            {platformPositions.map((position) => (
-              <div
-                key={position.id}
-                className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded border border-border/50 px-2 py-1"
-              >
-                <span className={position.side === "long" ? "text-bull" : "text-bear"}>
-                  {position.side.toUpperCase()} {position.symbol.replace("USDT", "")}
-                </span>
-                <span>{position.leverage}x</span>
-                <span>{Number(position.qty).toPrecision(5)}</span>
-              </div>
-            ))}
-            {platformPositions.length === 0 && (
-              <div className="py-2 text-center text-muted-foreground">Nenhuma operação aberta</div>
-            )}
+          <div className="max-h-[32rem] space-y-3 overflow-y-auto font-mono text-[10px]">
+            {(["long", "short"] as const).map((side) => {
+              const rows = platformPositions.filter((position) => position.side === side);
+              return (
+                <div key={side}>
+                  <div
+                    className={`mb-1 border-b border-border/50 pb-1 ${side === "long" ? "text-bull" : "text-bear"}`}
+                  >
+                    {side === "long" ? "LONGS" : "SHORTS"} ({rows.length})
+                  </div>
+                  <div className="space-y-1">
+                    {rows.map((position) => {
+                      const live = livePx(position.symbol);
+                      const pnl = calcPnl(
+                        position.side,
+                        Number(position.qty),
+                        Number(position.entry_price),
+                        live,
+                        Number(position.margin),
+                      );
+                      return (
+                        <div
+                          key={position.id}
+                          className="grid grid-cols-[1fr_auto] gap-2 rounded border border-border/50 px-2 py-2"
+                        >
+                          <div>
+                            <div className={side === "long" ? "text-bull" : "text-bear"}>
+                              {position.symbol.replace("USDT", "")} · {position.leverage}x
+                            </div>
+                            <div className="mt-1 text-muted-foreground">
+                              Entrada {fmtPrice(Number(position.entry_price))} · Atual{" "}
+                              {live ? fmtPrice(live) : "—"}
+                            </div>
+                            <div className="text-muted-foreground">
+                              Qtd. {Number(position.qty).toPrecision(7)} · Margem B${" "}
+                              {fmt(Number(position.margin))}
+                            </div>
+                          </div>
+                          <div
+                            className={`text-right font-bold ${pnl >= 0 ? "text-bull" : "text-bear"}`}
+                          >
+                            {pnl >= 0 ? "+" : ""}
+                            {fmt(pnl)} B$
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {rows.length === 0 && (
+                      <div className="py-2 text-muted-foreground">Nenhuma posição</div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-        <div className="border-b px-3 py-2 text-[10px] uppercase text-muted-foreground">
-          Livro de mercado — Binance real
-        </div>
-        <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
-          <span>Preço (USDT)</span>
-          <span className="text-right">Qtd.</span>
-          <span className="text-right">Total</span>
-        </div>
-        <div className="px-2 font-mono text-[11px]">
-          <div className="space-y-0.5">
-            {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
-              <OrderRow key={`ask-${row.price}`} row={row} side="ask" />
-            ))}
-          </div>
-          <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
-            <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
-            <span className="text-[10px] font-normal text-muted-foreground">
-              {orderBook
-                ? `atualizado ${new Date(orderBook.updatedAt).toLocaleTimeString("pt-BR")}`
-                : "carregando"}
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            {(orderBook?.bids ?? []).map((row) => (
-              <OrderRow key={`bid-${row.price}`} row={row} side="bid" />
-            ))}
-          </div>
-          {!orderBook && (
-            <div className="py-6 text-center font-sans text-xs text-muted-foreground">
-              Carregando ordens…
-            </div>
-          )}
         </div>
       </aside>
 
@@ -715,24 +688,6 @@ function Trade() {
         </div>
       )}
     </main>
-  );
-}
-
-function OrderRow({
-  row,
-  side,
-}: {
-  row: { price: number; quantity: number; total: number };
-  side: "ask" | "bid";
-}) {
-  return (
-    <div
-      className={`grid grid-cols-3 gap-2 rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
-    >
-      <span>{fmtPrice(row.price)}</span>
-      <span className="text-right text-foreground">{row.quantity.toPrecision(5)}</span>
-      <span className="text-right text-foreground">{row.total.toPrecision(5)}</span>
-    </div>
   );
 }
 
