@@ -14,8 +14,9 @@ async function admin() {
 function rpcError(error: { message: string; code?: string } | null) {
   if (!error) return;
   const clean = error.message.replace(/^.*?ERROR:\s*/, "").trim();
+  console.error("[BluxTrade] Supabase operation failed", { code: error.code, message: clean });
   const internal =
-    /permission denied|relation .* does not exist|column .* does not exist|syntax error|postgres/i.test(
+    /permission denied|relation .* does not exist|column .* does not exist|syntax error/i.test(
       clean,
     );
   throw new Error(
@@ -248,6 +249,41 @@ export const claimAffiliate = createServerFn({ method: "POST" })
     });
     rpcError(error);
     return { amount: Number(value ?? 0) };
+  });
+
+export const getAffiliateSummary = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const [profile, invited, earnings] = await Promise.all([
+      sb.from("profiles").select("referral_code").eq("id", context.userId).single(),
+      sb
+        .from("profiles")
+        .select("id", { count: "exact", head: true })
+        .eq("referred_by", context.userId),
+      sb
+        .from("affiliate_earnings")
+        .select("amount, claimed_at")
+        .eq("affiliate_id", context.userId)
+        .limit(1000),
+    ]);
+    rpcError(profile.error);
+    rpcError(invited.error);
+    rpcError(earnings.error);
+    const rows = earnings.data ?? [];
+    const pending = rows
+      .filter((row) => !row.claimed_at)
+      .reduce((sum, row) => sum + Number(row.amount), 0);
+    const claimed = rows
+      .filter((row) => row.claimed_at)
+      .reduce((sum, row) => sum + Number(row.amount), 0);
+    return {
+      referralCode: profile.data?.referral_code ?? null,
+      invitedCount: invited.count ?? 0,
+      pending,
+      claimed,
+      total: pending + claimed,
+    };
   });
 
 export const requestDeposit = createServerFn({ method: "POST" })

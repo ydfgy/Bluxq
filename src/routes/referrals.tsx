@@ -4,9 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
-import { useAuth, useProfile } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
-import { claimAffiliate } from "@/lib/blux.functions";
+import { useAuth } from "@/hooks/use-auth";
+import { claimAffiliate, getAffiliateSummary } from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 
@@ -26,51 +25,20 @@ export const Route = createFileRoute("/referrals")({
 
 function Referrals() {
   const { session } = useAuth();
-  const { data: profile } = useProfile();
   const qc = useQueryClient();
   const claim = useServerFn(claimAffiliate);
+  const getSummary = useServerFn(getAffiliateSummary);
   const [copied, setCopied] = useState(false);
   const uid = session?.user.id;
-  const { data: referralProfile } = useQuery({
-    queryKey: ["referral-profile", uid],
-    enabled: Boolean(uid),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("referral_code")
-        .eq("id", uid!)
-        .single();
-      if (error) throw error;
-      return data;
-    },
-  });
-  const referralCode = referralProfile?.referral_code;
-  const referralLink = referralCode
-    ? `${window.location.origin}/auth?mode=signup&ref=${encodeURIComponent(referralCode)}`
-    : "";
-
-  const { data: earnings = [], isLoading } = useQuery({
-    queryKey: ["affiliate-earnings", uid],
+  const { data: summary, isLoading } = useQuery({
+    queryKey: ["affiliate-summary", uid],
     enabled: Boolean(uid),
     refetchInterval: 5000,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("affiliate_earnings")
-        .select("id, amount, created_at, claimed_at")
-        .eq("affiliate_id", uid!)
-        .order("created_at", { ascending: false })
-        .limit(100);
-      if (error) throw error;
-      return data ?? [];
-    },
+    queryFn: () => getSummary(),
   });
-
-  const pending = earnings
-    .filter((earning) => !earning.claimed_at)
-    .reduce((sum, earning) => sum + Number(earning.amount), 0);
-  const claimed = earnings
-    .filter((earning) => earning.claimed_at)
-    .reduce((sum, earning) => sum + Number(earning.amount), 0);
+  const referralLink = summary?.referralCode
+    ? `${window.location.origin}/auth?mode=signup&ref=${encodeURIComponent(summary.referralCode)}`
+    : "";
 
   async function copyLink() {
     if (!referralLink) return;
@@ -84,36 +52,56 @@ function Referrals() {
     try {
       const result = await claim({ data: undefined });
       toast.success(`B$ ${fmt(result.amount)} added to your balance`);
-      await qc.invalidateQueries({ queryKey: ["affiliate-earnings", uid] });
+      await qc.invalidateQueries({ queryKey: ["affiliate-summary", uid] });
       await qc.invalidateQueries({ queryKey: ["profile", uid] });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unable to claim affiliate earnings");
     }
   }
 
+  const pending = summary?.pending ?? 0;
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <div>
+    <main className="mx-auto max-w-3xl px-4 py-10">
+      <div className="mb-8 text-center">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
           Affiliate program
         </p>
-        <h1 className="mt-2 text-3xl font-bold">Invite traders. Earn Blux.</h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          You earn 1% of the opening fee from every permanently referred trader. Commissions stay
-          pending until you claim them.
+        <h1 className="mt-2 text-3xl font-bold">Referral center</h1>
+        <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground">
+          Invite traders and earn 1% of the opening margin fee. Your commission stays pending until
+          you claim it.
         </p>
       </div>
 
-      <section className="rounded-xl border bg-card p-5">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+      <section className="mx-auto max-w-xl rounded-2xl border bg-card p-6 text-center shadow-xl">
+        <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+          Available to claim
+        </div>
+        <div className="mt-3 font-mono text-5xl font-bold text-primary">B$ {fmt(pending)}</div>
+        <Button className="mt-6 w-full" onClick={doClaim} disabled={pending <= 0 || isLoading}>
+          {pending > 0 ? `Claim B$ ${fmt(pending)}` : "Nothing to claim"}
+        </Button>
+        <p className="mt-3 text-xs text-muted-foreground">
+          The button stays disabled until you have pending commission.
+        </p>
+      </section>
+
+      <div className="mt-6 grid gap-3 sm:grid-cols-3">
+        <Stat label="Invited traders" value={String(summary?.invitedCount ?? 0)} />
+        <Stat label="Total earned" value={`B$ ${fmt(summary?.total)}`} />
+        <Stat label="Recently claimed" value={`B$ ${fmt(summary?.claimed)}`} />
+      </div>
+
+      <section className="mt-6 rounded-xl border bg-card p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Your referral link</h2>
             <p className="mt-1 text-sm text-muted-foreground">
-              The referral is locked to the new account at signup.
+              The referral is permanent after signup.
             </p>
           </div>
           <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-sm text-primary">
-            {referralCode ?? "Generating…"}
+            {summary?.referralCode ?? "Loading…"}
           </span>
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
@@ -128,56 +116,13 @@ function Referrals() {
           </Button>
         </div>
       </section>
-
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Pending to claim" value={`B$ ${fmt(pending)}`} />
-        <Stat label="Already claimed" value={`B$ ${fmt(claimed)}`} />
-        <Stat label="Total earned" value={`B$ ${fmt(pending + claimed)}`} />
-      </div>
-
-      <section className="rounded-xl border bg-card p-5">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-semibold">Commission balance</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Claiming moves the pending amount into your available Blux balance.
-            </p>
-          </div>
-          <Button onClick={doClaim} disabled={pending <= 0}>
-            Claim B$ {fmt(pending)}
-          </Button>
-        </div>
-        <div className="mt-5 divide-y border-t">
-          {isLoading && <p className="py-5 text-sm text-muted-foreground">Loading earnings…</p>}
-          {!isLoading &&
-            earnings.map((earning) => (
-              <div
-                key={earning.id}
-                className="flex items-center justify-between gap-3 py-3 text-sm"
-              >
-                <span className="text-muted-foreground">
-                  {new Date(earning.created_at).toLocaleString("en-US")}
-                </span>
-                <span className="font-mono text-primary">+ B$ {fmt(earning.amount)}</span>
-                <span className="text-xs text-muted-foreground">
-                  {earning.claimed_at ? "Claimed" : "Pending"}
-                </span>
-              </div>
-            ))}
-          {!isLoading && earnings.length === 0 && (
-            <p className="py-5 text-sm text-muted-foreground">
-              No commissions yet. Share your link to get started.
-            </p>
-          )}
-        </div>
-      </section>
     </main>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-card p-4 text-center">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 font-mono text-xl">{value}</div>
     </div>

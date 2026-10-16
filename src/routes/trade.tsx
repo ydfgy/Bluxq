@@ -119,6 +119,7 @@ function Trade() {
   const [marketMenuOpen, setMarketMenuOpen] = useState(false);
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
@@ -198,6 +199,11 @@ function Trade() {
   async function go(side: "long" | "short") {
     setBusy(true);
     try {
+      if (m + openingFee > Number(profile?.balance ?? 0)) {
+        throw new Error(
+          `Insufficient balance. You need B$ ${fmt(m + openingFee)} including the opening fee.`,
+        );
+      }
       if (poolMaxLev < MIN_LEVERAGE)
         throw new Error(
           `The pool has liquidity for at most ${Math.max(poolMaxLev, 0)}x on this margin. Reduce the margin or wait for more stakes.`,
@@ -629,23 +635,41 @@ function Trade() {
             Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
           </div>
         </div>
-        <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
-          <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
-          <Row
-            k="Quantidade"
-            v={
-              currentPrice
-                ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
-                : "—"
-            }
-          />
-          <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
-          <Row k="Liquidation Short" v={currentPrice ? fmtPrice(liqShort) : "—"} cls="text-bear" />
-          <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-          <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} B$`} />
-          <Row k="Opening fee" v={`${fmt(openingFee)} B$ (10% da margem)`} />
-          <Row k="Balance debited" v={`${fmt(m + openingFee)} B$ (margem + taxa)`} />
+        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+          <span className="text-muted-foreground">Total required</span>
+          <span className="font-mono font-bold text-primary">B$ {fmt(m + openingFee)}</span>
         </div>
+        <button
+          type="button"
+          className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setShowOrderDetails((value) => !value)}
+        >
+          <span>Operation details</span>
+          <span className="text-base">{showOrderDetails ? "⌃" : "⌄"}</span>
+        </button>
+        {showOrderDetails && (
+          <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
+            <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
+            <Row
+              k="Quantidade"
+              v={
+                currentPrice
+                  ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                  : "—"
+              }
+            />
+            <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
+            <Row
+              k="Liquidation Short"
+              v={currentPrice ? fmtPrice(liqShort) : "—"}
+              cls="text-bear"
+            />
+            <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} B$`} />
+            <Row k="Opening fee" v={`${fmt(openingFee)} B$ (10% da margem)`} />
+            <Row k="Total required" v={`${fmt(m + openingFee)} B$`} />
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-2">
           <Button
             disabled={
@@ -666,12 +690,6 @@ function Trade() {
             Short ↓
           </Button>
         </div>
-        <p className="text-[11px] leading-relaxed text-muted-foreground">
-          Prices reais da Binance. Alavancagem mínima: {MIN_LEVERAGE}x. O máximo varia conforme a
-          liquidez livre da pool, até {MAX_LEVERAGE}x. You are liquidated when you lose{" "}
-          {LIQ_LOSS * 100}% of your margin. Profit is paid by the pool and capped at {PROFIT_CAP}x a
-          margem.
-        </p>
       </aside>
       {selectedPosition && (
         <div
