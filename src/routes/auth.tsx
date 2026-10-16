@@ -27,6 +27,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [pw, setPw] = useState("");
   const [rbx, setRbx] = useState("");
+  const [referralCode, setReferralCode] = useState("");
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
   async function submit(e: React.FormEvent) {
@@ -37,7 +38,12 @@ function AuthPage() {
         const { data, error } = await supabase.auth.signUp({
           email,
           password: pw,
-          options: { data: { roblox_username: rbx } },
+          options: {
+            data: {
+              roblox_username: rbx,
+              referral_code: referralCode.trim().toUpperCase() || null,
+            },
+          },
         });
         if (error) throw error;
         if (!data.session) {
@@ -82,12 +88,20 @@ function AuthPage() {
           required
         />
         {signup && (
-          <Input
-            placeholder="Nome de usuário do Roblox"
-            value={rbx}
-            onChange={(e) => setRbx(e.target.value)}
-            required
-          />
+          <>
+            <Input
+              placeholder="Nome de usuário do Roblox"
+              value={rbx}
+              onChange={(e) => setRbx(e.target.value)}
+              required
+            />
+            <Input
+              placeholder="Código de indicação (opcional)"
+              value={referralCode}
+              onChange={(e) => setReferralCode(e.target.value)}
+              maxLength={10}
+            />
+          </>
         )}
         <Button className="w-full" disabled={busy}>
           {signup ? "Criar conta" : "Entrar"}

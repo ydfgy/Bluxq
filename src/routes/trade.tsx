@@ -166,6 +166,7 @@ function Trade() {
   }, [sync]);
 
   const m = Number(margin) || 0;
+  const openingFee = m * 0.1;
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // A posição reserva margem * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
@@ -349,60 +350,46 @@ function Trade() {
         </div>
         <div className="border-t px-2 py-2 font-mono text-[10px]">
           <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span>Maior volume aberto</span>
-            <span>5 maiores</span>
-          </div>
-          <div className="space-y-0.5">
-            {[...platformPositions]
-              .sort(
-                (a, b) =>
-                  Number(b.entry_price) * Number(b.qty) - Number(a.entry_price) * Number(a.qty),
-              )
-              .slice(0, 5)
-              .map((position) => (
-                <div
-                  key={`volume-${position.id}`}
-                  className="grid grid-cols-[1fr_auto_auto] gap-2 rounded px-1 py-1"
-                >
-                  <span className={position.side === "long" ? "text-bull" : "text-bear"}>
-                    {position.side.toUpperCase()} {position.symbol.replace("USDT", "")}
-                  </span>
-                  <span className="text-right text-muted-foreground">
-                    {Number(position.qty).toPrecision(5)}
-                  </span>
-                  <span className="text-right text-foreground">
-                    B$ {fmt(Number(position.entry_price) * Number(position.qty))}
-                  </span>
-                </div>
-              ))}
-            {platformPositions.length === 0 && (
-              <div className="py-2 text-center text-muted-foreground">Nenhuma posição aberta</div>
-            )}
-          </div>
-          <div className="mb-1 mt-3 border-t border-border/60 pt-2 text-muted-foreground">
-            Aberturas recentes
+            <span>Operações abertas recentemente</span>
+            <span>5 últimas</span>
           </div>
           <div className="space-y-0.5">
             {[...platformPositions]
               .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
               .slice(0, 5)
-              .map((position) => (
-                <div
-                  key={`recent-${position.id}`}
-                  className="grid grid-cols-[1fr_auto] gap-2 rounded px-1 py-1"
-                >
-                  <span className={position.side === "long" ? "text-bull" : "text-bear"}>
-                    {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
-                    {position.leverage}x
-                  </span>
-                  <span className="text-right text-muted-foreground">
-                    {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </span>
-                </div>
-              ))}
+              .map((position) => {
+                const entry = Number(position.entry_price);
+                const value = entry * Number(position.qty);
+                return (
+                  <div
+                    key={`recent-${position.id}`}
+                    className="grid grid-cols-[1fr_auto] gap-2 rounded px-1 py-1"
+                  >
+                    <div>
+                      <div className={position.side === "long" ? "text-bull" : "text-bear"}>
+                        {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
+                        {position.leverage}x
+                      </div>
+                      <div className="text-muted-foreground">
+                        Faixa {fmtPrice(entry)} · Vol. {Number(position.qty).toPrecision(5)} ·
+                        Margem B$ {fmt(Number(position.margin))}
+                      </div>
+                    </div>
+                    <div className="text-right text-foreground">
+                      <div>B$ {fmt(value)}</div>
+                      <div className="text-muted-foreground">
+                        {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            {platformPositions.length === 0 && (
+              <div className="py-2 text-center text-muted-foreground">Nenhuma posição aberta</div>
+            )}
           </div>
         </div>
       </aside>
@@ -656,7 +643,8 @@ function Trade() {
           <Row k="Liquidação Short" v={currentPrice ? fmtPrice(liqShort) : "—"} cls="text-bear" />
           <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
           <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
-          <Row k="Taxa" v={`${FEE_RATE * 100}% do lucro`} />
+          <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$ (10% da margem)`} />
+          <Row k="Saldo debitado" v={`${fmt(m + openingFee)} B$ (margem + taxa)`} />
         </div>
         <div className="grid grid-cols-2 gap-2">
           <Button
