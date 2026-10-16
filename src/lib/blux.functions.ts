@@ -32,6 +32,79 @@ function constantTimeEqual(left: string, right: string) {
   return difference === 0;
 }
 
+const verificationWords = [
+  "amber",
+  "anchor",
+  "apex",
+  "apple",
+  "arrow",
+  "atlas",
+  "aurora",
+  "badge",
+  "beacon",
+  "blue",
+  "brave",
+  "bridge",
+  "canyon",
+  "cinder",
+  "cobalt",
+  "comet",
+  "coral",
+  "cosmic",
+  "crystal",
+  "daring",
+  "delta",
+  "ember",
+  "falcon",
+  "feather",
+  "flare",
+  "forest",
+  "galaxy",
+  "golden",
+  "harbor",
+  "honest",
+  "jade",
+  "jupiter",
+  "lunar",
+  "maple",
+  "marble",
+  "meadow",
+  "meteor",
+  "midnight",
+  "mint",
+  "nebula",
+  "ocean",
+  "orbit",
+  "pearl",
+  "phoenix",
+  "pilot",
+  "planet",
+  "raven",
+  "rocket",
+  "sapphire",
+  "shadow",
+  "silver",
+  "solar",
+  "spark",
+  "summit",
+  "thunder",
+  "tiger",
+  "velvet",
+  "vertex",
+  "violet",
+  "wave",
+  "whisper",
+  "willow",
+  "winter",
+  "zenith",
+] as const;
+
+function createVerificationPhrase() {
+  const random = new Uint32Array(4);
+  crypto.getRandomValues(random);
+  return `invest with bluxtrade ${Array.from(random, (value) => verificationWords[value % verificationWords.length]).join(" ")}`;
+}
+
 async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
   const { data, error } = await supabase.rpc("has_role", { _user_id: userId, _role: "admin" });
   rpcError(error);
@@ -189,8 +262,14 @@ export const getVerificationChallenge = createServerFn({ method: "POST" })
     rpcError(profileError);
     if (profile?.verified) return { phrase: null, verified: true };
     rpcError(challengeError);
-    if (!challenge) throw new Error("Desafio de verificação não encontrado");
-    return { phrase: challenge.verify_phrase, verified: false };
+    if (challenge) return { phrase: challenge.verify_phrase, verified: false };
+
+    const phrase = createVerificationPhrase();
+    const { error: insertError } = await sb
+      .from("profile_challenges")
+      .upsert({ user_id: context.userId, verify_phrase: phrase }, { onConflict: "user_id" });
+    rpcError(insertError);
+    return { phrase, verified: false };
   });
 
 export const setRobloxUsername = createServerFn({ method: "POST" })

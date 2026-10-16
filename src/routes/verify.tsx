@@ -35,7 +35,12 @@ function Verify() {
   const [busy, setBusy] = useState(false);
   const [copying, setCopying] = useState(false);
   const [revealed, setRevealed] = useState(false);
-  const { data: challenge, isLoading: challengeLoading } = useQuery({
+  const {
+    data: challenge,
+    isLoading: challengeLoading,
+    isError: challengeError,
+    refetch: retryChallenge,
+  } = useQuery({
     queryKey: ["verification-challenge"],
     enabled: !!p && !p.verified,
     queryFn: () => loadChallenge(),
@@ -51,6 +56,19 @@ function Verify() {
     return (
       <main className="mx-auto max-w-md p-8">
         Conta Roblox <b>{p.roblox_username}</b> verificada.
+      </main>
+    );
+
+  if (challengeError)
+    return (
+      <main className="mx-auto max-w-md space-y-4 px-4 py-12">
+        <h1 className="text-2xl font-bold">Verifique sua conta Roblox</h1>
+        <p className="text-muted-foreground">
+          Não foi possível carregar sua frase de verificação agora.
+        </p>
+        <Button className="w-full" onClick={() => retryChallenge()}>
+          Tentar novamente
+        </Button>
       </main>
     );
 
