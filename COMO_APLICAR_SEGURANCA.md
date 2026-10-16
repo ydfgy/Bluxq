@@ -1,51 +1,69 @@
-# Aplicar o endurecimento de segurança no Supabase
+# Aplicar o schema completo e o endurecimento de segurança no Supabase
 
-Este procedimento aplica a migração completa do BluxTrade diretamente pelo **Supabase SQL Editor**. O arquivo é idempotente: pode ser executado novamente sem duplicar a tabela de desafios, as funções ou as políticas.
+O arquivo [`supabase-security-hardening.sql`](./supabase-security-hardening.sql) agora é um **bootstrap completo** do banco. Ele cria primeiro o schema base do BluxTrade e depois aplica o endurecimento de segurança.
 
-## Arquivo SQL completo
+Isso corrige o erro:
 
-Use o arquivo [`supabase-security-hardening.sql`](./supabase-security-hardening.sql). Ele contém:
+```text
+ERROR: 42P01: relation "public.profiles" does not exist
+```
 
-- tabela privada `public.profile_challenges`;
+Esse erro aconteceu porque o arquivo anterior continha apenas a camada de segurança e pressupunha que `public.profiles` já existia.
+
+## O que o arquivo completo cria
+
+- extensão `pgcrypto`;
+- enum `app_role`;
+- tabelas `user_roles`, `profiles`, `pool`, `stakes`, `positions`, `deposits` e `withdrawals`;
+- índices, RLS, políticas e permissões base;
+- trigger de criação de usuário;
+- funções financeiras de posição, stake, depósito e retirada;
+- tabela privada `profile_challenges`;
+- migração dos desafios Roblox existentes;
 - RLS owner-only para o desafio Roblox;
-- cópia dos desafios já existentes;
-- remoção do acesso amplo aos campos de `profiles`;
-- restrição do perfil ao próprio usuário;
+- restrição dos campos públicos de `profiles`;
 - validação server-side do nome Roblox;
 - geração de frase com prefixo `invest with bluxtrade` e quatro palavras aleatórias;
 - bootstrap de admin protegido por função server-side e lock;
 - RPC transacional de depósitos com lock por usuário;
 - permissões `service_role` necessárias para o backend.
 
+Todas as mensagens SQL do arquivo estão em **inglês**, conforme o padrão da plataforma.
+
 ## Como executar
 
 1. Abra o projeto correto no [Supabase](https://supabase.com/dashboard).
-2. Abra **SQL Editor**.
-3. Clique em **New query**.
-4. Abra o arquivo `supabase-security-hardening.sql` e copie **todo o conteúdo**, do `begin;` até o `commit;`.
-5. Cole o conteúdo no SQL Editor.
-6. Confira se está conectado ao projeto correto.
+2. Confirme que o projeto é o mesmo usado pela aplicação BluxTrade.
+3. Abra **SQL Editor**.
+4. Clique em **New query**.
+5. Abra o arquivo `supabase-security-hardening.sql` e copie **todo o conteúdo**, do `begin;` até o `commit;`.
+6. Cole tudo no SQL Editor.
 7. Clique em **Run**.
 8. Espere a execução terminar sem erro.
 
-O arquivo já contém `begin;` e `commit;`. Se ocorrer um erro, a transação não deve aplicar parcialmente as alterações. Corrija o erro e execute o arquivo inteiro novamente.
+O arquivo já contém `begin;` e `commit;`. Se ocorrer um erro, a transação deve ser revertida. Corrija o erro e execute o arquivo inteiro novamente.
 
-> Não altere os nomes das tabelas, funções, políticas ou colunas do arquivo.
+> Use o arquivo completo atualizado. Não use uma cópia antiga que contenha somente a parte de security hardening.
 
 ## Conferência após executar
 
-Depois que o SQL terminar, execute esta consulta separada no SQL Editor:
+Depois que o SQL terminar, execute esta consulta separada:
 
 ```sql
 select
-  to_regclass('public.profile_challenges') as profile_challenges,
+  to_regclass('public.user_roles') as user_roles,
   to_regclass('public.profiles') as profiles,
+  to_regclass('public.pool') as pool,
+  to_regclass('public.stakes') as stakes,
+  to_regclass('public.positions') as positions,
   to_regclass('public.deposits') as deposits,
+  to_regclass('public.withdrawals') as withdrawals,
+  to_regclass('public.profile_challenges') as profile_challenges,
   to_regprocedure('public.fn_claim_admin(uuid)') as claim_admin_function,
   to_regprocedure('public.fn_request_deposit(uuid,numeric)') as deposit_function;
 ```
 
-O resultado esperado é que nenhuma coluna venha como `null`.
+Nenhuma coluna deve aparecer como `null`.
 
 Confira as políticas RLS:
 
@@ -53,26 +71,27 @@ Confira as políticas RLS:
 select schemaname, tablename, policyname, cmd
 from pg_policies
 where schemaname = 'public'
-  and tablename in ('profiles', 'profile_challenges')
 order by tablename, policyname;
 ```
 
-Você deve ver a política `own verification challenge` em `profile_challenges` e a política `own profile` em `profiles`.
-
-Confira que a tabela de desafios está com RLS ativo:
+Confira que RLS está ativo nas tabelas protegidas:
 
 ```sql
 select relname, relrowsecurity, relforcerowsecurity
 from pg_class
 where oid in (
+  'public.user_roles'::regclass,
+  'public.profiles'::regclass,
   'public.profile_challenges'::regclass,
-  'public.profiles'::regclass
-);
+  'public.deposits'::regclass,
+  'public.withdrawals'::regclass
+)
+order by relname;
 ```
 
-`relrowsecurity` deve aparecer como `true` para as duas tabelas.
+`relrowsecurity` deve aparecer como `true`.
 
-## Configurações necessárias na aplicação
+## Configurações da aplicação
 
 No Vercel, mantenha estas variáveis somente no ambiente **Production** e como secrets:
 
@@ -83,7 +102,7 @@ ADMIN_BOOTSTRAP_SECRET
 
 `SUPABASE_SERVICE_ROLE_KEY` nunca deve começar com `VITE_` e nunca pode aparecer no frontend.
 
-No GitHub Actions, o secret `DATABASE_URL` só é necessário para o workflow automático. Depois de aplicar este arquivo manualmente, o workflow pode continuar falhando sem alterar o banco; isso não desfaz a migração manual.
+O secret `DATABASE_URL` do GitHub Actions só é necessário para o workflow automático. Depois de aplicar este arquivo manualmente, o workflow pode continuar falhando sem alterar o banco; isso não desfaz a migração manual.
 
 ## O que não fazer
 
