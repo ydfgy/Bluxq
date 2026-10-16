@@ -129,13 +129,24 @@ export function Protected({
   requireVerified?: boolean;
 }) {
   const { session, ready } = useAuth();
-  const { data: profile, isLoading } = useProfile();
+  const { data: profile, isLoading, isError } = useProfile();
   const nav = useNavigate();
   useEffect(() => {
     if (ready && !session) nav({ to: "/auth", replace: true });
-    else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
-  }, [ready, session, profile, requireVerified, nav]);
-  if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {
+    else if (ready && session && isError) {
+      void supabase.auth.signOut({ scope: "local" });
+      nav({ to: "/auth", replace: true });
+    } else if (requireVerified && profile && !profile.verified)
+      nav({ to: "/verify", replace: true });
+  }, [ready, session, profile, isError, requireVerified, nav]);
+  if (
+    !ready ||
+    !session ||
+    isLoading ||
+    isError ||
+    !profile ||
+    (requireVerified && !profile.verified)
+  ) {
     return (
       <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Loading…</div>
     );

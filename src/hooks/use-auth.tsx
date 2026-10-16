@@ -13,17 +13,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const qc = useQueryClient();
   useEffect(() => {
-    const { data } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
+    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      if (nextSession?.expires_at && nextSession.expires_at * 1000 <= Date.now()) {
+        setSession(null);
+        void supabase.auth.signOut({ scope: "local" });
+      } else {
+        setSession(nextSession);
+      }
       setReady(true);
       qc.invalidateQueries();
     });
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (data.session?.expires_at && data.session.expires_at * 1000 <= Date.now()) {
+        await supabase.auth.signOut({ scope: "local" });
+        setSession(null);
+      } else {
+        setSession(data.session);
+      }
       setReady(true);
     });
     return () => data.subscription.unsubscribe();
   }, [qc]);
+
+  useEffect(() => {
+    if (!session?.expires_at) return;
+    const remaining = session.expires_at * 1000 - Date.now();
+    if (remaining <= 0) {
+      void supabase.auth.signOut({ scope: "local" });
+      return;
+    }
+    const timeout = window.setTimeout(() => {
+      void supabase.auth.signOut({ scope: "local" });
+    }, remaining);
+    return () => window.clearTimeout(timeout);
+  }, [session]);
   return <AuthCtx.Provider value={{ session, ready }}>{children}</AuthCtx.Provider>;
 }
 
@@ -34,6 +57,7 @@ export function useProfile() {
   return useQuery({
     queryKey: ["profile", session?.user.id],
     enabled: !!session,
+    retry: false,
     refetchInterval: 5000,
     queryFn: async () => {
       const { data, error } = await supabase
