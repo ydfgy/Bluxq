@@ -31,8 +31,22 @@ function Referrals() {
   const claim = useServerFn(claimAffiliate);
   const [copied, setCopied] = useState(false);
   const uid = session?.user.id;
-  const referralLink = profile?.referral_code
-    ? `${window.location.origin}/auth?mode=signup&ref=${encodeURIComponent(profile.referral_code)}`
+  const { data: referralProfile } = useQuery({
+    queryKey: ["referral-profile", uid],
+    enabled: Boolean(uid),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("referral_code")
+        .eq("id", uid!)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+  });
+  const referralCode = referralProfile?.referral_code;
+  const referralLink = referralCode
+    ? `${window.location.origin}/auth?mode=signup&ref=${encodeURIComponent(referralCode)}`
     : "";
 
   const { data: earnings = [], isLoading } = useQuery({
@@ -99,7 +113,7 @@ function Referrals() {
             </p>
           </div>
           <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 font-mono text-sm text-primary">
-            {profile?.referral_code ?? "Generating…"}
+            {referralCode ?? "Generating…"}
           </span>
         </div>
         <div className="mt-4 flex flex-col gap-2 sm:flex-row">
