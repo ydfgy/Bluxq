@@ -28,7 +28,6 @@ import { getBinanceTickers } from "@/lib/market-data";
 import { connectOrderBookStream, fetchOrderBook, type OrderBook } from "@/lib/order-book";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 
 export const Route = createFileRoute("/trade")({
   head: () => ({
@@ -617,19 +616,24 @@ function Trade() {
               {lev}x
             </span>
           </div>
-          <Slider
-            aria-label="Alavancagem"
-            min={MIN_LEVERAGE}
-            max={sliderMax}
-            step={1}
-            value={[Math.min(lev, sliderMax)]}
-            onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)}
-            className="py-2"
-          />
+          <div className="grid grid-cols-4 gap-1">
+            {[1, 2, 3, 5, 10, 20, 30, 40, 50]
+              .filter((option) => option >= MIN_LEVERAGE && option <= sliderMax)
+              .map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setLev(option)}
+                  className={`rounded-md border px-2 py-2 text-xs font-mono transition-colors ${lev === option ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {option}x
+                </button>
+              ))}
+          </div>
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
             <span>{MIN_LEVERAGE}x mín.</span>
-            <span>arraste para ajustar</span>
-            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "unavailable"}</span>
+            <span>selecione uma opção</span>
+            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
           </div>
           <div className="text-[11px] text-muted-foreground">
             Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>

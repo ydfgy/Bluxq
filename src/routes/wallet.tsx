@@ -47,6 +47,8 @@ function Wallet() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState<"roblox" | "crypto">("roblox");
   const [withdrawMethod, setWithdrawMethod] = useState<"roblox" | "crypto">("roblox");
+  const [depositMethodSearch, setDepositMethodSearch] = useState("");
+  const [withdrawMethodSearch, setWithdrawMethodSearch] = useState("");
   const [asset, setAsset] = useState("USDT");
   const [network, setNetwork] = useState("TRC20");
   const [transactionHash, setTransactionHash] = useState("");
@@ -90,16 +92,10 @@ function Wallet() {
 
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <div className="rounded-xl border bg-card p-6">
-        <div className="text-sm text-muted-foreground">Available balance</div>
-        <div className="font-mono text-4xl text-gold">B$ {fmt(p?.balance)}</div>
-        <div className="mt-1 text-xs text-muted-foreground">1 Robux = 1 Blux (B$)</div>
-      </div>
-
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm">
-        <b>Importante:</b> BluxTrade é uma plataforma independente e{" "}
-        <b>não é afiliada, patrocinada ou associada à Roblox Corporation</b>. Roblox e Robux são
-        marcas de seus respectivos proprietários.
+        <b>Importante:</b> BluxTrade é uma plataforma independente e não é afiliada,
+        patrocinada ou associada a nenhuma das plataformas, empresas, grupos ou marcas
+        mencionados aqui, incluindo Roblox, Robux, Binance e redes de criptoativos.
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -110,7 +106,12 @@ function Wallet() {
               Escolha como quer enviar o valor para sua carteira.
             </p>
           </div>
-          <SelectMethod value={depositMethod} onChange={setDepositMethod} />
+          <MethodSearch
+            value={depositMethodSearch}
+            selected={depositMethod}
+            onSearch={setDepositMethodSearch}
+            onSelect={setDepositMethod}
+          />
           {depositMethod === "roblox" ? (
             <>
               <ol className="list-decimal space-y-1 pl-4 text-sm text-muted-foreground">
@@ -194,7 +195,12 @@ function Wallet() {
             <h2 className="text-lg font-bold">Sacar</h2>
             <p className="text-sm text-muted-foreground">Escolha onde deseja receber seu saldo.</p>
           </div>
-          <SelectMethod value={withdrawMethod} onChange={setWithdrawMethod} />
+          <MethodSearch
+            value={withdrawMethodSearch}
+            selected={withdrawMethod}
+            onSearch={setWithdrawMethodSearch}
+            onSelect={setWithdrawMethod}
+          />
           {withdrawMethod === "roblox" ? (
             <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
               O pagamento será enviado pelo grupo para a conta Roblox verificada:{" "}
@@ -289,23 +295,46 @@ function Wallet() {
   );
 }
 
-function SelectMethod({
+function MethodSearch({
   value,
-  onChange,
+  selected,
+  onSearch,
+  onSelect,
 }: {
-  value: "roblox" | "crypto";
-  onChange: (value: "roblox" | "crypto") => void;
+  value: string;
+  selected: "roblox" | "crypto";
+  onSearch: (value: string) => void;
+  onSelect: (value: "roblox" | "crypto") => void;
 }) {
+  const showCrypto = value.trim().toLowerCase() === "crypto";
   return (
-    <Field label="Método">
-      <select
-        className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+    <Field label="Pesquisar forma de pagamento">
+      <Input
         value={value}
-        onChange={(e) => onChange(e.target.value as "roblox" | "crypto")}
-      >
-        <option value="roblox">Roblox / Robux</option>
-        <option value="crypto">Crypto</option>
-      </select>
+        onChange={(event) => onSearch(event.target.value)}
+        placeholder="Digite o nome exato da forma"
+      />
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          className={`rounded-md border px-3 py-2 text-sm ${selected === "roblox" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+          onClick={() => onSelect("roblox")}
+        >
+          Roblox / Robux
+        </button>
+        {showCrypto && (
+          <button
+            type="button"
+            className={`rounded-md border px-3 py-2 text-sm ${selected === "crypto" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+            onClick={() => onSelect("crypto")}
+          >
+            Crypto
+          </button>
+        )}
+      </div>
+      <p className="text-xs text-muted-foreground">
+        Crypto aparece somente quando você pesquisa exatamente “crypto”.
+      </p>
     </Field>
   );
 }

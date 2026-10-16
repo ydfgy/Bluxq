@@ -47,6 +47,9 @@ export function Navbar() {
             <Link to="/wallet" className={link} activeProps={active}>
               Wallet
             </Link>
+            <Link to="/convert" className={link} activeProps={active}>
+              Converter
+            </Link>
             <Link to="/stake" className={link} activeProps={active}>
               Stake
             </Link>
@@ -102,6 +105,9 @@ export function Navbar() {
           </Link>
           <Link to="/wallet" className={link} activeProps={active}>
             Wallet
+          </Link>
+          <Link to="/convert" className={link} activeProps={active}>
+            Converter
           </Link>
           <Link to="/stake" className={link} activeProps={active}>
             Stake

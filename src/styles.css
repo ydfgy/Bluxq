@@ -87,6 +87,7 @@
 @layer base {
   * {
     border-color: var(--color-border);
+    box-shadow: none !important;
   }
   html {
     color-scheme: dark;
