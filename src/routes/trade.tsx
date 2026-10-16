@@ -279,66 +279,59 @@ function Trade() {
   return (
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
       <CoinRain show={rain} />
-      {/* livro de ordens */}
+      {/* order book interno da plataforma */}
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs uppercase text-muted-foreground">Ordens da BluxTrade</span>
+          <span className="text-xs uppercase text-muted-foreground">Order book BluxTrade</span>
           <span className="text-[10px] text-bull">● ao vivo</span>
         </div>
-        <div className="px-2 py-2">
+        <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
+          <span>Preço entrada</span>
+          <span className="text-right">Volume</span>
+          <span className="text-right">Valor B$</span>
+        </div>
+        <div className="px-2 py-2 font-mono text-[11px]">
           <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Posições internas abertas agora</span>
+            <span>Operações abertas agora</span>
             <span>{platformPositions.length}</span>
           </div>
-          <div className="max-h-[32rem] space-y-3 overflow-y-auto font-mono text-[10px]">
+          <div className="max-h-[32rem] space-y-2 overflow-y-auto">
             {(["long", "short"] as const).map((side) => {
               const rows = platformPositions.filter((position) => position.side === side);
               return (
                 <div key={side}>
                   <div
-                    className={`mb-1 border-b border-border/50 pb-1 ${side === "long" ? "text-bull" : "text-bear"}`}
+                    className={`mb-1 border-b border-border/50 pb-1 text-[10px] ${side === "long" ? "text-bull" : "text-bear"}`}
                   >
-                    {side === "long" ? "LONGS" : "SHORTS"} ({rows.length})
+                    {side === "long" ? "LONG — compras" : "SHORT — vendas"} ({rows.length})
                   </div>
-                  <div className="space-y-1">
+                  <div className="space-y-0.5">
                     {rows.map((position) => {
-                      const live = livePx(position.symbol);
-                      const pnl = calcPnl(
-                        position.side,
-                        Number(position.qty),
-                        Number(position.entry_price),
-                        live,
-                        Number(position.margin),
-                      );
+                      const entry = Number(position.entry_price);
+                      const quantity = Number(position.qty);
+                      const value = entry * quantity;
                       return (
                         <div
                           key={position.id}
-                          className="grid grid-cols-[1fr_auto] gap-2 rounded border border-border/50 px-2 py-2"
+                          className={`grid grid-cols-3 gap-2 rounded px-1 py-1 ${side === "long" ? "text-bull" : "text-bear"}`}
                         >
-                          <div>
-                            <div className={side === "long" ? "text-bull" : "text-bear"}>
-                              {position.symbol.replace("USDT", "")} · {position.leverage}x
-                            </div>
-                            <div className="mt-1 text-muted-foreground">
-                              Entrada {fmtPrice(Number(position.entry_price))} · Atual{" "}
-                              {live ? fmtPrice(live) : "—"}
-                            </div>
-                            <div className="text-muted-foreground">
-                              Qtd. {Number(position.qty).toPrecision(7)} · Margem B${" "}
-                              {fmt(Number(position.margin))}
-                            </div>
-                          </div>
-                          <div
-                            className={`text-right font-bold ${pnl >= 0 ? "text-bull" : "text-bear"}`}
+                          <span>{fmtPrice(entry)}</span>
+                          <span
+                            className="text-right text-foreground"
+                            title={`${position.symbol.replace("USDT", "")} · ${position.leverage}x`}
                           >
-                            {pnl >= 0 ? "+" : ""}
-                            {fmt(pnl)} B$
-                          </div>
+                            {quantity.toPrecision(7)}
+                          </span>
+                          <span className="text-right text-foreground">{fmt(value)}</span>
+                          <span className="col-span-3 -mt-1 text-[9px] text-muted-foreground">
+                            {position.symbol.replace("USDT", "")}/USDT · {position.leverage}x ·
+                            margem B$ {fmt(Number(position.margin))}
+                          </span>
                         </div>
                       );
                     })}
                     {rows.length === 0 && (
-                      <div className="py-2 text-muted-foreground">Nenhuma posição</div>
+                      <div className="py-2 text-muted-foreground">Nenhuma operação</div>
                     )}
                   </div>
                 </div>
