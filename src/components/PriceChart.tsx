@@ -40,7 +40,7 @@ export function PriceChart({ symbol, interval, lines, onPrice }: { symbol: strin
           crosshair: { mode: CrosshairMode.Normal },
           timeScale: { timeVisible: true, secondsVisible: false },
         });
-        const s = chart.addCandlestickSeries({ upColor: "#22c55e", downColor: "#ef4444", borderVisible: false, wickUpColor: "#22c55e", wickDownColor: "#ef4444" });
+        const s = chart.addCandlestickSeries({ upColor: "#1d4ed8", downColor: "#ef4444", borderVisible: false, wickUpColor: "#1d4ed8", wickDownColor: "#ef4444" });
         seriesRef.current = s;
         const r = await fetch(`https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`, { signal: AbortSignal.timeout(12000) });
         if (!r.ok) throw new Error(`Binance respondeu ${r.status}`);

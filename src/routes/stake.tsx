@@ -15,7 +15,7 @@ export const Route = createFileRoute("/stake")({
   head: () => ({
     meta: [
       { title: "Stake — Bluxq" },
-      { name: "description", content: "Stake bluxx and earn from trader fees and losses." },
+      { name: "description", content: "Stake blux and earn from trader fees and losses." },
       { property: "og:title", content: "Stake — Bluxq" },
       { property: "og:description", content: "Be the house: earn from fees and liquidations." },
       { property: "og:type", content: "website" },
@@ -77,7 +77,7 @@ function Stake() {
       <div>
         <h1 className="text-2xl font-bold">Stake — seja a casa</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Your bluxx enter the pool that pays trader profits. You earn when traders lose or are
+          Your blux enter the pool that pays trader profits. You earn when traders lose or are
           liquidated, and receive {STAKER_SHARE * 100}% da taxa de {FEE_RATE * 100}% of every profit
           fee. If traders win, the pool decreases.
         </p>

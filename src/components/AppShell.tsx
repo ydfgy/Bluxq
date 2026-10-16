@@ -150,18 +150,6 @@ export function Protected({
 }
 
 export function CoinRain({ show }: { show: number }) {
-  if (!show) return null;
-  return (
-    <div key={show} className="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-      {Array.from({ length: 28 }).map((_, i) => (
-        <span
-          key={i}
-          className="animate-coin absolute grid h-7 w-7 place-items-center rounded-full bg-gold text-[10px] font-bold text-gold-foreground glow-gold"
-          style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 7) * 0.08}s`, top: "-5vh" }}
-        >
-          $BX
-        </span>
-      ))}
-    </div>
-  );
+  void show;
+  return null;
 }

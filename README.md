@@ -1,6 +1,6 @@
 # Bluxq
 
-Plataforma de trading com Robux/bluxx, dados de mercado em tempo real, gráficos de candles, operações Long/Short, alavancagem e pool de liquidez para stake.
+Plataforma de trading com Robux/blux, dados de mercado em tempo real, gráficos de candles, operações Long/Short, alavancagem e pool de liquidez para stake.
 
 ## Funcionalidades
 
@@ -10,7 +10,7 @@ Plataforma de trading com Robux/bluxx, dados de mercado em tempo real, gráficos
 - Operações Long e Short.
 - Alavancagem mínima de 1x e máxima dinâmica conforme a liquidez livre da pool, limitada a 50x.
 - Carteira de depósitos e saques.
-- Stake de bluxx para fornecer liquidez.
+- Stake de blux para fornecer liquidez.
 - Verificação de conta Roblox.
 
 ## Desenvolvimento local

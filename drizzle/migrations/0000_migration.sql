@@ -117,7 +117,7 @@ declare
   words text[] := array['banana','foguete','pizza','dragao','neon','tigre','robo','lua','cometa','ninja','turbo','cristal','vulcao','pinguim','raio','castelo','galaxia','abacaxi','trovao','lobo'];
   phrase text;
 begin
-  phrase := 'bluxx ' || words[1+floor(random()*20)::int] || ' ' || words[1+floor(random()*20)::int] || ' ' || words[1+floor(random()*20)::int] || ' ' || (100+floor(random()*900)::int)::text;
+  phrase := 'blux ' || words[1+floor(random()*20)::int] || ' ' || words[1+floor(random()*20)::int] || ' ' || words[1+floor(random()*20)::int] || ' ' || (100+floor(random()*900)::int)::text;
   insert into public.profiles (id, email, roblox_username, verify_phrase)
   values (new.id, new.email, coalesce(nullif(new.raw_user_meta_data->>'roblox_username',''),'sem-nome'), phrase);
   insert into public.user_roles (user_id, role) values (new.id, 'user');

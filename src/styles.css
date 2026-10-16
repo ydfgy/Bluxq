@@ -54,32 +54,32 @@
   --card-foreground: var(--foreground);
   --popover: oklch(0.09 0 0);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.84 0.24 145);
-  --primary-foreground: oklch(0.15 0.03 150);
+  --primary: oklch(0.42 0.13 255);
+  --primary-foreground: oklch(0.98 0.01 250);
   --secondary: oklch(0.1 0 0);
   --secondary-foreground: var(--foreground);
   --muted: oklch(0.085 0 0);
   --muted-foreground: oklch(0.65 0.02 155);
-  --accent: oklch(0.2 0.04 145);
+  --accent: oklch(0.18 0.05 255);
   --accent-foreground: var(--foreground);
   --destructive: oklch(0.65 0.24 22);
   --destructive-foreground: oklch(0.98 0 0);
-  --bull: oklch(0.82 0.24 145);
-  --bull-foreground: oklch(0.15 0.03 150);
+  --bull: oklch(0.48 0.16 255);
+  --bull-foreground: oklch(0.98 0.01 250);
   --bear: oklch(0.64 0.24 22);
   --bear-foreground: oklch(0.98 0 0);
   --gold: oklch(0.83 0.17 80);
   --gold-foreground: oklch(0.2 0.04 70);
   --border: oklch(0.19 0 0);
   --input: oklch(0.2 0 0);
-  --ring: oklch(0.84 0.24 145);
+  --ring: oklch(0.52 0.16 255);
 
   --glow-bull: 0 0 24px -4px color-mix(in oklab, var(--bull) 70%, transparent);
   --glow-bear: 0 0 24px -4px color-mix(in oklab, var(--bear) 70%, transparent);
   --glow-gold: 0 0 30px -6px color-mix(in oklab, var(--gold) 80%, transparent);
   --gradient-hero: radial-gradient(
     ellipse at top,
-    color-mix(in oklab, var(--bull) 18%, transparent),
+    color-mix(in oklab, var(--primary) 18%, transparent),
     transparent 60%
   );
 }
@@ -113,6 +113,34 @@
 }
 @utility text-glow {
   text-shadow: 0 0 18px color-mix(in oklab, currentColor 60%, transparent);
+}
+
+.blux-range {
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  cursor: grab;
+  border: 1px solid oklch(0.32 0.08 255);
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--primary), oklch(0.12 0.03 255));
+}
+.blux-range:active {
+  cursor: grabbing;
+}
+.blux-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border: 2px solid oklch(0.68 0.16 255);
+  border-radius: 50%;
+  background: oklch(0.08 0.02 255);
+}
+.blux-range::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border: 2px solid oklch(0.68 0.16 255);
+  border-radius: 50%;
+  background: oklch(0.08 0.02 255);
 }
 
 @keyframes coin-fall {

@@ -35,7 +35,7 @@ export const Route = createFileRoute("/trade")({
       { title: "Trade com alavancagem — Bluxq" },
       {
         name: "description",
-        content: "Opere Long e Short em cripto real com bluxx e alavancagem até 50x.",
+        content: "Opere Long e Short em cripto real com blux e alavancagem até 50x.",
       },
       { property: "og:title", content: "Trade — Bluxq" },
       { property: "og:description", content: "Gráfico ao vivo, Long/Short e alavancagem até 50x." },
@@ -187,7 +187,7 @@ function Trade() {
         .flatMap((p) => [
           {
             price: Number(p.entry_price),
-            color: p.side === "long" ? "#22c55e" : "#ef4444",
+            color: p.side === "long" ? "#1d4ed8" : "#ef4444",
             title: `${p.side === "long" ? "LONG" : "SHORT"} ${p.leverage}x entrada`,
           },
           { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidation" },
@@ -280,16 +280,16 @@ function Trade() {
     if (!context) return;
     context.fillStyle = "#050505";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#22c55e";
+    context.fillStyle = "#1d4ed8";
     context.font = "700 34px sans-serif";
     context.fillText("Bluxq", 70, 90);
     context.fillStyle = "#f4f4f5";
     context.font = "700 54px sans-serif";
     context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
-    context.fillStyle = position.side === "long" ? "#22c55e" : "#ef4444";
+    context.fillStyle = position.side === "long" ? "#1d4ed8" : "#ef4444";
     context.font = "700 34px monospace";
     context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
-    context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
+    context.fillStyle = pnl >= 0 ? "#1d4ed8" : "#ef4444";
     context.font = "700 72px monospace";
     context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
     context.font = "32px monospace";
@@ -321,7 +321,6 @@ function Trade() {
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-          <span className="text-[10px] text-bull">● mercado ao vivo</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
           <span>Price</span>
@@ -616,6 +615,16 @@ function Trade() {
               {lev}x
             </span>
           </div>
+          <input
+            aria-label="Arraste para escolher a alavancagem"
+            type="range"
+            min={MIN_LEVERAGE}
+            max={sliderMax}
+            step={1}
+            value={Math.min(lev, sliderMax)}
+            onChange={(event) => setLev(Number(event.target.value))}
+            className="blux-range"
+          />
           <div className="grid grid-cols-4 gap-1">
             {[1, 2, 3, 5, 10, 20, 30, 40, 50]
               .filter((option) => option >= MIN_LEVERAGE && option <= sliderMax)
