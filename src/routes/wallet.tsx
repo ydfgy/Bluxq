@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -10,14 +10,15 @@ import { requestDeposit, requestWithdraw } from "@/lib/blux.functions";
 import { fmt, ROBLOX_GROUP_URL } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/wallet")({
   head: () => ({
     meta: [
       { title: "Wallet — BluxTrade" },
-      { name: "description", content: "Deposit and withdraw Robux on BluxTrade." },
+      { name: "description", content: "Manage Robux and crypto deposits and withdrawals." },
       { property: "og:title", content: "Wallet — BluxTrade" },
-      { property: "og:description", content: "Deposite Robux e receba Blux para operar." },
+      { property: "og:description", content: "Deposite e saque por Roblox ou Crypto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -42,8 +43,14 @@ function Wallet() {
   const qc = useQueryClient();
   const dep = useServerFn(requestDeposit);
   const wd = useServerFn(requestWithdraw);
-  const [d, setD] = useState("100");
-  const [w, setW] = useState("");
+  const [depositAmount, setDepositAmount] = useState("100");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [depositMethod, setDepositMethod] = useState<"roblox" | "crypto">("roblox");
+  const [withdrawMethod, setWithdrawMethod] = useState<"roblox" | "crypto">("roblox");
+  const [asset, setAsset] = useState("USDT");
+  const [network, setNetwork] = useState("TRC20");
+  const [transactionHash, setTransactionHash] = useState("");
+  const [destination, setDestination] = useState("");
   const uid = session?.user.id;
 
   const { data: hist } = useQuery({
@@ -65,8 +72,8 @@ function Wallet() {
           .limit(30),
       ]);
       return [
-        ...(a.data ?? []).map((x) => ({ ...x, kind: "Deposit" })),
-        ...(b.data ?? []).map((x) => ({ ...x, kind: "Withdrawal" })),
+        ...(a.data ?? []).map((x) => ({ ...x, kind: "Deposit", method: x.payment_method })),
+        ...(b.data ?? []).map((x) => ({ ...x, kind: "Withdrawal", method: x.payout_method })),
       ].sort((x, y) => y.created_at.localeCompare(x.created_at));
     },
   });
@@ -82,85 +89,181 @@ function Wallet() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8 space-y-6">
+    <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div className="rounded-xl border bg-card p-6">
         <div className="text-sm text-muted-foreground">Available balance</div>
         <div className="font-mono text-4xl text-gold">B$ {fmt(p?.balance)}</div>
-        <div className="text-xs text-muted-foreground mt-1">1 Robux = 1 Blux (B$)</div>
+        <div className="mt-1 text-xs text-muted-foreground">1 Robux = 1 Blux (B$)</div>
       </div>
+
+      <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm">
+        <b>Importante:</b> BluxTrade é uma plataforma independente e{" "}
+        <b>não é afiliada, patrocinada ou associada à Roblox Corporation</b>. Roblox e Robux são
+        marcas de seus respectivos proprietários.
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="rounded-xl border bg-card p-5 space-y-3">
-          <h2 className="font-bold text-lg">Depositar</h2>
-          <ol className="text-sm text-muted-foreground list-decimal pl-4 space-y-1">
-            <li>
-              Entre no{" "}
-              <a
-                href={ROBLOX_GROUP_URL}
-                target="_blank"
-                rel="noreferrer"
-                className="text-primary underline"
-              >
-                our Roblox group
-              </a>
-              .
-            </li>
-            <li>
-              Buy the group item/pass for the amount you want to deposit using the account{" "}
-              <b>{p?.roblox_username}</b>.
-            </li>
-            <li>Enter the amount below. Once confirmed, Blux will be added to your account.</li>
-          </ol>
-          <Input
-            type="number"
-            min={10}
-            value={d}
-            onChange={(e) => setD(e.target.value)}
-            className="font-mono"
-          />
+        <section className="space-y-3 rounded-xl border bg-card p-5">
+          <div>
+            <h2 className="text-lg font-bold">Depositar</h2>
+            <p className="text-sm text-muted-foreground">
+              Escolha como quer enviar o valor para sua carteira.
+            </p>
+          </div>
+          <SelectMethod value={depositMethod} onChange={setDepositMethod} />
+          {depositMethod === "roblox" ? (
+            <>
+              <ol className="list-decimal space-y-1 pl-4 text-sm text-muted-foreground">
+                <li>
+                  Entre no{" "}
+                  <a
+                    href={ROBLOX_GROUP_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="text-primary underline"
+                  >
+                    grupo Roblox
+                  </a>
+                  .
+                </li>
+                <li>
+                  Compre o item/pass do grupo usando a conta <b>{p?.roblox_username}</b>.
+                </li>
+                <li>Informe o mesmo valor abaixo e envie para confirmação.</li>
+              </ol>
+              <p className="rounded-md bg-muted p-3 text-xs text-muted-foreground">
+                Conta vinculada para este fluxo:{" "}
+                <b className="text-foreground">{p?.roblox_username}</b>. Ela já fica salva após a
+                verificação.
+              </p>
+            </>
+          ) : (
+            <>
+              <p className="text-sm text-muted-foreground">
+                Envie a cripto e informe os dados da transação. A confirmação é feita manualmente
+                pela equipe.
+              </p>
+              <CryptoFields
+                asset={asset}
+                network={network}
+                onAsset={setAsset}
+                onNetwork={setNetwork}
+              />
+              <Field label="Hash da transação (TXID)">
+                <Input
+                  value={transactionHash}
+                  onChange={(e) => setTransactionHash(e.target.value)}
+                  placeholder="Cole o hash da transação"
+                />
+              </Field>
+            </>
+          )}
+          <Field label="Valor em B$">
+            <Input
+              type="number"
+              min={10}
+              value={depositAmount}
+              onChange={(e) => setDepositAmount(e.target.value)}
+              className="font-mono"
+            />
+          </Field>
           <Button
             className="w-full"
             onClick={() =>
               run(
-                () => dep({ data: { amount: Math.floor(Number(d)) } }),
-                "Deposit enviado para confirmação",
+                () =>
+                  dep({
+                    data: {
+                      amount: Math.floor(Number(depositAmount)),
+                      paymentMethod: depositMethod,
+                      asset: depositMethod === "crypto" ? asset : undefined,
+                      network: depositMethod === "crypto" ? network : undefined,
+                      transactionHash: depositMethod === "crypto" ? transactionHash : undefined,
+                    },
+                  }),
+                "Depósito enviado para confirmação",
               )
             }
           >
-            Submit deposit
+            Enviar depósito
           </Button>
         </section>
-        <section className="rounded-xl border bg-card p-5 space-y-3">
-          <h2 className="font-bold text-lg">Sacar</h2>
-          <p className="text-sm text-muted-foreground">
-            The amount leaves your balance now and is paid in Robux by the group to{" "}
-            <b>{p?.roblox_username}</b>.
-          </p>
-          <Input
-            type="number"
-            placeholder="Quantidade de B$"
-            value={w}
-            onChange={(e) => setW(e.target.value)}
-            className="font-mono"
-          />
+
+        <section className="space-y-3 rounded-xl border bg-card p-5">
+          <div>
+            <h2 className="text-lg font-bold">Sacar</h2>
+            <p className="text-sm text-muted-foreground">Escolha onde deseja receber seu saldo.</p>
+          </div>
+          <SelectMethod value={withdrawMethod} onChange={setWithdrawMethod} />
+          {withdrawMethod === "roblox" ? (
+            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+              O pagamento será enviado pelo grupo para a conta Roblox verificada:{" "}
+              <b className="text-foreground">{p?.roblox_username}</b>.
+            </p>
+          ) : (
+            <>
+              <CryptoFields
+                asset={asset}
+                network={network}
+                onAsset={setAsset}
+                onNetwork={setNetwork}
+              />
+              <Field label="Endereço de destino">
+                <Input
+                  value={destination}
+                  onChange={(e) => setDestination(e.target.value)}
+                  placeholder="Endereço da sua carteira"
+                />
+              </Field>
+            </>
+          )}
+          <Field label="Valor em B$">
+            <Input
+              type="number"
+              min={10}
+              placeholder="Quantidade de B$"
+              value={withdrawAmount}
+              onChange={(e) => setWithdrawAmount(e.target.value)}
+              className="font-mono"
+            />
+          </Field>
           <Button
             variant="outline"
             className="w-full"
-            onClick={() => run(() => wd({ data: { amount: Number(w) } }), "Withdrawal solicitado")}
+            onClick={() =>
+              run(
+                () =>
+                  wd({
+                    data: {
+                      amount: Number(withdrawAmount),
+                      payoutMethod: withdrawMethod,
+                      asset: withdrawMethod === "crypto" ? asset : undefined,
+                      network: withdrawMethod === "crypto" ? network : undefined,
+                      destination: withdrawMethod === "crypto" ? destination : undefined,
+                    },
+                  }),
+                "Saque solicitado",
+              )
+            }
           >
-            Request withdrawal
+            Solicitar saque
           </Button>
         </section>
       </div>
+
       <section className="rounded-xl border bg-card">
-        <h2 className="font-bold p-4 border-b">History</h2>
+        <h2 className="border-b p-4 font-bold">Histórico</h2>
         {(hist ?? []).map((x) => (
           <div
             key={x.id}
-            className="flex items-center justify-between border-b last:border-0 px-4 py-2 text-sm"
+            className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-sm last:border-0"
           >
-            <span>{x.kind}</span>
+            <span>
+              {x.kind} ·{" "}
+              {x.method === "crypto" ? `Crypto${x.asset ? ` (${x.asset})` : ""}` : "Roblox"}
+            </span>
             <span className="font-mono">{fmt(x.amount, 0)} B$</span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-xs text-muted-foreground">
               {new Date(x.created_at).toLocaleString("pt-BR")}
             </span>
             <span
@@ -177,9 +280,70 @@ function Wallet() {
           </div>
         ))}
         {!hist?.length && (
-          <div className="p-6 text-center text-sm text-muted-foreground">No activity yet.</div>
+          <div className="p-6 text-center text-sm text-muted-foreground">
+            Nenhuma atividade ainda.
+          </div>
         )}
       </section>
     </main>
+  );
+}
+
+function SelectMethod({
+  value,
+  onChange,
+}: {
+  value: "roblox" | "crypto";
+  onChange: (value: "roblox" | "crypto") => void;
+}) {
+  return (
+    <Field label="Método">
+      <select
+        className="flex h-10 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"
+        value={value}
+        onChange={(e) => onChange(e.target.value as "roblox" | "crypto")}
+      >
+        <option value="roblox">Roblox / Robux</option>
+        <option value="crypto">Crypto</option>
+      </select>
+    </Field>
+  );
+}
+function CryptoFields({
+  asset,
+  network,
+  onAsset,
+  onNetwork,
+}: {
+  asset: string;
+  network: string;
+  onAsset: (value: string) => void;
+  onNetwork: (value: string) => void;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Field label="Moeda">
+        <Input
+          value={asset}
+          onChange={(e) => onAsset(e.target.value.toUpperCase())}
+          placeholder="USDT"
+        />
+      </Field>
+      <Field label="Rede">
+        <Input
+          value={network}
+          onChange={(e) => onNetwork(e.target.value.toUpperCase())}
+          placeholder="TRC20"
+        />
+      </Field>
+    </div>
+  );
+}
+function Field({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="space-y-1">
+      <Label>{label}</Label>
+      {children}
+    </div>
   );
 }

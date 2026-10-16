@@ -288,13 +288,27 @@ export const getAffiliateSummary = createServerFn({ method: "GET" })
 
 export const requestDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ amount: z.number().int().min(10).max(10_000_000) }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        amount: z.number().int().min(10).max(10_000_000),
+        paymentMethod: z.enum(["roblox", "crypto"]),
+        asset: z.string().trim().max(20).optional(),
+        network: z.string().trim().max(30).optional(),
+        transactionHash: z.string().trim().max(200).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { error } = await (
       await admin()
-    ).rpc("fn_request_deposit", {
+    ).rpc("fn_request_deposit_v2", {
       _user: context.userId,
       _amount: data.amount,
+      _payment_method: data.paymentMethod,
+      _asset: data.asset ?? null,
+      _network: data.network ?? null,
+      _transaction_hash: data.transactionHash ?? null,
     });
     rpcError(error);
     return { ok: true };
@@ -302,11 +316,28 @@ export const requestDeposit = createServerFn({ method: "POST" })
 
 export const requestWithdraw = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => amount.parse(d))
+  .validator((d) =>
+    z
+      .object({
+        amount: amount.shape.amount,
+        payoutMethod: z.enum(["roblox", "crypto"]),
+        asset: z.string().trim().max(20).optional(),
+        network: z.string().trim().max(30).optional(),
+        destination: z.string().trim().max(200).optional(),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { error } = await (
       await admin()
-    ).rpc("fn_request_withdraw", { _user: context.userId, _amount: data.amount });
+    ).rpc("fn_request_withdraw_v2", {
+      _user: context.userId,
+      _amount: data.amount,
+      _payout_method: data.payoutMethod,
+      _asset: data.asset ?? null,
+      _network: data.network ?? null,
+      _destination: data.destination ?? null,
+    });
     rpcError(error);
     return { ok: true };
   });
@@ -405,7 +436,14 @@ export const verifyRoblox = createServerFn({ method: "POST" })
     });
     if (!r2.ok)
       throw new Error("Unable to read the Roblox profile right now. Try again in a few seconds.");
-    const j2 = (await r2.json()) as { description?: string };
+    const j2 = (await r2.json()) as { description?: string; created?: string };
+    if (!j2.created) throw new Error("Unable to verify the Roblox account age right now.");
+    const accountCreatedAt = new Date(j2.created);
+    const oneYearAgo = new Date();
+    oneYearAgo.setUTCDate(oneYearAgo.getUTCDate() - 365);
+    if (Number.isNaN(accountCreatedAt.getTime()) || accountCreatedAt > oneYearAgo) {
+      throw new Error("Sua conta Roblox precisa ter pelo menos 1 ano para ser verificada.");
+    }
     const bio = (j2.description ?? "").toLowerCase();
     if (!bio.includes(challenge.verify_phrase.toLowerCase())) {
       throw new Error(
@@ -429,6 +467,7 @@ export const verifyRoblox = createServerFn({ method: "POST" })
         roblox_user_id: user.id,
         roblox_username: user.name,
         roblox_display_name: user.displayName,
+        roblox_created_at: accountCreatedAt.toISOString(),
       })
       .eq("id", context.userId);
     rpcError(error);

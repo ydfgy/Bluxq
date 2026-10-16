@@ -115,7 +115,12 @@ function Admin() {
             className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0"
           >
             <span className="flex-1">{user(x)}</span>
-            <span className="font-mono text-gold">{fmt(x.amount, 0)} R$</span>
+            <span className="font-mono text-gold">{fmt(x.amount, 0)} B$</span>
+            <span className="text-xs text-muted-foreground">
+              {x.payment_method === "crypto"
+                ? `Crypto: ${x.asset ?? "?"} / ${x.network ?? "?"} · TX: ${x.transaction_hash ?? "?"}`
+                : "Roblox / Robux"}
+            </span>
             <span className="text-xs text-muted-foreground">
               {new Date(x.created_at).toLocaleString("pt-BR")}
             </span>
@@ -140,7 +145,8 @@ function Admin() {
           Saques aguardando ({data?.withdrawals.length ?? 0})
         </h2>
         <p className="px-4 pt-2 text-xs text-muted-foreground">
-          Pague os Robux pelo grupo e marque como pago. “Devolver” estorna o saldo ao usuário.
+          Para Roblox, pague os Robux pelo grupo. Para Crypto, envie para o endereço informado e
+          marque como pago. “Devolver” estorna o saldo ao usuário.
         </p>
         {data?.withdrawals.map((x) => (
           <div
@@ -148,7 +154,12 @@ function Admin() {
             className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0"
           >
             <span className="flex-1">{user(x)}</span>
-            <span className="font-mono text-gold">{fmt(x.amount, 0)} R$</span>
+            <span className="font-mono text-gold">{fmt(x.amount, 0)} B$</span>
+            <span className="text-xs text-muted-foreground">
+              {x.payout_method === "crypto"
+                ? `Crypto: ${x.asset ?? "?"} / ${x.network ?? "?"} · ${x.destination ?? "?"}`
+                : "Roblox / Robux"}
+            </span>
             <span className="text-xs text-muted-foreground">
               {new Date(x.created_at).toLocaleString("pt-BR")}
             </span>
