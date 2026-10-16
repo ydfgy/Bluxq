@@ -92,13 +92,13 @@ set search_path = public
 as $$
 begin
   if _user is null then
-    raise exception 'Usuário inválido';
+    raise exception 'Invalid user';
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended('bluxtrade-admin-bootstrap', 0));
 
   if exists (select 1 from public.user_roles where role = 'admin') then
-    raise exception 'A administração já foi inicializada';
+    raise exception 'Administration has already been initialized';
   end if;
 
   insert into public.user_roles (user_id, role)
@@ -136,7 +136,7 @@ declare
 begin
   username := trim(coalesce(new.raw_user_meta_data->>'roblox_username', ''));
   if username !~ '^[A-Za-z0-9_]{3,20}$' then
-    raise exception 'Nome de usuário Roblox inválido';
+    raise exception 'Invalid Roblox username';
   end if;
 
   for i in 1..4 loop
@@ -180,11 +180,11 @@ declare
   v_pending integer;
 begin
   if _user is null then
-    raise exception 'Usuário inválido';
+    raise exception 'Invalid user';
   end if;
   _amount := round(_amount, 2);
   if _amount < 10 or _amount > 10000000 or _amount <> trunc(_amount, 0) then
-    raise exception 'Valor de depósito inválido';
+    raise exception 'Invalid deposit amount';
   end if;
 
   perform pg_advisory_xact_lock(hashtextextended('bluxtrade-deposit:' || _user::text, 0));
@@ -194,17 +194,17 @@ begin
   where id = _user
   for update;
   if not found then
-    raise exception 'Perfil não encontrado';
+    raise exception 'Profile not found';
   end if;
   if not v_verified then
-    raise exception 'Verifique sua conta Roblox primeiro';
+    raise exception 'Verify your Roblox account first';
   end if;
 
   select count(*)::integer into v_pending
   from public.deposits
   where user_id = _user and status = 'pending';
   if v_pending >= 3 then
-    raise exception 'Você já tem 3 depósitos aguardando confirmação';
+    raise exception 'You already have 3 deposits awaiting confirmation';
   end if;
 
   insert into public.deposits (user_id, amount)
