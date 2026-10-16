@@ -282,62 +282,56 @@ function Trade() {
       {/* order book interno da plataforma */}
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs uppercase text-muted-foreground">Order book BluxTrade</span>
-          <span className="text-[10px] text-bull">● ao vivo</span>
+          <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
+          <span className="text-[10px] text-bull">● operações ao vivo</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
-          <span>Preço entrada</span>
-          <span className="text-right">Volume</span>
-          <span className="text-right">Valor B$</span>
+          <span>Preço</span>
+          <span className="text-right">Qtd.</span>
+          <span className="text-right">Total</span>
         </div>
-        <div className="px-2 py-2 font-mono text-[11px]">
-          <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
-            <span>Operações abertas agora</span>
-            <span>{platformPositions.length}</span>
+        <div className="px-2 font-mono text-[11px]">
+          <div className="space-y-0.5">
+            {platformPositions
+              .filter((position) => position.side === "short")
+              .slice()
+              .reverse()
+              .map((position) => (
+                <OrderRow
+                  key={position.id}
+                  row={{
+                    price: Number(position.entry_price),
+                    quantity: Number(position.qty),
+                    total: Number(position.entry_price) * Number(position.qty),
+                  }}
+                  side="ask"
+                />
+              ))}
           </div>
-          <div className="max-h-[32rem] space-y-2 overflow-y-auto">
-            {(["long", "short"] as const).map((side) => {
-              const rows = platformPositions.filter((position) => position.side === side);
-              return (
-                <div key={side}>
-                  <div
-                    className={`mb-1 border-b border-border/50 pb-1 text-[10px] ${side === "long" ? "text-bull" : "text-bear"}`}
-                  >
-                    {side === "long" ? "LONG — compras" : "SHORT — vendas"} ({rows.length})
-                  </div>
-                  <div className="space-y-0.5">
-                    {rows.map((position) => {
-                      const entry = Number(position.entry_price);
-                      const quantity = Number(position.qty);
-                      const value = entry * quantity;
-                      return (
-                        <div
-                          key={position.id}
-                          className={`grid grid-cols-3 gap-2 rounded px-1 py-1 ${side === "long" ? "text-bull" : "text-bear"}`}
-                        >
-                          <span>{fmtPrice(entry)}</span>
-                          <span
-                            className="text-right text-foreground"
-                            title={`${position.symbol.replace("USDT", "")} · ${position.leverage}x`}
-                          >
-                            {quantity.toPrecision(7)}
-                          </span>
-                          <span className="text-right text-foreground">{fmt(value)}</span>
-                          <span className="col-span-3 -mt-1 text-[9px] text-muted-foreground">
-                            {position.symbol.replace("USDT", "")}/USDT · {position.leverage}x ·
-                            margem B$ {fmt(Number(position.margin))}
-                          </span>
-                        </div>
-                      );
-                    })}
-                    {rows.length === 0 && (
-                      <div className="py-2 text-muted-foreground">Nenhuma operação</div>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+          <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
+            <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
+            <span className="text-[10px] font-normal text-muted-foreground">preço atual</span>
           </div>
+          <div className="space-y-0.5">
+            {platformPositions
+              .filter((position) => position.side === "long")
+              .map((position) => (
+                <OrderRow
+                  key={position.id}
+                  row={{
+                    price: Number(position.entry_price),
+                    quantity: Number(position.qty),
+                    total: Number(position.entry_price) * Number(position.qty),
+                  }}
+                  side="bid"
+                />
+              ))}
+          </div>
+          {platformPositions.length === 0 && (
+            <div className="py-6 text-center font-sans text-xs text-muted-foreground">
+              Nenhuma operação aberta
+            </div>
+          )}
         </div>
       </aside>
 
@@ -681,6 +675,24 @@ function Trade() {
         </div>
       )}
     </main>
+  );
+}
+
+function OrderRow({
+  row,
+  side,
+}: {
+  row: { price: number; quantity: number; total: number };
+  side: "ask" | "bid";
+}) {
+  return (
+    <div
+      className={`grid grid-cols-3 gap-2 rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
+    >
+      <span>{fmtPrice(row.price)}</span>
+      <span className="text-right text-foreground">{row.quantity.toPrecision(5)}</span>
+      <span className="text-right text-foreground">{fmt(row.total)}</span>
+    </div>
   );
 }
 
