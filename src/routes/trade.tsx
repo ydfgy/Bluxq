@@ -187,7 +187,7 @@ function Trade() {
         .flatMap((p) => [
           {
             price: Number(p.entry_price),
-            color: p.side === "long" ? "#1d4ed8" : "#ef4444",
+            color: p.side === "long" ? "#22c55e" : "#ef4444",
             title: `${p.side === "long" ? "LONG" : "SHORT"} ${p.leverage}x entrada`,
           },
           { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidation" },
@@ -202,6 +202,9 @@ function Trade() {
         throw new Error(
           `Insufficient balance. You need $BX ${fmt(m + openingFee)} including the opening fee.`,
         );
+      }
+      if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+        throw new Error("Preço de mercado indisponível. Aguarde a atualização e tente novamente.");
       }
       if (poolMaxLev < MIN_LEVERAGE)
         throw new Error(
@@ -280,16 +283,16 @@ function Trade() {
     if (!context) return;
     context.fillStyle = "#050505";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#1d4ed8";
+    context.fillStyle = "#22c55e";
     context.font = "700 34px sans-serif";
     context.fillText("Bluxq", 70, 90);
     context.fillStyle = "#f4f4f5";
     context.font = "700 54px sans-serif";
     context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
-    context.fillStyle = position.side === "long" ? "#1d4ed8" : "#ef4444";
+    context.fillStyle = position.side === "long" ? "#22c55e" : "#ef4444";
     context.font = "700 34px monospace";
     context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
-    context.fillStyle = pnl >= 0 ? "#1d4ed8" : "#ef4444";
+    context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
     context.font = "700 72px monospace";
     context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
     context.font = "32px monospace";
@@ -625,32 +628,28 @@ function Trade() {
             onChange={(event) => setLev(Number(event.target.value))}
             className="blux-range"
           />
-          <div className="grid grid-cols-4 gap-1">
-            {[1, 2, 3, 5, 10, 20, 30, 40, 50]
-              .filter((option) => option >= MIN_LEVERAGE && option <= sliderMax)
-              .map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  onClick={() => setLev(option)}
-                  className={`rounded-md border px-2 py-2 text-xs font-mono transition-colors ${lev === option ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
-                >
-                  {option}x
-                </button>
-              ))}
-          </div>
           <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
             <span>{MIN_LEVERAGE}x mín.</span>
-            <span>selecione uma opção</span>
+            <span>arraste para ajustar</span>
             <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
           </div>
           <div className="text-[11px] text-muted-foreground">
             Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
           </div>
         </div>
-        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-          <span className="text-muted-foreground">Total required</span>
-          <span className="font-mono font-bold text-primary">$BX {fmt(m + openingFee)}</span>
+        <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+          <div className="mb-2 flex items-center justify-between font-semibold">
+            <span>Total a debitar</span>
+            <span className="font-mono text-foreground">$BX {fmt(m + openingFee)}</span>
+          </div>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Margem da posição</span>
+            <span className="font-mono">$BX {fmt(m)}</span>
+          </div>
+          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Taxa de abertura (10%)</span>
+            <span className="font-mono">$BX {fmt(openingFee)}</span>
+          </div>
         </div>
         <button
           type="button"
@@ -683,22 +682,23 @@ function Trade() {
             <Row k="Total required" v={`${fmt(m + openingFee)} $BX`} />
           </div>
         )}
-        <div className="grid grid-cols-2 gap-2">
+        <div className="grid grid-cols-[1fr_1px_1fr] items-stretch overflow-hidden rounded-lg border border-border">
           <Button
             disabled={
               busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
             }
             onClick={() => go("long")}
-            className="bg-bull text-bull-foreground hover:bg-bull/90"
+            className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
           >
             Long ↑
           </Button>
+          <span aria-hidden="true" className="my-2 w-px -rotate-[12deg] bg-border" />
           <Button
             disabled={
               busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
             }
             onClick={() => go("short")}
-            className="bg-bear text-bear-foreground hover:bg-bear/90"
+            className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
           >
             Short ↓
           </Button>
