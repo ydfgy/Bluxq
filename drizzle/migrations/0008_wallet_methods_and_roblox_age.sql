@@ -55,7 +55,7 @@ declare p public.profiles;
 begin
   if _payout_method not in ('roblox', 'crypto') then raise exception 'Método de saque inválido'; end if;
   _amount := round(_amount, 2);
-  if _amount < 10 then raise exception 'Saque mínimo B$10'; end if;
+  if _amount < 10 then raise exception 'Saque mínimo $BX10'; end if;
   if _payout_method = 'crypto' and (nullif(trim(coalesce(_asset, '')), '') is null or nullif(trim(coalesce(_network, '')), '') is null or nullif(trim(coalesce(_destination, '')), '') is null) then
     raise exception 'Informe moeda, rede e endereço de destino';
   end if;

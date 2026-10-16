@@ -32,12 +32,12 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/trade")({
   head: () => ({
     meta: [
-      { title: "Trade com alavancagem — BluxTrade" },
+      { title: "Trade com alavancagem — Bluxq" },
       {
         name: "description",
-        content: "Opere Long e Short em cripto real com Blux e alavancagem até 50x.",
+        content: "Opere Long e Short em cripto real com bluxx e alavancagem até 50x.",
       },
-      { property: "og:title", content: "Trade — BluxTrade" },
+      { property: "og:title", content: "Trade — Bluxq" },
       { property: "og:description", content: "Gráfico ao vivo, Long/Short e alavancagem até 50x." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -200,7 +200,7 @@ function Trade() {
     try {
       if (m + openingFee > Number(profile?.balance ?? 0)) {
         throw new Error(
-          `Insufficient balance. You need B$ ${fmt(m + openingFee)} including the opening fee.`,
+          `Insufficient balance. You need $BX ${fmt(m + openingFee)} including the opening fee.`,
         );
       }
       if (poolMaxLev < MIN_LEVERAGE)
@@ -224,7 +224,7 @@ function Trade() {
       const r = await close({ data: { id } });
       if (r.pnl > 0) setRain(Date.now());
       toast[r.pnl >= 0 ? "success" : "error"](
-        `Fechada: ${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)} B$ (taxa ${fmt(r.fee)})`,
+        `Fechada: ${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)} $BX (taxa ${fmt(r.fee)})`,
       );
       await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
       await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
@@ -243,9 +243,9 @@ function Trade() {
   const unrealPct = openMargin ? (unreal / openMargin) * 100 : 0;
   function currentResultText() {
     return [
-      "BluxTrade — resultado atual",
+      "Bluxq — resultado atual",
       `Pares abertos: ${openPos.length}`,
-      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} B$ (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
+      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} $BX (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
       `Atualizado em: ${new Date().toLocaleString("pt-BR")}`,
     ].join("\n");
   }
@@ -258,7 +258,7 @@ function Trade() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "bluxtrade-resultado-atual.txt";
+    link.download = "bluxq-resultado-atual.txt";
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Resultado baixado");
@@ -282,7 +282,7 @@ function Trade() {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#22c55e";
     context.font = "700 34px sans-serif";
-    context.fillText("BluxTrade", 70, 90);
+    context.fillText("Bluxq", 70, 90);
     context.fillStyle = "#f4f4f5";
     context.font = "700 54px sans-serif";
     context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
@@ -291,7 +291,7 @@ function Trade() {
     context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
     context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
     context.font = "700 72px monospace";
-    context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`, 70, 385);
+    context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
     context.font = "32px monospace";
     context.fillText(`${roe >= 0 ? "+" : ""}${roe.toFixed(2)}%`, 75, 440);
     context.fillStyle = "#d4d4d8";
@@ -308,7 +308,7 @@ function Trade() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `bluxtrade-${position.symbol.toLowerCase()}-${position.side}.png`;
+      link.download = `bluxq-${position.symbol.toLowerCase()}-${position.side}.png`;
       link.click();
       URL.revokeObjectURL(url);
     }, "image/png");
@@ -377,11 +377,11 @@ function Trade() {
                       </div>
                       <div className="text-muted-foreground">
                         Faixa {fmtPrice(entry)} · Vol. {Number(position.qty).toPrecision(5)} ·
-                        Margem B$ {fmt(Number(position.margin))}
+                        Margem $BX {fmt(Number(position.margin))}
                       </div>
                     </div>
                     <div className="text-right text-foreground">
-                      <div>B$ {fmt(value)}</div>
+                      <div>$BX {fmt(value)}</div>
                       <div className="text-muted-foreground">
                         {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
                           hour: "2-digit",
@@ -484,7 +484,7 @@ function Trade() {
               <div className="ml-auto flex items-center gap-2">
                 <span className={`font-mono text-sm ${unreal >= 0 ? "text-bull" : "text-bear"}`}>
                   PnL {unreal >= 0 ? "+" : ""}
-                  {fmt(unreal)} B$ ({unrealPct >= 0 ? "+" : ""}
+                  {fmt(unreal)} $BX ({unrealPct >= 0 ? "+" : ""}
                   {unrealPct.toFixed(2)}%)
                 </span>
                 <button
@@ -586,10 +586,10 @@ function Trade() {
       <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">Balance</span>
-          <span className="font-mono text-gold">B$ {fmt(profile?.balance)}</span>
+          <span className="font-mono text-gold">$BX {fmt(profile?.balance)}</span>
         </div>
         <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Margem (B$)</label>
+          <label className="text-xs text-muted-foreground">Margem ($BX)</label>
           <Input
             type="number"
             min={10}
@@ -636,12 +636,12 @@ function Trade() {
             <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
           </div>
           <div className="text-[11px] text-muted-foreground">
-            Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
+            Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
           </div>
         </div>
         <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
           <span className="text-muted-foreground">Total required</span>
-          <span className="font-mono font-bold text-primary">B$ {fmt(m + openingFee)}</span>
+          <span className="font-mono font-bold text-primary">$BX {fmt(m + openingFee)}</span>
         </div>
         <button
           type="button"
@@ -653,7 +653,7 @@ function Trade() {
         </button>
         {showOrderDetails && (
           <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
-            <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
+            <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
             <Row
               k="Quantidade"
               v={
@@ -669,9 +669,9 @@ function Trade() {
               cls="text-bear"
             />
             <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} B$`} />
-            <Row k="Opening fee" v={`${fmt(openingFee)} B$ (10% da margem)`} />
-            <Row k="Total required" v={`${fmt(m + openingFee)} B$`} />
+            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
+            <Row k="Opening fee" v={`${fmt(openingFee)} $BX (10% da margem)`} />
+            <Row k="Total required" v={`${fmt(m + openingFee)} $BX`} />
           </div>
         )}
         <div className="grid grid-cols-2 gap-2">
@@ -706,7 +706,7 @@ function Trade() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Operação BluxTrade</div>
+                <div className="text-xs uppercase text-muted-foreground">Operação Bluxq</div>
                 <h2 className="mt-1 text-2xl font-bold">
                   {selectedPosition.symbol.replace("USDT", "")} / USDT
                 </h2>
@@ -725,7 +725,7 @@ function Trade() {
               {selectedPosition.side.toUpperCase()} {selectedPosition.leverage}x
             </div>
             <div className="mt-4 space-y-2 rounded-lg border p-3 font-mono text-sm">
-              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} B$`} />
+              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} $BX`} />
               <Row k="Quantidade" v={Number(selectedPosition.qty).toPrecision(7)} />
               <Row k="Entrada" v={fmtPrice(Number(selectedPosition.entry_price))} />
               <Row k="Price atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
@@ -743,7 +743,7 @@ function Trade() {
                   livePx(selectedPosition.symbol),
                   Number(selectedPosition.margin),
                 );
-                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`;
+                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`;
               })()}
             </div>
             <div className="mt-5 flex gap-2">

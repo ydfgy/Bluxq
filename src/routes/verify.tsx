@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/verify")({
   head: () => ({
     meta: [
-      { title: "Verify Roblox — BluxTrade" },
+      { title: "Verify Roblox — Bluxq" },
       { name: "description", content: "Verify your Roblox account" },
       { property: "og:title", content: "Verify Roblox" },
       { property: "og:description", content: "Verify your Roblox account" },

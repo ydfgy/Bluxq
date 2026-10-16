@@ -95,7 +95,7 @@ declare
 begin
   if _side not in ('long','short') then raise exception 'Invalid side'; end if;
   if _lev < 1 or _lev > 50 then raise exception 'Leverage must be between 1x and 50x'; end if;
-  if _margin < 10 then raise exception 'Minimum margin is B$10'; end if;
+  if _margin < 10 then raise exception 'Minimum margin is $BX10'; end if;
   if _price is null or _price <= 0 then raise exception 'Price unavailable'; end if;
   _margin := round(_margin, 2);
   v_opening_fee := round(_margin * 0.10, 2);

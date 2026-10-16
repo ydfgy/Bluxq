@@ -12,8 +12,8 @@ type Target = "usd" | "robux";
 export const Route = createFileRoute("/convert")({
   head: () => ({
     meta: [
-      { title: "Conversor B$ — BluxTrade" },
-      { name: "description", content: "Converta o saldo B$ para dólares ou Robux." },
+      { title: "Conversor $BX — Bluxq" },
+      { name: "description", content: "Converta o saldo $BX para dólares ou Robux." },
     ],
   }),
   component: () => (
@@ -34,9 +34,9 @@ function Converter() {
     <main className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <section className="space-y-2">
         <p className="text-xs uppercase tracking-[0.2em] text-primary">Carteira</p>
-        <h1 className="text-3xl font-bold">Conversor B$</h1>
+        <h1 className="text-3xl font-bold">Conversor $BX</h1>
         <p className="text-muted-foreground">
-          Veja quanto o seu saldo em B$ representa na moeda escolhida. Esta é uma referência de
+          Veja quanto o seu saldo em $BX representa na moeda escolhida. Esta é uma referência de
           conversão, não uma ordem automática de saque.
         </p>
       </section>
@@ -44,7 +44,7 @@ function Converter() {
       <section className="space-y-5 rounded-xl border bg-card p-5">
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="blux-amount">Valor em B$</Label>
+            <Label htmlFor="blux-amount">Valor em $BX</Label>
             <Input
               id="blux-amount"
               type="number"
@@ -55,7 +55,7 @@ function Converter() {
               className="font-mono text-lg"
             />
             <p className="text-xs text-muted-foreground">
-              Saldo disponível: B$ {Number(profile?.balance ?? 0).toFixed(2)}
+              Saldo disponível: $BX {Number(profile?.balance ?? 0).toFixed(2)}
             </p>
           </div>
           <div className="space-y-2">
@@ -75,7 +75,7 @@ function Converter() {
                 className={`rounded-md border px-3 py-3 text-left text-sm ${target === "robux" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
               >
                 Robux
-                <span className="mt-1 block text-xs text-muted-foreground">1 B$ = 1 Robux</span>
+                <span className="mt-1 block text-xs text-muted-foreground">1 $BX = 1 Robux</span>
               </button>
             </div>
           </div>
@@ -87,15 +87,15 @@ function Converter() {
             {target === "usd" ? `US$ ${converted.toFixed(4)}` : `${converted.toFixed(2)} Robux`}
           </p>
           <p className="mt-2 text-xs text-muted-foreground">
-            Cotação de referência: 1 B$ = 1 Robux = US$ {USD_PER_BLUX.toFixed(4)}.
+            Cotação de referência: 1 $BX = 1 Robux = US$ {USD_PER_BLUX.toFixed(4)}.
           </p>
         </div>
       </section>
 
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm text-muted-foreground">
-        BluxTrade é independente e não é afiliada, patrocinada ou associada à Roblox Corporation,
-        Roblox ou qualquer outra empresa citada no site. Roblox e Robux são marcas de seus
-        respectivos proprietários.
+        Bluxq é independente e não é afiliada, patrocinada ou associada à Roblox Corporation, Roblox
+        ou qualquer outra empresa citada no site. Roblox e Robux são marcas de seus respectivos
+        proprietários.
       </div>
     </main>
   );

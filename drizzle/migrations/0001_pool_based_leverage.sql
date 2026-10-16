@@ -14,7 +14,7 @@ declare
 begin
   if _side not in ('long','short') then raise exception 'Lado inválido'; end if;
   if _lev < 5 or _lev > 50 then raise exception 'Alavancagem deve estar entre 5x e 50x'; end if;
-  if _margin < 10 then raise exception 'Margem mínima é B$10'; end if;
+  if _margin < 10 then raise exception 'Margem mínima é $BX10'; end if;
   if _price is null or _price <= 0 then raise exception 'Preço indisponível'; end if;
 
   _margin := round(_margin, 2);
@@ -27,10 +27,10 @@ begin
   -- Reserva: margem * (alavancagem - 1) de dívida + margem * 5 de lucro máximo.
   v_max_lev := least(50, floor(v_available / _margin - 4)::int);
   if v_max_lev < 5 then
-    raise exception 'Liquidez insuficiente: esta margem permite no máximo %x (disponível: B$%)', greatest(v_max_lev, 0), round(v_available, 2);
+    raise exception 'Liquidez insuficiente: esta margem permite no máximo %x (disponível: $BX%)', greatest(v_max_lev, 0), round(v_available, 2);
   end if;
   if _lev > v_max_lev then
-    raise exception 'Alavancagem máxima para esta margem: %x (disponível: B$%)', v_max_lev, round(v_available, 2);
+    raise exception 'Alavancagem máxima para esta margem: %x (disponível: $BX%)', v_max_lev, round(v_available, 2);
   end if;
 
   v_borrowed := _margin * (_lev - 1);

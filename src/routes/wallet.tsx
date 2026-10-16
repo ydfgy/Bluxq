@@ -15,9 +15,9 @@ import { Label } from "@/components/ui/label";
 export const Route = createFileRoute("/wallet")({
   head: () => ({
     meta: [
-      { title: "Wallet — BluxTrade" },
+      { title: "Wallet — Bluxq" },
       { name: "description", content: "Manage Robux and crypto deposits and withdrawals." },
-      { property: "og:title", content: "Wallet — BluxTrade" },
+      { property: "og:title", content: "Wallet — Bluxq" },
       { property: "og:description", content: "Deposite e saque por Roblox ou Crypto." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -93,7 +93,7 @@ function Wallet() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm">
-        <b>Importante:</b> BluxTrade é uma plataforma independente e não é afiliada, patrocinada ou
+        <b>Importante:</b> Bluxq é uma plataforma independente e não é afiliada, patrocinada ou
         associada à Roblox Corporation, Roblox ou qualquer outra empresa mencionada no site. Roblox
         e Robux são referências do fluxo de pagamento.
       </div>
@@ -159,7 +159,7 @@ function Wallet() {
               </Field>
             </>
           )}
-          <Field label="Valor em B$">
+          <Field label="Valor em $BX">
             <Input
               type="number"
               min={10}
@@ -223,11 +223,11 @@ function Wallet() {
               </Field>
             </>
           )}
-          <Field label="Valor em B$">
+          <Field label="Valor em $BX">
             <Input
               type="number"
               min={10}
-              placeholder="Quantidade de B$"
+              placeholder="Quantidade de $BX"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               className="font-mono"
@@ -268,7 +268,7 @@ function Wallet() {
               {x.kind} ·{" "}
               {x.method === "crypto" ? `Crypto${x.asset ? ` (${x.asset})` : ""}` : "Roblox"}
             </span>
-            <span className="font-mono">{fmt(x.amount, 0)} B$</span>
+            <span className="font-mono">{fmt(x.amount, 0)} $BX</span>
             <span className="text-xs text-muted-foreground">
               {new Date(x.created_at).toLocaleString("pt-BR")}
             </span>

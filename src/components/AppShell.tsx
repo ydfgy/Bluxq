@@ -10,11 +10,9 @@ export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
       <span className="grid h-8 w-8 place-items-center rounded-lg bg-gold text-gold-foreground glow-gold font-mono">
-        B$
+        $BX
       </span>
-      <span>
-        Blux<span className="text-primary">Trade</span>
-      </span>
+      <span>Bluxq</span>
     </Link>
   );
 }
@@ -70,7 +68,7 @@ export function Navbar() {
                 to="/wallet"
                 className="rounded-full border border-gold/40 bg-gold/10 px-3 py-1 font-mono text-sm text-gold"
               >
-                B$ {fmt(profile.balance)}
+                $BX {fmt(profile.balance)}
               </Link>
               <div className="hidden sm:flex items-center gap-2">
                 {profile.avatar_url ? (
@@ -161,7 +159,7 @@ export function CoinRain({ show }: { show: number }) {
           className="animate-coin absolute grid h-7 w-7 place-items-center rounded-full bg-gold text-[10px] font-bold text-gold-foreground glow-gold"
           style={{ left: `${(i * 37) % 100}%`, animationDelay: `${(i % 7) * 0.08}s`, top: "-5vh" }}
         >
-          B$
+          $BX
         </span>
       ))}
     </div>

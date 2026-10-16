@@ -12,8 +12,8 @@ import { Button } from "@/components/ui/button";
 export const Route = createFileRoute("/referrals")({
   head: () => ({
     meta: [
-      { title: "Referrals — BluxTrade" },
-      { name: "description", content: "Earn commissions by referring traders to BluxTrade." },
+      { title: "Referrals — Bluxq" },
+      { name: "description", content: "Earn commissions by referring traders to Bluxq." },
     ],
   }),
   component: () => (
@@ -51,7 +51,7 @@ function Referrals() {
   async function doClaim() {
     try {
       const result = await claim({ data: undefined });
-      toast.success(`B$ ${fmt(result.amount)} added to your balance`);
+      toast.success(`$BX ${fmt(result.amount)} added to your balance`);
       await qc.invalidateQueries({ queryKey: ["affiliate-summary", uid] });
       await qc.invalidateQueries({ queryKey: ["profile", uid] });
     } catch (error) {
@@ -77,9 +77,9 @@ function Referrals() {
         <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Available to claim
         </div>
-        <div className="mt-3 font-mono text-5xl font-bold text-primary">B$ {fmt(pending)}</div>
+        <div className="mt-3 font-mono text-5xl font-bold text-primary">$BX {fmt(pending)}</div>
         <Button className="mt-6 w-full" onClick={doClaim} disabled={pending <= 0 || isLoading}>
-          {pending > 0 ? `Claim B$ ${fmt(pending)}` : "Nothing to claim"}
+          {pending > 0 ? `Claim $BX ${fmt(pending)}` : "Nothing to claim"}
         </Button>
         <p className="mt-3 text-xs text-muted-foreground">
           The button stays disabled until you have pending commission.
@@ -88,8 +88,8 @@ function Referrals() {
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
         <Stat label="Invited traders" value={String(summary?.invitedCount ?? 0)} />
-        <Stat label="Total earned" value={`B$ ${fmt(summary?.total)}`} />
-        <Stat label="Recently claimed" value={`B$ ${fmt(summary?.claimed)}`} />
+        <Stat label="Total earned" value={`$BX ${fmt(summary?.total)}`} />
+        <Stat label="Recently claimed" value={`$BX ${fmt(summary?.claimed)}`} />
       </div>
 
       <section className="mt-6 rounded-xl border bg-card p-5">

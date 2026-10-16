@@ -14,7 +14,7 @@ async function admin() {
 function rpcError(error: { message: string; code?: string } | null) {
   if (!error) return;
   const clean = error.message.replace(/^.*?ERROR:\s*/, "").trim();
-  console.error("[BluxTrade] Supabase operation failed", { code: error.code, message: clean });
+  console.error("[Bluxq] Supabase operation failed", { code: error.code, message: clean });
   const internal =
     /permission denied|relation .* does not exist|column .* does not exist|syntax error/i.test(
       clean,

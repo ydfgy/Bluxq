@@ -14,7 +14,7 @@ function Index() {
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-4xl items-center justify-center px-4 py-12">
       <section className="w-full rounded-xl border bg-card p-8 text-center sm:p-12">
         <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gold text-2xl font-bold text-gold-foreground glow-gold">
-          B$
+          $BX
         </div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Trade real, com dados ao vivo
