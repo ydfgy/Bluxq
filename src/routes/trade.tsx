@@ -250,9 +250,9 @@ function Trade() {
       </aside>
 
       {/* gráfico */}
-      <section className="-mt-2 space-y-3 order-1 lg:order-2 min-w-0">
+      <section className="space-y-3 order-1 lg:order-2 min-w-0">
         <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="sticky top-14 z-20 flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3 backdrop-blur">
+          <div className="sticky top-16 z-20 flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3 backdrop-blur">
             <div className="relative">
               <button
                 onClick={() => setMarketMenuOpen((open) => !open)}
