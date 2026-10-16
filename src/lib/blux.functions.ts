@@ -177,20 +177,18 @@ export const getVerificationChallenge = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const sb = await admin();
-    const { data: profile, error: profileError } = await sb
-      .from("profiles")
-      .select("verified")
-      .eq("id", context.userId)
-      .single();
+    const [{ data: profile, error: profileError }, { data: challenge, error: challengeError }] =
+      await Promise.all([
+        sb.from("profiles").select("verified").eq("id", context.userId).single(),
+        sb
+          .from("profile_challenges")
+          .select("verify_phrase")
+          .eq("user_id", context.userId)
+          .maybeSingle(),
+      ]);
     rpcError(profileError);
     if (profile?.verified) return { phrase: null, verified: true };
-
-    const { data: challenge, error } = await sb
-      .from("profile_challenges")
-      .select("verify_phrase")
-      .eq("user_id", context.userId)
-      .single();
-    rpcError(error);
+    rpcError(challengeError);
     if (!challenge) throw new Error("Desafio de verificação não encontrado");
     return { phrase: challenge.verify_phrase, verified: false };
   });
@@ -282,20 +280,6 @@ export const verifyRoblox = createServerFn({ method: "POST" })
     rpcError(takenError);
     if (taken) throw new Error("Essa conta Roblox já está ligada a outro usuário");
 
-    let avatar: string | null = null;
-    try {
-      const r3 = await fetch(
-        `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=150x150&format=Png`,
-        { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) },
-      );
-      if (r3.ok) {
-        const j3 = (await r3.json()) as { data?: { imageUrl?: string }[] };
-        avatar = j3.data?.[0]?.imageUrl ?? null;
-      }
-    } catch {
-      // The avatar is decorative; verification must not fail when thumbnails are down.
-    }
-
     const { error } = await sb
       .from("profiles")
       .update({
@@ -303,7 +287,6 @@ export const verifyRoblox = createServerFn({ method: "POST" })
         roblox_user_id: user.id,
         roblox_username: user.name,
         roblox_display_name: user.displayName,
-        avatar_url: avatar,
       })
       .eq("id", context.userId);
     rpcError(error);

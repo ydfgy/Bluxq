@@ -33,6 +33,7 @@ function Verify() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [copying, setCopying] = useState(false);
   const [revealed, setRevealed] = useState(false);
   const { data: challenge, isLoading: challengeLoading } = useQuery({
     queryKey: ["verification-challenge"],
@@ -40,7 +41,12 @@ function Verify() {
     queryFn: () => loadChallenge(),
   });
 
-  if (!p) return null;
+  if (!p)
+    return (
+      <main className="mx-auto max-w-md p-8" aria-busy="true">
+        Carregando verificação…
+      </main>
+    );
   if (p.verified)
     return (
       <main className="mx-auto max-w-md p-8">
@@ -50,11 +56,27 @@ function Verify() {
 
   async function copyPhrase() {
     if (!challenge?.phrase) return;
+    setCopying(true);
     try {
-      await navigator.clipboard.writeText(challenge.phrase);
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(challenge.phrase);
+      } else {
+        const textarea = document.createElement("textarea");
+        textarea.value = challenge.phrase;
+        textarea.setAttribute("readonly", "true");
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.select();
+        const copied = document.execCommand("copy");
+        textarea.remove();
+        if (!copied) throw new Error("Clipboard unavailable");
+      }
       toast.success("Frase copiada");
     } catch {
       toast.error("Não foi possível copiar a frase");
+    } finally {
+      setCopying(false);
     }
   }
 
@@ -65,7 +87,11 @@ function Verify() {
         Cole esta frase em Sobre no perfil Roblox <b>{p.roblox_username}</b> e clique em verificar.
         A conferência é feita no servidor.
       </p>
-      <div className="rounded-lg border bg-card p-4 font-mono text-gold" aria-live="polite">
+      <div
+        className="rounded-lg border bg-card p-4 font-mono text-gold"
+        aria-live="polite"
+        aria-busy={challengeLoading}
+      >
         {challengeLoading
           ? "Carregando frase…"
           : revealed
@@ -80,13 +106,13 @@ function Verify() {
         >
           {revealed ? "Ocultar frase" : "Mostrar frase"}
         </Button>
-        <Button variant="outline" onClick={copyPhrase} disabled={!revealed || !challenge?.phrase}>
-          Copiar frase
+        <Button variant="outline" onClick={copyPhrase} disabled={copying || !challenge?.phrase}>
+          {copying ? "Copiando…" : "Copiar frase"}
         </Button>
       </div>
       <Button
         className="w-full"
-        disabled={busy}
+        disabled={busy || challengeLoading || !challenge?.phrase}
         onClick={async () => {
           setBusy(true);
           try {
@@ -103,7 +129,7 @@ function Verify() {
           }
         }}
       >
-        Verificar
+        {busy ? "Verificando…" : "Verificar"}
       </Button>
     </main>
   );
