@@ -144,6 +144,22 @@ export const syncPositions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+/** Returns sanitized open positions so the platform order book reflects real internal activity. */
+export const getPlatformOpenPositions = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { data, error } = await (
+      await admin()
+    )
+      .from("positions")
+      .select("id, symbol, side, margin, leverage, qty, entry_price, liq_price, opened_at")
+      .eq("status", "open")
+      .order("opened_at", { ascending: false })
+      .limit(200);
+    rpcError(error);
+    return data ?? [];
+  });
+
 export const openPosition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) =>

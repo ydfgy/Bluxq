@@ -7,7 +7,12 @@ import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { openPosition, closePosition, syncPositions } from "@/lib/blux.functions";
+import {
+  getPlatformOpenPositions,
+  openPosition,
+  closePosition,
+  syncPositions,
+} from "@/lib/blux.functions";
 import {
   MARKETS,
   fmt,
@@ -47,6 +52,18 @@ export const Route = createFileRoute("/trade")({
 });
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
+
+type PositionDetails = {
+  id: string;
+  symbol: string;
+  side: "long" | "short";
+  margin: number | string;
+  leverage: number;
+  qty: number | string;
+  entry_price: number | string;
+  liq_price: number | string;
+  opened_at: string;
+};
 
 function useTickers() {
   return useQuery({
@@ -103,6 +120,7 @@ function Trade() {
   const [rain, setRain] = useState(0);
   const [marketMenuOpen, setMarketMenuOpen] = useState(false);
   const [tab, setTab] = useState<"open" | "history">("open");
+  const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
@@ -114,6 +132,7 @@ function Trade() {
   const open = useServerFn(openPosition);
   const close = useServerFn(closePosition);
   const sync = useServerFn(syncPositions);
+  const platformOpen = useServerFn(getPlatformOpenPositions);
 
   const { data: positions = [] } = useQuery({
     queryKey: ["positions", session?.user.id],
@@ -126,6 +145,11 @@ function Trade() {
           .order("opened_at", { ascending: false })
           .limit(100)
       ).data ?? [],
+  });
+  const { data: platformPositions = [] } = useQuery({
+    queryKey: ["platform-open-positions"],
+    refetchInterval: 2000,
+    queryFn: () => platformOpen(),
   });
   const openPos = positions.filter((p) => p.status === "open");
   const history = positions.filter((p) => p.status !== "open");
@@ -233,6 +257,56 @@ function Trade() {
     URL.revokeObjectURL(url);
     toast.success("Resultado baixado");
   }
+  function downloadPositionImage(position: PositionDetails) {
+    const px = livePx(position.symbol);
+    const pnl = calcPnl(
+      position.side,
+      Number(position.qty),
+      Number(position.entry_price),
+      px,
+      Number(position.margin),
+    );
+    const roe = (pnl / Number(position.margin)) * 100;
+    const canvas = document.createElement("canvas");
+    canvas.width = 1200;
+    canvas.height = 700;
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.fillStyle = "#050505";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#22c55e";
+    context.font = "700 34px sans-serif";
+    context.fillText("BluxTrade", 70, 90);
+    context.fillStyle = "#f4f4f5";
+    context.font = "700 54px sans-serif";
+    context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
+    context.fillStyle = position.side === "long" ? "#22c55e" : "#ef4444";
+    context.font = "700 34px monospace";
+    context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
+    context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
+    context.font = "700 72px monospace";
+    context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`, 70, 385);
+    context.font = "32px monospace";
+    context.fillText(`${roe >= 0 ? "+" : ""}${roe.toFixed(2)}%`, 75, 440);
+    context.fillStyle = "#d4d4d8";
+    context.font = "24px monospace";
+    context.fillText(`Entrada: ${fmtPrice(Number(position.entry_price))}`, 70, 535);
+    context.fillText(
+      `Atual: ${fmtPrice(px)}   Quantidade: ${Number(position.qty).toPrecision(7)}`,
+      70,
+      580,
+    );
+    context.fillText(new Date().toLocaleString("pt-BR"), 70, 635);
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `bluxtrade-${position.symbol.toLowerCase()}-${position.side}.png`;
+      link.click();
+      URL.revokeObjectURL(url);
+    }, "image/png");
+  }
 
   return (
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
@@ -240,8 +314,34 @@ function Trade() {
       {/* livro de ordens */}
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-          <span className="text-[10px] text-bull">● Binance ao vivo</span>
+          <span className="text-xs uppercase text-muted-foreground">Ordens da BluxTrade</span>
+          <span className="text-[10px] text-bull">● ao vivo</span>
+        </div>
+        <div className="border-b px-2 py-2">
+          <div className="mb-1 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>Posições abertas na plataforma</span>
+            <span>{platformPositions.length}</span>
+          </div>
+          <div className="max-h-44 space-y-1 overflow-y-auto font-mono text-[10px]">
+            {platformPositions.map((position) => (
+              <div
+                key={position.id}
+                className="grid grid-cols-[1fr_auto_auto] items-center gap-2 rounded border border-border/50 px-2 py-1"
+              >
+                <span className={position.side === "long" ? "text-bull" : "text-bear"}>
+                  {position.side.toUpperCase()} {position.symbol.replace("USDT", "")}
+                </span>
+                <span>{position.leverage}x</span>
+                <span>{Number(position.qty).toPrecision(5)}</span>
+              </div>
+            ))}
+            {platformPositions.length === 0 && (
+              <div className="py-2 text-center text-muted-foreground">Nenhuma operação aberta</div>
+            )}
+          </div>
+        </div>
+        <div className="border-b px-3 py-2 text-[10px] uppercase text-muted-foreground">
+          Livro de mercado — Binance real
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
           <span>Preço (USDT)</span>
@@ -402,7 +502,11 @@ function Trade() {
                       : Number(p.pnl ?? 0);
                   const roe = (pnl / Number(p.margin)) * 100;
                   return (
-                    <tr key={p.id} className="border-t">
+                    <tr
+                      key={p.id}
+                      onClick={() => tab === "open" && setSelectedPosition(p as PositionDetails)}
+                      className="cursor-pointer border-t hover:bg-muted/40"
+                    >
                       <td className="p-2 font-sans font-semibold">
                         {p.symbol.replace("USDT", "")}
                       </td>
@@ -420,7 +524,14 @@ function Trade() {
                       </td>
                       <td className="pr-2 text-right">
                         {tab === "open" ? (
-                          <Button size="sm" variant="outline" onClick={() => doClose(p.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void doClose(p.id);
+                            }}
+                          >
                             Fechar
                           </Button>
                         ) : (
@@ -541,6 +652,68 @@ function Trade() {
           {LIQ_LOSS * 100}% da margem. O lucro é pago pela pool e limitado a {PROFIT_CAP}x a margem.
         </p>
       </aside>
+      {selectedPosition && (
+        <div
+          className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
+          onClick={() => setSelectedPosition(null)}
+        >
+          <div
+            className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-2xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between">
+              <div>
+                <div className="text-xs uppercase text-muted-foreground">Operação BluxTrade</div>
+                <h2 className="mt-1 text-2xl font-bold">
+                  {selectedPosition.symbol.replace("USDT", "")} / USDT
+                </h2>
+              </div>
+              <button
+                onClick={() => setSelectedPosition(null)}
+                className="text-xl text-muted-foreground hover:text-foreground"
+                aria-label="Fechar"
+              >
+                ×
+              </button>
+            </div>
+            <div
+              className={`mt-4 text-xl font-mono font-bold ${selectedPosition.side === "long" ? "text-bull" : "text-bear"}`}
+            >
+              {selectedPosition.side.toUpperCase()} {selectedPosition.leverage}x
+            </div>
+            <div className="mt-4 space-y-2 rounded-lg border p-3 font-mono text-sm">
+              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} B$`} />
+              <Row k="Quantidade" v={Number(selectedPosition.qty).toPrecision(7)} />
+              <Row k="Entrada" v={fmtPrice(Number(selectedPosition.entry_price))} />
+              <Row k="Preço atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
+              <Row k="Liquidação" v={fmtPrice(Number(selectedPosition.liq_price))} />
+              <Row k="Aberta em" v={new Date(selectedPosition.opened_at).toLocaleString("pt-BR")} />
+            </div>
+            <div
+              className={`mt-4 text-center text-3xl font-mono font-bold ${calcPnl(selectedPosition.side, Number(selectedPosition.qty), Number(selectedPosition.entry_price), livePx(selectedPosition.symbol), Number(selectedPosition.margin)) >= 0 ? "text-bull" : "text-bear"}`}
+            >
+              {(() => {
+                const pnl = calcPnl(
+                  selectedPosition.side,
+                  Number(selectedPosition.qty),
+                  Number(selectedPosition.entry_price),
+                  livePx(selectedPosition.symbol),
+                  Number(selectedPosition.margin),
+                );
+                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`;
+              })()}
+            </div>
+            <div className="mt-5 flex gap-2">
+              <Button className="flex-1" onClick={() => downloadPositionImage(selectedPosition)}>
+                Baixar imagem
+              </Button>
+              <Button variant="outline" onClick={() => setSelectedPosition(null)}>
+                Fechar
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
