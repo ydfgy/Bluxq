@@ -692,7 +692,7 @@ function Trade() {
           >
             Long ↑
           </Button>
-          <span aria-hidden="true" className="my-2 w-px -rotate-[12deg] bg-border" />
+          <span aria-hidden="true" className="my-2 w-px rotate-[12deg] bg-border" />
           <Button
             disabled={
               busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
