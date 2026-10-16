@@ -347,6 +347,64 @@ function Trade() {
             </div>
           )}
         </div>
+        <div className="border-t px-2 py-2 font-mono text-[10px]">
+          <div className="mb-1 flex items-center justify-between text-muted-foreground">
+            <span>Maior volume aberto</span>
+            <span>5 maiores</span>
+          </div>
+          <div className="space-y-0.5">
+            {[...platformPositions]
+              .sort(
+                (a, b) =>
+                  Number(b.entry_price) * Number(b.qty) - Number(a.entry_price) * Number(a.qty),
+              )
+              .slice(0, 5)
+              .map((position) => (
+                <div
+                  key={`volume-${position.id}`}
+                  className="grid grid-cols-[1fr_auto_auto] gap-2 rounded px-1 py-1"
+                >
+                  <span className={position.side === "long" ? "text-bull" : "text-bear"}>
+                    {position.side.toUpperCase()} {position.symbol.replace("USDT", "")}
+                  </span>
+                  <span className="text-right text-muted-foreground">
+                    {Number(position.qty).toPrecision(5)}
+                  </span>
+                  <span className="text-right text-foreground">
+                    B$ {fmt(Number(position.entry_price) * Number(position.qty))}
+                  </span>
+                </div>
+              ))}
+            {platformPositions.length === 0 && (
+              <div className="py-2 text-center text-muted-foreground">Nenhuma posição aberta</div>
+            )}
+          </div>
+          <div className="mb-1 mt-3 border-t border-border/60 pt-2 text-muted-foreground">
+            Aberturas recentes
+          </div>
+          <div className="space-y-0.5">
+            {[...platformPositions]
+              .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
+              .slice(0, 5)
+              .map((position) => (
+                <div
+                  key={`recent-${position.id}`}
+                  className="grid grid-cols-[1fr_auto] gap-2 rounded px-1 py-1"
+                >
+                  <span className={position.side === "long" ? "text-bull" : "text-bear"}>
+                    {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
+                    {position.leverage}x
+                  </span>
+                  <span className="text-right text-muted-foreground">
+                    {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </span>
+                </div>
+              ))}
+          </div>
+        </div>
       </aside>
 
       {/* gráfico */}
