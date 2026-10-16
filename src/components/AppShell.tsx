@@ -8,8 +8,15 @@ import { fmt } from "@/lib/markets";
 
 export function Logo() {
   return (
-    <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-      <img src="/bluxq-logo-trim.png" alt="Bluxq" className="h-9 w-auto object-contain" />
+    <Link
+      to="/"
+      aria-label="Bluxq — início"
+      className="flex items-center gap-2 font-bold text-lg tracking-tight"
+    >
+      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold/10 p-1 ring-1 ring-gold/30">
+        <img src="/bluxq-favicon.png" alt="" className="h-full w-full object-contain" />
+      </span>
+      <span>Bluxq</span>
     </Link>
   );
 }
