@@ -9,6 +9,7 @@ import {
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { type ReactNode } from "react";
+import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -88,6 +89,11 @@ function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="pt-BR" className="dark">
       <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(() => { const isWalletInjectionError = (event) => { const message = String(event?.message || event?.reason?.message || event?.reason || ""); const file = String(event?.filename || ""); return message.includes("Cannot redefine property: ethereum") || file.includes("evmAsk.js"); }; window.addEventListener("error", (event) => { if (isWalletInjectionError(event)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true); window.addEventListener("unhandledrejection", (event) => { if (isWalletInjectionError(event)) { event.preventDefault(); event.stopImmediatePropagation(); } }, true); })();`,
+          }}
+        />
         <HeadContent />
       </head>
       <body>
@@ -100,6 +106,35 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    const isWalletInjectionError = (event: ErrorEvent | PromiseRejectionEvent) => {
+      const message = String(
+        "message" in event
+          ? event.message
+          : ((event.reason as { message?: string } | undefined)?.message ?? event.reason),
+      );
+      const file = "filename" in event ? event.filename : "";
+      return message.includes("Cannot redefine property: ethereum") || file.includes("evmAsk.js");
+    };
+    const onError = (event: ErrorEvent) => {
+      if (isWalletInjectionError(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    const onRejection = (event: PromiseRejectionEvent) => {
+      if (isWalletInjectionError(event)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+      }
+    };
+    window.addEventListener("error", onError, true);
+    window.addEventListener("unhandledrejection", onRejection, true);
+    return () => {
+      window.removeEventListener("error", onError, true);
+      window.removeEventListener("unhandledrejection", onRejection, true);
+    };
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
