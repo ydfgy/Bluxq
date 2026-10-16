@@ -810,7 +810,6 @@ function MarketIcon({ base, size = "sm" }: { base: string; size?: "sm" | "md" })
     <span
       className={`relative grid shrink-0 place-items-center rounded-full bg-muted font-mono text-[9px] text-muted-foreground ${size === "md" ? "h-7 w-7" : "h-5 w-5"}`}
     >
-      <span aria-hidden="true">{base.slice(0, 1).toUpperCase()}</span>
       <img
         src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
         alt=""

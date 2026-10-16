@@ -9,7 +9,7 @@ import { fmt } from "@/lib/markets";
 export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2 font-bold text-lg tracking-tight">
-      <img src="/bluxq-logo.png" alt="Bluxq" className="h-12 w-auto object-contain" />
+      <img src="/bluxq-logo-trim.png" alt="Bluxq" className="h-9 w-auto object-contain" />
     </Link>
   );
 }
