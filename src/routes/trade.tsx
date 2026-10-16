@@ -410,13 +410,6 @@ function Trade() {
                 onClick={() => setMarketMenuOpen((open) => !open)}
                 className="flex items-center gap-2 text-lg font-bold hover:text-primary"
               >
-                <MarketIcon
-                  base={
-                    MARKETS.find((mk) => mk.symbol === symbol)?.icon ??
-                    symbol.replace("USDT", "").toLowerCase()
-                  }
-                  size="md"
-                />
                 {symbol.replace("USDT", "")}/USDT{" "}
                 <span className="text-xs text-muted-foreground">⌄</span>
               </button>
@@ -432,10 +425,7 @@ function Trade() {
                       }}
                       className={`flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
                     >
-                      <span className="flex items-center gap-2">
-                        <MarketIcon base={mk.icon} />
-                        {mk.base}/USDT
-                      </span>
+                      <span>{mk.base}/USDT</span>
                       <span className="font-mono text-xs text-muted-foreground">
                         {tickers?.[mk.symbol]?.lastPrice
                           ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice))
@@ -802,24 +792,5 @@ function Row({ k, v, cls = "" }: { k: string; v: string; cls?: string }) {
       <span className="text-muted-foreground font-sans">{k}</span>
       <span className={cls}>{v}</span>
     </div>
-  );
-}
-
-function MarketIcon({ base, size = "sm" }: { base: string; size?: "sm" | "md" }) {
-  return (
-    <span
-      className={`relative grid shrink-0 place-items-center rounded-full bg-muted font-mono text-[9px] text-muted-foreground ${size === "md" ? "h-7 w-7" : "h-5 w-5"}`}
-    >
-      <img
-        src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
-        alt=""
-        className={`${size === "md" ? "h-7 w-7" : "h-5 w-5"} rounded-full`}
-        loading="lazy"
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-        }}
-      />
-      <span className="sr-only">{base}</span>
-    </span>
   );
 }

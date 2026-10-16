@@ -74,10 +74,7 @@ function Converter() {
                 onClick={() => setTarget("robux")}
                 className={`rounded-md border px-3 py-3 text-left text-sm ${target === "robux" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
               >
-                <span className="flex items-center gap-2">
-                  <img src="/robux-icon.png" alt="" className="h-6 w-6 object-contain" />
-                  Robux
-                </span>
+                Robux
                 <span className="mt-1 block text-xs text-muted-foreground">1 $BX = 1 Robux</span>
               </button>
             </div>
