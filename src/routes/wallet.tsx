@@ -320,7 +320,10 @@ function MethodSearch({
           className={`rounded-md border px-3 py-2 text-sm ${selected === "roblox" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
           onClick={() => onSelect("roblox")}
         >
-          Roblox / Robux
+          <span className="flex items-center gap-2">
+            <img src="/robux-icon.png" alt="" className="h-5 w-5 object-contain" />
+            Roblox / Robux
+          </span>
         </button>
         {showCrypto && (
           <button
