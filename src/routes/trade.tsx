@@ -251,69 +251,71 @@ function Trade() {
 
       {/* gráfico */}
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
-        <div className="sticky top-16 z-20 rounded-xl border bg-card/95 p-3 flex flex-wrap items-center gap-x-6 gap-y-1 shadow-sm backdrop-blur">
-          <div className="relative">
-            <button
-              onClick={() => setMarketMenuOpen((open) => !open)}
-              className="flex items-center gap-2 text-lg font-bold hover:text-primary"
-            >
-              <MarketIcon
-                base={
-                  MARKETS.find((mk) => mk.symbol === symbol)?.icon ??
-                  symbol.replace("USDT", "").toLowerCase()
-                }
-                size="md"
-              />
-              {symbol.replace("USDT", "")}/USDT{" "}
-              <span className="text-xs text-muted-foreground">⌄</span>
-            </button>
-            {marketMenuOpen && (
-              <div className="absolute left-0 top-10 z-30 w-52 rounded-lg border bg-card p-1 shadow-xl">
-                {MARKETS.map((mk) => (
-                  <button
-                    key={mk.symbol}
-                    onClick={() => {
-                      setSymbol(mk.symbol);
-                      setPrice(0);
-                      setMarketMenuOpen(false);
-                    }}
-                    className={`flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
-                  >
-                    <span className="flex items-center gap-2">
-                      <MarketIcon base={mk.icon} />
-                      {mk.base}/USDT
-                    </span>
-                    <span className="font-mono text-xs text-muted-foreground">
-                      {tickers?.[mk.symbol]?.lastPrice
-                        ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice))
-                        : "—"}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>
-            {currentPrice ? fmtPrice(currentPrice) : "…"}
-          </div>
-          <Stat k="24h" v={`${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`} />
-          <Stat k="Máx 24h" v={t ? fmtPrice(Number(t.highPrice)) : "—"} />
-          <Stat k="Mín 24h" v={t ? fmtPrice(Number(t.lowPrice)) : "—"} />
-          <Stat k="Volume" v={t ? `$${fmt(Number(t.quoteVolume) / 1e6, 1)}M` : "—"} />
-          <div className="ml-auto flex gap-1">
-            {INTERVALS.map((i) => (
+        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="sticky top-16 z-20 flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3 backdrop-blur">
+            <div className="relative">
               <button
-                key={i}
-                onClick={() => setIntervalV(i)}
-                className={`rounded px-2 py-1 text-xs font-mono ${interval === i ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                onClick={() => setMarketMenuOpen((open) => !open)}
+                className="flex items-center gap-2 text-lg font-bold hover:text-primary"
               >
-                {i}
+                <MarketIcon
+                  base={
+                    MARKETS.find((mk) => mk.symbol === symbol)?.icon ??
+                    symbol.replace("USDT", "").toLowerCase()
+                  }
+                  size="md"
+                />
+                {symbol.replace("USDT", "")}/USDT{" "}
+                <span className="text-xs text-muted-foreground">⌄</span>
               </button>
-            ))}
+              {marketMenuOpen && (
+                <div className="absolute left-0 top-10 z-30 w-52 rounded-lg border bg-card p-1 shadow-xl">
+                  {MARKETS.map((mk) => (
+                    <button
+                      key={mk.symbol}
+                      onClick={() => {
+                        setSymbol(mk.symbol);
+                        setPrice(0);
+                        setMarketMenuOpen(false);
+                      }}
+                      className={`flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
+                    >
+                      <span className="flex items-center gap-2">
+                        <MarketIcon base={mk.icon} />
+                        {mk.base}/USDT
+                      </span>
+                      <span className="font-mono text-xs text-muted-foreground">
+                        {tickers?.[mk.symbol]?.lastPrice
+                          ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice))
+                          : "—"}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className={`font-mono text-xl ${chg >= 0 ? "text-bull" : "text-bear"}`}>
+              {currentPrice ? fmtPrice(currentPrice) : "…"}
+            </div>
+            <Stat k="24h" v={`${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`} />
+            <Stat k="Máx 24h" v={t ? fmtPrice(Number(t.highPrice)) : "—"} />
+            <Stat k="Mín 24h" v={t ? fmtPrice(Number(t.lowPrice)) : "—"} />
+            <Stat k="Volume" v={t ? `$${fmt(Number(t.quoteVolume) / 1e6, 1)}M` : "—"} />
+            <div className="ml-auto flex gap-1">
+              {INTERVALS.map((i) => (
+                <button
+                  key={i}
+                  onClick={() => setIntervalV(i)}
+                  className={`rounded px-2 py-1 text-xs font-mono ${interval === i ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                >
+                  {i}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="rounded-xl border bg-card h-[460px] p-1">
-          <PriceChart symbol={symbol} interval={interval} lines={lines} onPrice={setPrice} />
+          <div className="h-[460px] p-1">
+            <PriceChart symbol={symbol} interval={interval} lines={lines} onPrice={setPrice} />
+          </div>
         </div>
 
         {/* posições */}
