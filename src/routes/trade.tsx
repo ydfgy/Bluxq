@@ -54,6 +54,14 @@ export const Route = createFileRoute("/trade")({
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
 
+function marginWithinBudget(balance: number, fraction = 1) {
+  const budgetCents = Math.max(0, Math.floor(balance * fraction * 100 + 0.000001));
+  let marginCents = Math.floor(budgetCents / 1.1);
+  while (marginCents + Math.round(marginCents / 10) > budgetCents) marginCents -= 1;
+  while (marginCents + 1 + Math.round((marginCents + 1) / 10) <= budgetCents) marginCents += 1;
+  return marginCents / 100;
+}
+
 type PositionDetails = {
   id: string;
   symbol: string;
@@ -173,7 +181,7 @@ function Trade() {
   const marginInCents = Math.round(m * 100);
   const openingFee = Math.round(marginInCents / 10) / 100;
   const totalRequired = Math.round((m + openingFee) * 100) / 100;
-  const maxAffordableMargin = Math.floor((balance / 1.1 + Number.EPSILON) * 100) / 100;
+  const maxAffordableMargin = marginWithinBudget(balance);
   const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
   const shortfall = Math.max(0, Math.round((totalRequired - balance) * 100) / 100);
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
@@ -615,8 +623,7 @@ function Trade() {
               <button
                 key={f}
                 onClick={() => {
-                  const nextMargin = Math.floor(((balance * f) / 1.1 + Number.EPSILON) * 100) / 100;
-                  setMargin(nextMargin.toFixed(2));
+                  setMargin(marginWithinBudget(balance, f).toFixed(2));
                 }}
                 className="flex-1 rounded border py-1 text-xs hover:bg-muted"
               >
