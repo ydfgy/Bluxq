@@ -7,6 +7,7 @@ export type OrderBookLevel = {
 export type OrderBook = {
   asks: OrderBookLevel[];
   bids: OrderBookLevel[];
+  updatedAt: number;
 };
 
 type RawOrderBook = {
@@ -38,7 +39,7 @@ function levels(rows: [string, string][] = []): OrderBookLevel[] {
 }
 
 export function parseOrderBook(raw: RawOrderBook): OrderBook {
-  return { asks: levels(raw.asks), bids: levels(raw.bids) };
+  return { asks: levels(raw.asks), bids: levels(raw.bids), updatedAt: Date.now() };
 }
 
 export async function fetchOrderBook(symbol: string, limit = 15): Promise<OrderBook> {

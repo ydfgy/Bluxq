@@ -209,6 +209,30 @@ function Trade() {
       a + calcPnl(p.side, Number(p.qty), Number(p.entry_price), livePx(p.symbol), Number(p.margin)),
     0,
   );
+  const openMargin = openPos.reduce((a, p) => a + Number(p.margin), 0);
+  const unrealPct = openMargin ? (unreal / openMargin) * 100 : 0;
+  function currentResultText() {
+    return [
+      "BluxTrade — resultado atual",
+      `Pares abertos: ${openPos.length}`,
+      `Lucro/prejuízo: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} B$ (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
+      `Atualizado em: ${new Date().toLocaleString("pt-BR")}`,
+    ].join("\n");
+  }
+  async function copyCurrentResult() {
+    await navigator.clipboard.writeText(currentResultText());
+    toast.success("Resultado atual copiado");
+  }
+  function downloadCurrentResult() {
+    const blob = new Blob([currentResultText()], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "bluxtrade-resultado-atual.txt";
+    link.click();
+    URL.revokeObjectURL(url);
+    toast.success("Resultado baixado");
+  }
 
   return (
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
@@ -217,7 +241,7 @@ function Trade() {
       <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-          <span className="text-[10px] text-muted-foreground">tempo real</span>
+          <span className="text-[10px] text-bull">● Binance ao vivo</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
           <span>Preço (USDT)</span>
@@ -233,7 +257,9 @@ function Trade() {
           <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
             <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
             <span className="text-[10px] font-normal text-muted-foreground">
-              {orderBook ? "● ao vivo" : "carregando"}
+              {orderBook
+                ? `atualizado ${new Date(orderBook.updatedAt).toLocaleTimeString("pt-BR")}`
+                : "carregando"}
             </span>
           </div>
           <div className="space-y-0.5">
@@ -331,12 +357,25 @@ function Trade() {
               </button>
             ))}
             {tab === "open" && openPos.length > 0 && (
-              <span
-                className={`ml-auto font-mono text-sm ${unreal >= 0 ? "text-bull" : "text-bear"}`}
-              >
-                PnL total {unreal >= 0 ? "+" : ""}
-                {fmt(unreal)} B$
-              </span>
+              <div className="ml-auto flex items-center gap-2">
+                <span className={`font-mono text-sm ${unreal >= 0 ? "text-bull" : "text-bear"}`}>
+                  PnL {unreal >= 0 ? "+" : ""}
+                  {fmt(unreal)} B$ ({unrealPct >= 0 ? "+" : ""}
+                  {unrealPct.toFixed(2)}%)
+                </span>
+                <button
+                  onClick={copyCurrentResult}
+                  className="rounded border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  Copiar
+                </button>
+                <button
+                  onClick={downloadCurrentResult}
+                  className="rounded border px-2 py-1 text-[10px] text-muted-foreground hover:text-foreground"
+                >
+                  Baixar
+                </button>
+              </div>
             )}
           </div>
           <div className="overflow-x-auto">
