@@ -70,8 +70,13 @@ export function Navbar() {
         <div className="ml-auto flex items-center gap-3">
           {session && profile ? (
             <>
-              <Link to="/wallet" className="font-mono text-sm text-gold">
-                $BX {fmt(profile.balance)}
+              <Link
+                to="/wallet"
+                className="flex items-center gap-1.5 font-mono text-sm text-gold"
+                aria-label={`Saldo $BX ${fmt(profile.balance)}`}
+              >
+                <img src="/bluxq-icon.png" alt="" className="h-4 w-4 object-contain" />
+                <span>$BX {fmt(profile.balance)}</span>
               </Link>
               <div className="hidden text-sm sm:block">
                 {profile.is_anonymous ? "Anônimo" : profile.roblox_username}

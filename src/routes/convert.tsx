@@ -27,7 +27,7 @@ function CurrencyIcon({ currency }: { currency: Currency }) {
 }
 
 function currencyLabel(currency: Currency) {
-  return currency === "robux" ? "Robux" : "B$";
+  return currency === "robux" ? "Robux" : "$BX";
 }
 
 function Converter() {
@@ -68,7 +68,7 @@ function Converter() {
               </div>
             </div>
             {from === "blux" && (
-              <p className="text-xs text-muted-foreground">Saldo: B$ {balance.toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground">Saldo: $BX {balance.toFixed(2)}</p>
             )}
           </div>
 

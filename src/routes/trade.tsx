@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
@@ -357,7 +357,7 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookOpen ? (orderBookSide === "left" ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_220px_320px]") : orderBookSide === "left" ? "lg:grid-cols-[40px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_220px_320px]"}`}
     >
       <CoinRain show={rain} />
       {/* livro de ordens e posições abertas */}
@@ -365,22 +365,34 @@ function Trade() {
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
         <aside
-          className={`overflow-hidden rounded-xl bg-black ${orderBookOpen ? "w-full lg:min-w-0" : "h-12 w-10 lg:h-fit"}`}
+          className={`overflow-hidden rounded-xl border border-border bg-card ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-10"}`}
         >
           {!orderBookOpen ? (
-            <button
-              type="button"
-              onClick={() => setOrderBookOpen(true)}
-              className="flex h-12 w-full items-center justify-center text-muted-foreground hover:text-foreground lg:h-24 lg:items-start lg:py-4"
-              aria-label="Abrir livro de ordens"
-              title="Abrir livro de ordens"
-            >
-              {orderBookSide === "left" ? (
-                <ChevronRight aria-hidden="true" className="h-4 w-4" />
-              ) : (
-                <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-              )}
-            </button>
+            <div className="flex min-h-14 w-full flex-col items-center justify-center gap-1 py-1">
+              <button
+                type="button"
+                onClick={() => setOrderBookSide(orderBookSide === "left" ? "right" : "left")}
+                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Mover livro para o outro lado"
+                title="Mover livro para o outro lado"
+              >
+                <ArrowLeftRight aria-hidden="true" className="h-4 w-4" />
+              </button>
+              <span className="h-px w-5 bg-border" />
+              <button
+                type="button"
+                onClick={() => setOrderBookOpen(true)}
+                className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+                aria-label="Abrir livro de ordens"
+                title="Abrir livro de ordens"
+              >
+                {orderBookSide === "left" ? (
+                  <ChevronRight aria-hidden="true" className="h-4 w-4" />
+                ) : (
+                  <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+                )}
+              </button>
+            </div>
           ) : (
             <>
               <div className="flex items-center justify-between px-3 py-2">
@@ -461,7 +473,7 @@ function Trade() {
 
         <aside className="rounded-xl bg-black p-3 font-mono text-[10px]">
           <div className="mb-2 flex items-center justify-between text-muted-foreground">
-            <span>Opened positions</span>
+            <span>Recent positions</span>
             <span>{recentPositions.length}/10</span>
           </div>
           <div className="mb-2 grid grid-cols-3 gap-1">
@@ -484,7 +496,8 @@ function Trade() {
                   {position.leverage}x
                 </div>
                 <div className="text-muted-foreground">
-                  Opened · Margem $BX {fmt(Number(position.margin))} ·{" "}
+                  Margin $BX {fmt(Number(position.margin))} · Size $BX{" "}
+                  {fmt(Number(position.margin) * Number(position.leverage))} ·{" "}
                   {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",
