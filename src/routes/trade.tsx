@@ -20,6 +20,8 @@ import {
   fmtPrice,
   calcPnl,
   FEE_RATE,
+  PROFIT_CAP,
+  LIQ_LOSS,
   MIN_LEVERAGE,
   MAX_LEVERAGE,
 } from "@/lib/markets";
@@ -125,6 +127,7 @@ function Trade() {
   const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = useState(true);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
@@ -194,13 +197,17 @@ function Trade() {
   const marginInCents = Math.round(m * 100);
   const openingFee = Math.round(marginInCents / 10) / 100;
   const totalRequired = Math.round((m + openingFee) * 100) / 100;
+  const maxAffordableMargin = marginWithinBudget(balance);
   const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
+  const shortfall = Math.max(0, Math.round((totalRequired - balance) * 100) / 100);
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
     m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
+  const liqLong = currentPrice * (1 - LIQ_LOSS / lev);
+  const liqShort = currentPrice * (1 + LIQ_LOSS / lev);
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -766,16 +773,68 @@ function Trade() {
               Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
             </div>
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex items-center justify-between font-semibold">
-              <span>Total a pagar</span>
+          <div className="space-y-1 p-3 text-sm">
+            <div className="mb-2 flex items-center justify-between font-semibold">
+              <span>Total para abrir</span>
               <span className="font-mono text-foreground">$BX {fmt(totalRequired)}</span>
             </div>
+            {!session && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Explore o mercado livremente. Para enviar uma ordem, crie uma conta.
+              </p>
+            )}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <span>Tamanho da posição</span>
-              <span className="font-mono">$BX {fmt(size)}</span>
+              <span>Margem da posição</span>
+              <span className="font-mono">$BX {fmt(m)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Taxa de abertura (10%)</span>
+              <span className="font-mono">$BX {fmt(openingFee)}</span>
             </div>
           </div>
+          {profile && m >= 10 && shortfall > 0 && (
+            <p role="status" className="text-xs leading-relaxed text-bear">
+              Saldo insuficiente: faltam $BX {fmt(shortfall)}. Margem máxima agora: $BX{" "}
+              {fmt(maxAffordableMargin)}.
+            </p>
+          )}
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setShowOrderDetails((value) => !value)}
+          >
+            <span>Detalhes da operação</span>
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showOrderDetails && (
+            <div className="space-y-1 p-3 font-mono text-xs">
+              <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
+              <Row
+                k="Quantidade"
+                v={
+                  currentPrice
+                    ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                    : "—"
+                }
+              />
+              <Row
+                k="Liquidation Long"
+                v={currentPrice ? fmtPrice(liqLong) : "—"}
+                cls="text-bull"
+              />
+              <Row
+                k="Liquidation Short"
+                v={currentPrice ? fmtPrice(liqShort) : "—"}
+                cls="text-bear"
+              />
+              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+              <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
+              <Row k="Taxa de abertura" v={`${fmt(openingFee)} $BX`} />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 items-stretch">
             <Button
               disabled={
