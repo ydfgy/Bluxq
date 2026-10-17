@@ -119,6 +119,7 @@ function Trade() {
   const [marketMenuOpen, setMarketMenuOpen] = useState(false);
   const [marketSearch, setMarketSearch] = useState("");
   const [orderBookOpen, setOrderBookOpen] = useState(true);
+  const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
   const [recentSide, setRecentSide] = useState<"all" | "long" | "short">("all");
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
@@ -337,124 +338,148 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] gap-3 p-3 ${orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookOpen ? (orderBookSide === "left" ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_220px_320px]") : orderBookSide === "left" ? "lg:grid-cols-[40px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
     >
       <CoinRain show={rain} />
-      {/* livro de ordens */}
-      <aside
-        className={`order-2 overflow-hidden rounded-xl bg-black lg:order-2 ${orderBookOpen ? "lg:min-w-0" : "lg:w-10"}`}
+      {/* livro de ordens e posições abertas */}
+      <section
+        className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
-        {!orderBookOpen ? (
-          <button
-            type="button"
-            onClick={() => setOrderBookOpen(true)}
-            className="flex h-full min-h-24 w-full items-start justify-center py-4 text-muted-foreground hover:text-foreground"
-            aria-label="Abrir livro de ordens"
-            title="Abrir livro de ordens"
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </button>
-        ) : (
-          <>
-            <div className="flex items-center justify-between px-3 py-2">
-              <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-              <button
-                type="button"
-                onClick={() => setOrderBookOpen(false)}
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Minimizar livro de ordens"
-                title="Minimizar livro de ordens"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-            <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
-              <span>Price</span>
-              <span className="text-right">Qtd.</span>
-              <span className="text-right">Total</span>
-            </div>
-            <div className="px-2 font-mono text-[11px]">
-              <div className="space-y-0.5">
-                {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
-                  <OrderRow
-                    key={`ask-${row.price}`}
-                    row={row}
-                    side="ask"
-                    depthMax={orderBookDepthMax}
-                  />
-                ))}
-              </div>
-              <div className="my-2 flex items-center justify-between py-2 text-base font-bold">
-                <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
-                <span className="text-[10px] font-normal text-muted-foreground">
-                  {orderBook ? "LIVE" : "carregando"}
-                </span>
-              </div>
-              <div className="space-y-0.5">
-                {(orderBook?.bids ?? []).map((row) => (
-                  <OrderRow
-                    key={`bid-${row.price}`}
-                    row={row}
-                    side="bid"
-                    depthMax={orderBookDepthMax}
-                  />
-                ))}
-              </div>
-              {!orderBook && (
-                <div className="py-6 text-center font-sans text-xs text-muted-foreground">
-                  Loading market levels…
-                </div>
-              )}
-            </div>
-            <div className="px-2 py-2 font-mono text-[10px]">
-              <div className="mb-2 flex items-center justify-between text-muted-foreground">
-                <span>Opened positions</span>
-                <span>{recentPositions.length}/10</span>
-              </div>
-              <div className="mb-2 grid grid-cols-3 gap-1">
-                {(["all", "long", "short"] as const).map((side) => (
+        <aside
+          className={`overflow-hidden rounded-xl bg-black ${orderBookOpen ? "lg:min-w-0" : "lg:w-10"}`}
+        >
+          {!orderBookOpen ? (
+            <button
+              type="button"
+              onClick={() => setOrderBookOpen(true)}
+              className="flex h-full min-h-24 w-full items-start justify-center py-4 text-muted-foreground hover:text-foreground"
+              aria-label="Abrir livro de ordens"
+              title="Abrir livro de ordens"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
+                <div className="flex items-center gap-1">
                   <button
-                    key={side}
                     type="button"
-                    onClick={() => setRecentSide(side)}
-                    className={`rounded px-1.5 py-1 text-[10px] uppercase transition-colors ${recentSide === side ? "bg-bull text-black" : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"}`}
+                    onClick={() => setOrderBookSide("left")}
+                    className={`text-muted-foreground hover:text-foreground ${orderBookSide === "left" ? "text-primary" : ""}`}
+                    aria-label="Mover livro para a esquerda"
+                    title="Mover livro para a esquerda"
                   >
-                    {side}
+                    <ChevronLeft className="h-4 w-4" />
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    onClick={() => setOrderBookOpen(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Minimizar livro de ordens"
+                    title="Minimizar livro de ordens"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderBookSide("right")}
+                    className={`text-muted-foreground hover:text-foreground ${orderBookSide === "right" ? "text-primary" : ""}`}
+                    aria-label="Mover livro para a direita"
+                    title="Mover livro para a direita"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
-              <div className="space-y-0.5">
-                {recentPositions.map((position) => {
-                  return (
-                    <div
-                      key={`recent-${position.id}`}
-                      className="rounded px-1 py-1 hover:bg-white/5"
-                    >
-                      <div className={position.side === "long" ? "text-bull" : "text-bear"}>
-                        {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
-                        {position.leverage}x
-                      </div>
-                      <div className="text-muted-foreground">
-                        Opened · Margem $BX {fmt(Number(position.margin))} ·{" "}
-                        {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-                {recentPositions.length === 0 && (
-                  <div className="py-2 text-center text-muted-foreground">No opened positions</div>
+              <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
+                <span>Price</span>
+                <span className="text-right">Qtd.</span>
+                <span className="text-right">Total</span>
+              </div>
+              <div className="px-2 font-mono text-[11px]">
+                <div className="space-y-0.5">
+                  {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
+                    <OrderRow
+                      key={`ask-${row.price}`}
+                      row={row}
+                      side="ask"
+                      depthMax={orderBookDepthMax}
+                    />
+                  ))}
+                </div>
+                <div className="my-2 flex items-center justify-between py-2 text-base font-bold">
+                  <span className="text-primary">
+                    {currentPrice ? fmtPrice(currentPrice) : "—"}
+                  </span>
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    {orderBook ? "LIVE" : "carregando"}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {(orderBook?.bids ?? []).map((row) => (
+                    <OrderRow
+                      key={`bid-${row.price}`}
+                      row={row}
+                      side="bid"
+                      depthMax={orderBookDepthMax}
+                    />
+                  ))}
+                </div>
+                {!orderBook && (
+                  <div className="py-6 text-center font-sans text-xs text-muted-foreground">
+                    Loading market levels…
+                  </div>
                 )}
               </div>
-            </div>
-          </>
-        )}
-      </aside>
+            </>
+          )}
+        </aside>
+
+        <aside className="rounded-xl bg-black p-3 font-mono text-[10px]">
+          <div className="mb-2 flex items-center justify-between text-muted-foreground">
+            <span>Opened positions</span>
+            <span>{recentPositions.length}/10</span>
+          </div>
+          <div className="mb-2 grid grid-cols-3 gap-1">
+            {(["all", "long", "short"] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => setRecentSide(side)}
+                className={`rounded px-1.5 py-1 text-[10px] uppercase transition-colors ${recentSide === side ? "bg-bull text-black" : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"}`}
+              >
+                {side}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-0.5">
+            {recentPositions.map((position) => (
+              <div key={`recent-${position.id}`} className="rounded px-1 py-1 hover:bg-white/5">
+                <div className={position.side === "long" ? "text-bull" : "text-bear"}>
+                  {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
+                  {position.leverage}x
+                </div>
+                <div className="text-muted-foreground">
+                  Opened · Margem $BX {fmt(Number(position.margin))} ·{" "}
+                  {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+            ))}
+            {recentPositions.length === 0 && (
+              <div className="py-2 text-center text-muted-foreground">No opened positions</div>
+            )}
+          </div>
+        </aside>
+      </section>
 
       {/* gráfico */}
-      <section className="order-1 min-w-0 space-y-3 lg:order-1">
+      <section
+        className={`order-1 min-w-0 space-y-3 ${orderBookSide === "left" ? "lg:order-2" : "lg:order-1"}`}
+      >
         <div className="overflow-hidden rounded-xl bg-black">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 bg-black p-3">
             <div className="relative">
