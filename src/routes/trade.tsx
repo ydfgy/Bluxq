@@ -150,7 +150,9 @@ function Trade() {
       (
         await supabase
           .from("positions")
-          .select("*")
+          .select(
+            "id, symbol, side, margin, leverage, qty, entry_price, liq_price, opened_at, closed_at, exit_price, pnl, fee, payout, status",
+          )
           .order("opened_at", { ascending: false })
           .limit(100)
       ).data ?? [],

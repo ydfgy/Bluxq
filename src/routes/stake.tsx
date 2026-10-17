@@ -41,8 +41,15 @@ function Stake() {
     refetchInterval: 5000,
     queryFn: async () => {
       const [pool, mine] = await Promise.all([
-        supabase.from("pool").select("*").single(),
-        supabase.from("stakes").select("*").eq("user_id", session!.user.id).maybeSingle(),
+        supabase
+          .from("pool")
+          .select("total_assets, total_reserved, total_shares, fees_to_stakers")
+          .single(),
+        supabase
+          .from("stakes")
+          .select("deposited, shares")
+          .eq("user_id", session!.user.id)
+          .maybeSingle(),
       ]);
       return { pool: pool.data, mine: mine.data };
     },

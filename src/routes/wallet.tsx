@@ -60,13 +60,15 @@ function Wallet() {
       const [a, b] = await Promise.all([
         supabase
           .from("deposits")
-          .select("*")
+          .select(
+            "id, amount, payment_method, asset, network, transaction_hash, status, created_at",
+          )
           .eq("user_id", uid!)
           .order("created_at", { ascending: false })
           .limit(30),
         supabase
           .from("withdrawals")
-          .select("*")
+          .select("id, amount, payout_method, asset, network, destination, status, created_at")
           .eq("user_id", uid!)
           .order("created_at", { ascending: false })
           .limit(30),

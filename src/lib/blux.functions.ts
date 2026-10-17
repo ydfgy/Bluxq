@@ -33,6 +33,33 @@ function constantTimeEqual(left: string, right: string) {
   return difference === 0;
 }
 
+const adminAuthAttempts = new Map<
+  string,
+  { count: number; windowStartedAt: number; blockedUntil: number }
+>();
+const ADMIN_AUTH_WINDOW_MS = 10 * 60 * 1000;
+const ADMIN_AUTH_MAX_ATTEMPTS = 5;
+const ADMIN_AUTH_BLOCK_MS = 15 * 60 * 1000;
+
+function checkAdminAuthRateLimit(userId: string) {
+  const now = Date.now();
+  const current = adminAuthAttempts.get(userId);
+  if (!current) return;
+  if (current.blockedUntil > now) throw new Error("Muitas tentativas. Tente novamente mais tarde.");
+  if (now - current.windowStartedAt >= ADMIN_AUTH_WINDOW_MS) adminAuthAttempts.delete(userId);
+}
+
+function recordAdminAuthFailure(userId: string) {
+  const now = Date.now();
+  const current = adminAuthAttempts.get(userId);
+  const next =
+    !current || now - current.windowStartedAt >= ADMIN_AUTH_WINDOW_MS
+      ? { count: 1, windowStartedAt: now, blockedUntil: 0 }
+      : { ...current, count: current.count + 1 };
+  if (next.count >= ADMIN_AUTH_MAX_ATTEMPTS) next.blockedUntil = now + ADMIN_AUTH_BLOCK_MS;
+  adminAuthAttempts.set(userId, next);
+}
+
 function base64UrlEncode(value: string | Uint8Array) {
   const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
   let binary = "";
@@ -61,13 +88,13 @@ async function signAdminToken(payload: string) {
   );
 }
 
-async function verifyAdminToken(token: string) {
+async function verifyAdminToken(token: string, userId: string) {
   try {
     const [encodedPayload, encodedSignature] = token.split(".");
     if (!encodedPayload || !encodedSignature) return false;
     const payload = new TextDecoder().decode(base64UrlDecode(encodedPayload));
-    const parsed = JSON.parse(payload) as { exp?: number };
-    if (!parsed.exp || parsed.exp < Date.now()) return false;
+    const parsed = JSON.parse(payload) as { exp?: number; sub?: string };
+    if (!parsed.exp || parsed.exp < Date.now() || parsed.sub !== userId) return false;
     const expected = await signAdminToken(payload);
     return constantTimeEqual(expected, encodedSignature);
   } catch {
@@ -75,8 +102,9 @@ async function verifyAdminToken(token: string) {
   }
 }
 
-async function assertAdminPanelAccess(token: string) {
-  if (!(await verifyAdminToken(token))) throw new Error("Acesso ao painel expirado ou inválido");
+async function assertAdminPanelAccess(token: string, userId: string) {
+  if (!(await verifyAdminToken(token, userId)))
+    throw new Error("Acesso ao painel expirado ou inválido");
 }
 
 const verificationWords = [
@@ -537,7 +565,8 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
   .validator((d) =>
     z.object({ adminKey: z.string().uuid(), pin: z.string().regex(/^\d{6}$/) }).parse(d),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
+    checkAdminAuthRateLimit(context.userId);
     const expectedKey = process.env["ADMIN_PANEL_UUID"] ?? "";
     const expectedPin = process.env["ADMIN_PANEL_PIN"] ?? "";
     if (
@@ -546,9 +575,11 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       !constantTimeEqual(data.adminKey, expectedKey) ||
       !constantTimeEqual(data.pin, expectedPin)
     ) {
+      recordAdminAuthFailure(context.userId);
       throw new Error("PIN ou caminho inválido");
     }
-    const payload = JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000 });
+    adminAuthAttempts.delete(context.userId);
+    const payload = JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000, sub: context.userId });
     return { token: `${base64UrlEncode(payload)}.${await signAdminToken(payload)}` };
   });
 
@@ -563,7 +594,7 @@ export const claimAdmin = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken);
+    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     const expected = process.env["ADMIN_BOOTSTRAP_SECRET"] ?? "";
     if (!expected || !constantTimeEqual(data.bootstrapSecret, expected)) {
       throw new Error("Invalid bootstrap key");
@@ -577,13 +608,23 @@ export const adminOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ adminAccessToken: z.string().min(1).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken);
+    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     await assertAdmin(context.supabase, context.userId);
     const sb = await admin();
     const [d, w, pool] = await Promise.all([
-      sb.from("deposits").select("*").eq("status", "pending").order("created_at"),
-      sb.from("withdrawals").select("*").eq("status", "pending").order("created_at"),
-      sb.from("pool").select("*").single(),
+      sb
+        .from("deposits")
+        .select("id, user_id, amount, payment_method, asset, network, transaction_hash, created_at")
+        .eq("status", "pending")
+        .order("created_at")
+        .limit(200),
+      sb
+        .from("withdrawals")
+        .select("id, user_id, amount, payout_method, asset, network, destination, created_at")
+        .eq("status", "pending")
+        .order("created_at")
+        .limit(200),
+      sb.from("pool").select("total_assets, total_reserved, platform_revenue").single(),
     ]);
     rpcError(d.error);
     rpcError(w.error);
@@ -616,7 +657,7 @@ export const reviewDeposit = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken);
+    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     await assertAdmin(context.supabase, context.userId);
     const { error } = await (
       await admin()
@@ -637,7 +678,7 @@ export const reviewWithdraw = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken);
+    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     await assertAdmin(context.supabase, context.userId);
     const { error } = await (
       await admin()
