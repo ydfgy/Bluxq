@@ -359,7 +359,7 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[176px_minmax(0,1fr)_320px]" : "lg:grid-cols-[32px_minmax(0,1fr)_320px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_176px_320px]" : "lg:grid-cols-[minmax(0,1fr)_32px_320px]"}`}
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_256px]" : "lg:grid-cols-[40px_minmax(0,1fr)_256px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_256px]" : "lg:grid-cols-[minmax(0,1fr)_40px_256px]"}`}
     >
       <CoinRain show={rain} />
       {/* livro de ordens e posições abertas */}
@@ -367,7 +367,7 @@ function Trade() {
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
         <aside
-          className={`overflow-hidden rounded-xl ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-8"}`}
+          className={`overflow-hidden rounded-xl ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-10"}`}
         >
           {!orderBookOpen ? (
             <div className="flex min-h-14 w-full flex-col items-center justify-center gap-1 py-1">
@@ -707,7 +707,7 @@ function Trade() {
 
       {/* ordem */}
       {orderPanelOpen ? (
-        <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
+        <aside className="order-3 h-fit space-y-4 p-4 lg:sticky lg:top-16">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
               Nova ordem
@@ -773,7 +773,7 @@ function Trade() {
               Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
             </div>
           </div>
-          <div className="rounded-lg border border-border bg-black p-3 text-sm">
+          <div className="space-y-1 p-3 text-sm">
             <div className="mb-2 flex items-center justify-between font-semibold">
               <span>Total para abrir</span>
               <span className="font-mono text-foreground">$BX {fmt(totalRequired)}</span>
@@ -787,7 +787,7 @@ function Trade() {
               <span>Margem da posição</span>
               <span className="font-mono">$BX {fmt(m)}</span>
             </div>
-            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Taxa de abertura (10%)</span>
               <span className="font-mono">$BX {fmt(openingFee)}</span>
             </div>
@@ -810,7 +810,7 @@ function Trade() {
             />
           </button>
           {showOrderDetails && (
-            <div className="space-y-1 rounded-lg bg-black p-3 font-mono text-xs">
+            <div className="space-y-1 p-3 font-mono text-xs">
               <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
               <Row
                 k="Quantidade"
@@ -835,7 +835,7 @@ function Trade() {
               <Row k="Taxa de abertura" v={`${fmt(openingFee)} $BX`} />
             </div>
           )}
-          <div className="grid grid-cols-[1fr_1px_1fr] items-stretch overflow-hidden rounded-lg border border-border">
+          <div className="grid grid-cols-2 gap-2 items-stretch">
             <Button
               disabled={
                 busy ||
@@ -844,11 +844,10 @@ function Trade() {
                   (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
               }
               onClick={() => go("long")}
-              className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
+              className="h-11 rounded-md bg-bull text-bull-foreground hover:bg-bull/90"
             >
               Long ↑
             </Button>
-            <span aria-hidden="true" className="my-2 w-px rotate-[12deg] bg-border" />
             <Button
               disabled={
                 busy ||
@@ -857,7 +856,7 @@ function Trade() {
                   (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
               }
               onClick={() => go("short")}
-              className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
+              className="h-11 rounded-md bg-bear text-bear-foreground hover:bg-bear/90"
             >
               Short ↓
             </Button>
@@ -867,7 +866,7 @@ function Trade() {
         <button
           type="button"
           onClick={() => setOrderPanelOpen(true)}
-          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-l-lg border border-r-0 bg-card px-2 py-3 text-xs font-semibold text-muted-foreground shadow-lg hover:text-foreground lg:sticky lg:top-28 lg:col-start-3 lg:row-start-1 lg:h-fit lg:self-start"
+          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 px-2 py-3 text-xs font-semibold text-muted-foreground hover:text-foreground lg:sticky lg:top-28 lg:col-start-3 lg:row-start-1 lg:h-fit lg:self-start"
           aria-label="Abrir painel de ordem"
           title="Abrir ordem"
         >
