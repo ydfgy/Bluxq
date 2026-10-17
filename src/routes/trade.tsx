@@ -125,7 +125,6 @@ function Trade() {
   const [marketSearch, setMarketSearch] = useState("");
   const [orderBookOpen, setOrderBookOpen] = useState(true);
   const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
-  const [recentSide, setRecentSide] = useState<"all" | "long" | "short">("all");
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
@@ -177,7 +176,6 @@ function Trade() {
   });
   const selectedMarket = MARKETS.find((market) => market.symbol === symbol) ?? MARKETS[0];
   const recentPositions = [...platformPositions]
-    .filter((position) => recentSide === "all" || position.side === recentSide)
     .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
     .slice(0, 10);
 
@@ -369,7 +367,7 @@ function Trade() {
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
         <aside
-          className={`overflow-hidden rounded-xl border border-border bg-card ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-10"}`}
+          className={`overflow-hidden rounded-xl ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-10"}`}
         >
           {!orderBookOpen ? (
             <div className="flex min-h-14 w-full flex-col items-center justify-center gap-1 py-1">
@@ -471,48 +469,40 @@ function Trade() {
                   </div>
                 )}
               </div>
+              <aside className="mt-3 rounded-xl bg-black p-3 font-mono text-[10px]">
+                <div className="mb-2 flex items-center justify-between text-muted-foreground">
+                  <span>Recent positions</span>
+                  <span>{recentPositions.length}/10</span>
+                </div>
+                <div className="space-y-0.5">
+                  {recentPositions.map((position) => (
+                    <div
+                      key={`recent-${position.id}`}
+                      className="rounded px-1 py-1 hover:bg-white/5"
+                    >
+                      <div className={position.side === "long" ? "text-bull" : "text-bear"}>
+                        {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
+                        {position.leverage}x
+                      </div>
+                      <div className="text-muted-foreground">
+                        Margin $BX {fmt(Number(position.margin))} · Size $BX{" "}
+                        {fmt(Number(position.margin) * Number(position.leverage))} ·{" "}
+                        {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                  {recentPositions.length === 0 && (
+                    <div className="py-2 text-center text-muted-foreground">
+                      No opened positions
+                    </div>
+                  )}
+                </div>
+              </aside>
             </>
           )}
-        </aside>
-
-        <aside className="rounded-xl bg-black p-3 font-mono text-[10px]">
-          <div className="mb-2 flex items-center justify-between text-muted-foreground">
-            <span>Recent positions</span>
-            <span>{recentPositions.length}/10</span>
-          </div>
-          <div className="mb-2 grid grid-cols-3 gap-1">
-            {(["all", "long", "short"] as const).map((side) => (
-              <button
-                key={side}
-                type="button"
-                onClick={() => setRecentSide(side)}
-                className={`rounded px-1.5 py-1 text-[10px] uppercase transition-colors ${recentSide === side ? "bg-bull text-black" : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"}`}
-              >
-                {side}
-              </button>
-            ))}
-          </div>
-          <div className="space-y-0.5">
-            {recentPositions.map((position) => (
-              <div key={`recent-${position.id}`} className="rounded px-1 py-1 hover:bg-white/5">
-                <div className={position.side === "long" ? "text-bull" : "text-bear"}>
-                  {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
-                  {position.leverage}x
-                </div>
-                <div className="text-muted-foreground">
-                  Margin $BX {fmt(Number(position.margin))} · Size $BX{" "}
-                  {fmt(Number(position.margin) * Number(position.leverage))} ·{" "}
-                  {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
-                </div>
-              </div>
-            ))}
-            {recentPositions.length === 0 && (
-              <div className="py-2 text-center text-muted-foreground">No opened positions</div>
-            )}
-          </div>
         </aside>
       </section>
 
