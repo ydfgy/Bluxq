@@ -3,7 +3,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -129,6 +129,7 @@ function Trade() {
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [orderPanelOpen, setOrderPanelOpen] = useState(true);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
@@ -603,139 +604,170 @@ function Trade() {
       </section>
 
       {/* ordem */}
-      <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Saldo</span>
-          <span className="font-mono text-gold">B$ {fmt(balance)}</span>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Margem (B$)</label>
-          <Input
-            type="number"
-            min={10}
-            step="0.01"
-            value={margin}
-            onChange={(e) => setMargin(e.target.value)}
-            className="font-mono"
-          />
-          <div className="flex gap-1">
-            {[0.1, 0.25, 0.5, 1].map((f) => (
-              <button
-                key={f}
-                onClick={() => {
-                  setMargin(marginWithinBudget(balance, f).toFixed(2));
-                }}
-                className="flex-1 rounded border py-1 text-xs hover:bg-muted"
-              >
-                {f * 100}%
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Alavancagem</span>
-            <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
-              {lev}x
+      {orderPanelOpen ? (
+        <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Nova ordem
             </span>
+            <button
+              type="button"
+              onClick={() => setOrderPanelOpen(false)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Minimizar painel de ordem"
+              title="Minimizar"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
           </div>
-          <Slider
-            aria-label="Alavancagem"
-            min={MIN_LEVERAGE}
-            max={sliderMax}
-            step={1}
-            value={[Math.min(lev, sliderMax)]}
-            onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)}
-            className="py-2"
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-            <span>{MIN_LEVERAGE}x mín.</span>
-            <span>arraste para ajustar</span>
-            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "unavailable"}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Saldo</span>
+            <span className="font-mono text-gold">B$ {fmt(balance)}</span>
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Margem (B$)</label>
+            <Input
+              type="number"
+              min={10}
+              step="0.01"
+              value={margin}
+              onChange={(e) => setMargin(e.target.value)}
+              className="font-mono"
+            />
+            <div className="flex gap-1">
+              {[0.1, 0.25, 0.5, 1].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => {
+                    setMargin(marginWithinBudget(balance, f).toFixed(2));
+                  }}
+                  className="flex-1 rounded border py-1 text-xs hover:bg-muted"
+                >
+                  {f * 100}%
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-          <span className="text-muted-foreground">Total para abrir</span>
-          <span className="font-mono font-bold text-primary">B$ {fmt(totalRequired)}</span>
-        </div>
-        {profile && m >= 10 && shortfall > 0 && (
-          <p role="status" className="text-xs leading-relaxed text-bear">
-            Saldo insuficiente: faltam B$ {fmt(shortfall)}. Margem máxima agora: B${" "}
-            {fmt(maxAffordableMargin)}.
-          </p>
-        )}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Alavancagem</span>
+              <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
+                {lev}x
+              </span>
+            </div>
+            <Slider
+              aria-label="Alavancagem"
+              min={MIN_LEVERAGE}
+              max={sliderMax}
+              step={1}
+              value={[Math.min(lev, sliderMax)]}
+              onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)}
+              className="py-2"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span>{MIN_LEVERAGE}x mín.</span>
+              <span>arraste para ajustar</span>
+              <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "unavailable"}</span>
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
+            <span className="text-muted-foreground">Total para abrir</span>
+            <span className="font-mono font-bold text-primary">B$ {fmt(totalRequired)}</span>
+          </div>
+          {profile && m >= 10 && shortfall > 0 && (
+            <p role="status" className="text-xs leading-relaxed text-bear">
+              Saldo insuficiente: faltam B$ {fmt(shortfall)}. Margem máxima agora: B${" "}
+              {fmt(maxAffordableMargin)}.
+            </p>
+          )}
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setShowOrderDetails((value) => !value)}
+            aria-expanded={showOrderDetails}
+            aria-controls="order-details"
+          >
+            <span>Detalhes da operação</span>
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showOrderDetails && (
+            <div
+              id="order-details"
+              className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono"
+            >
+              <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
+              <Row
+                k="Quantidade"
+                v={
+                  currentPrice
+                    ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                    : "—"
+                }
+              />
+              <Row
+                k="Liquidation Long"
+                v={currentPrice ? fmtPrice(liqLong) : "—"}
+                cls="text-bull"
+              />
+              <Row
+                k="Liquidation Short"
+                v={currentPrice ? fmtPrice(liqShort) : "—"}
+                cls="text-bear"
+              />
+              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+              <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
+              <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$`} />
+            </div>
+          )}
+          <div className="grid grid-cols-2 gap-2">
+            <Button
+              disabled={
+                busy ||
+                !currentPrice ||
+                m < 10 ||
+                !canAfford ||
+                poolMaxLev < MIN_LEVERAGE ||
+                lev > poolMaxLev
+              }
+              onClick={() => go("long")}
+              className="bg-bull text-bull-foreground hover:bg-bull/90"
+            >
+              Long ↑
+            </Button>
+            <Button
+              disabled={
+                busy ||
+                !currentPrice ||
+                m < 10 ||
+                !canAfford ||
+                poolMaxLev < MIN_LEVERAGE ||
+                lev > poolMaxLev
+              }
+              onClick={() => go("short")}
+              className="bg-bear text-bear-foreground hover:bg-bear/90"
+            >
+              Short ↓
+            </Button>
+          </div>
+        </aside>
+      ) : (
         <button
           type="button"
-          className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => setShowOrderDetails((value) => !value)}
-          aria-expanded={showOrderDetails}
-          aria-controls="order-details"
+          onClick={() => setOrderPanelOpen(true)}
+          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-l-lg border border-r-0 bg-card px-2 py-3 text-xs font-semibold text-muted-foreground shadow-lg hover:text-foreground lg:sticky lg:top-28 lg:col-start-3 lg:row-start-1 lg:h-fit lg:self-start"
+          aria-label="Abrir painel de ordem"
+          title="Abrir ordem"
         >
-          <span>Detalhes da operação</span>
-          <ChevronDown
-            aria-hidden="true"
-            className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
-          />
+          <ChevronRight aria-hidden="true" className="h-4 w-4" />
+          <span className="[writing-mode:vertical-rl]">Ordem</span>
         </button>
-        {showOrderDetails && (
-          <div
-            id="order-details"
-            className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono"
-          >
-            <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
-            <Row
-              k="Quantidade"
-              v={
-                currentPrice
-                  ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
-                  : "—"
-              }
-            />
-            <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
-            <Row
-              k="Liquidation Short"
-              v={currentPrice ? fmtPrice(liqShort) : "—"}
-              cls="text-bear"
-            />
-            <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-            <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
-            <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$ (10% da margem)`} />
-          </div>
-        )}
-        <div className="grid grid-cols-2 gap-2">
-          <Button
-            disabled={
-              busy ||
-              !currentPrice ||
-              m < 10 ||
-              !canAfford ||
-              poolMaxLev < MIN_LEVERAGE ||
-              lev > poolMaxLev
-            }
-            onClick={() => go("long")}
-            className="bg-bull text-bull-foreground hover:bg-bull/90"
-          >
-            Long ↑
-          </Button>
-          <Button
-            disabled={
-              busy ||
-              !currentPrice ||
-              m < 10 ||
-              !canAfford ||
-              poolMaxLev < MIN_LEVERAGE ||
-              lev > poolMaxLev
-            }
-            onClick={() => go("short")}
-            className="bg-bear text-bear-foreground hover:bg-bear/90"
-          >
-            Short ↓
-          </Button>
-        </div>
-      </aside>
+      )}
       {selectedPosition && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
