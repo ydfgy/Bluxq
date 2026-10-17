@@ -1,11 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useIsAdmin } from "@/hooks/use-auth";
-import { adminOverview, claimAdmin, reviewDeposit, reviewWithdraw } from "@/lib/blux.functions";
+import {
+  adminOverview,
+  authenticateAdminPanel,
+  claimAdmin,
+  reviewDeposit,
+  reviewWithdraw,
+} from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,7 +25,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
 }
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/admin/$adminKey")({
   head: () => ({
     meta: [
       { title: "Admin — Bluxq" },
@@ -39,18 +45,42 @@ export const Route = createFileRoute("/admin")({
 });
 
 function Admin() {
+  const { adminKey } = Route.useParams();
   const { data: isAdmin, isLoading } = useIsAdmin();
   const qc = useQueryClient();
   const claim = useServerFn(claimAdmin);
+  const authenticate = useServerFn(authenticateAdminPanel);
   const overview = useServerFn(adminOverview);
   const rd = useServerFn(reviewDeposit);
   const rw = useServerFn(reviewWithdraw);
   const [bootstrapSecret, setBootstrapSecret] = useState("");
+  const [pin, setPin] = useState("");
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+  const [authenticating, setAuthenticating] = useState(false);
+
+  useEffect(() => {
+    setAccessToken(sessionStorage.getItem("bluxq-admin-access"));
+  }, []);
+
+  async function unlock() {
+    setAuthenticating(true);
+    try {
+      const result = await authenticate({ data: { adminKey, pin } });
+      sessionStorage.setItem("bluxq-admin-access", result.token);
+      setAccessToken(result.token);
+      toast.success("Painel desbloqueado");
+    } catch (error: unknown) {
+      toast.error(errorMessage(error));
+    } finally {
+      setAuthenticating(false);
+    }
+  }
+
   const { data } = useQuery({
-    queryKey: ["admin"],
-    enabled: !!isAdmin,
+    queryKey: ["admin", accessToken],
+    enabled: !!isAdmin && !!accessToken,
     refetchInterval: 5000,
-    queryFn: () => overview(),
+    queryFn: () => overview({ data: { adminAccessToken: accessToken! } }),
   });
 
   async function run(fn: () => Promise<unknown>, msg: string) {
@@ -64,6 +94,35 @@ function Admin() {
   }
 
   if (isLoading) return null;
+  if (!accessToken) {
+    return (
+      <main className="mx-auto max-w-md space-y-4 px-4 py-12">
+        <h1 className="text-xl font-bold">Painel privado</h1>
+        <p className="text-sm text-muted-foreground">
+          Informe o PIN de 6 dígitos para continuar. O acesso é válido somente nesta sessão.
+        </p>
+        <Input
+          type="password"
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          placeholder="PIN de 6 dígitos"
+          value={pin}
+          onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" && pin.length === 6) void unlock();
+          }}
+        />
+        <Button
+          className="w-full"
+          disabled={pin.length !== 6 || authenticating}
+          onClick={() => void unlock()}
+        >
+          {authenticating ? "Verificando…" : "Entrar"}
+        </Button>
+      </main>
+    );
+  }
   if (!isAdmin) {
     return (
       <main className="mx-auto max-w-md space-y-4 px-4 py-12">
@@ -82,7 +141,12 @@ function Admin() {
         <Button
           className="w-full"
           disabled={bootstrapSecret.length < 32}
-          onClick={() => run(() => claim({ data: { bootstrapSecret } }), "Agora você é admin")}
+          onClick={() =>
+            run(
+              () => claim({ data: { bootstrapSecret, adminAccessToken: accessToken } }),
+              "Agora você é admin",
+            )
+          }
         >
           Inicializar administração
         </Button>
@@ -126,14 +190,24 @@ function Admin() {
             </span>
             <Button
               size="sm"
-              onClick={() => run(() => rd({ data: { id: x.id, approve: true } }), "Aprovado")}
+              onClick={() =>
+                run(
+                  () => rd({ data: { id: x.id, approve: true, adminAccessToken: accessToken } }),
+                  "Aprovado",
+                )
+              }
             >
               Aprovar
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => run(() => rd({ data: { id: x.id, approve: false } }), "Recusado")}
+              onClick={() =>
+                run(
+                  () => rd({ data: { id: x.id, approve: false, adminAccessToken: accessToken } }),
+                  "Recusado",
+                )
+              }
             >
               Recusar
             </Button>
@@ -146,7 +220,7 @@ function Admin() {
         </h2>
         <p className="px-4 pt-2 text-xs text-muted-foreground">
           Para Roblox, pague os Robux pelo grupo. Para Crypto, envie para o endereço informado e
-          marque como pago. “Devolver” estorna o saldo ao usuário.
+          marque como pago.
         </p>
         {data?.withdrawals.map((x) => (
           <div
@@ -165,14 +239,24 @@ function Admin() {
             </span>
             <Button
               size="sm"
-              onClick={() => run(() => rw({ data: { id: x.id, paid: true } }), "Marcado como pago")}
+              onClick={() =>
+                run(
+                  () => rw({ data: { id: x.id, paid: true, adminAccessToken: accessToken } }),
+                  "Marcado como pago",
+                )
+              }
             >
               Paguei
             </Button>
             <Button
               size="sm"
               variant="outline"
-              onClick={() => run(() => rw({ data: { id: x.id, paid: false } }), "Devolvido")}
+              onClick={() =>
+                run(
+                  () => rw({ data: { id: x.id, paid: false, adminAccessToken: accessToken } }),
+                  "Devolvido",
+                )
+              }
             >
               Devolver
             </Button>

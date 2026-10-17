@@ -33,6 +33,52 @@ function constantTimeEqual(left: string, right: string) {
   return difference === 0;
 }
 
+function base64UrlEncode(value: string | Uint8Array) {
+  const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
+}
+
+function base64UrlDecode(value: string) {
+  const normalized = value.replaceAll("-", "+").replaceAll("_", "/");
+  return Uint8Array.from(atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=")), (c) =>
+    c.charCodeAt(0),
+  );
+}
+
+async function signAdminToken(payload: string) {
+  const secret = `${process.env["ADMIN_PANEL_UUID"] ?? ""}:${process.env["ADMIN_PANEL_PIN"] ?? ""}`;
+  const key = await crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return base64UrlEncode(
+    new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload))),
+  );
+}
+
+async function verifyAdminToken(token: string) {
+  try {
+    const [encodedPayload, encodedSignature] = token.split(".");
+    if (!encodedPayload || !encodedSignature) return false;
+    const payload = new TextDecoder().decode(base64UrlDecode(encodedPayload));
+    const parsed = JSON.parse(payload) as { exp?: number };
+    if (!parsed.exp || parsed.exp < Date.now()) return false;
+    const expected = await signAdminToken(payload);
+    return constantTimeEqual(expected, encodedSignature);
+  } catch {
+    return false;
+  }
+}
+
+async function assertAdminPanelAccess(token: string) {
+  if (!(await verifyAdminToken(token))) throw new Error("Acesso ao painel expirado ou inválido");
+}
+
 const verificationWords = [
   "amber",
   "anchor",
@@ -486,10 +532,38 @@ export const verifyRoblox = createServerFn({ method: "POST" })
   });
 
 /* ---------- Admin ---------- */
+export const authenticateAdminPanel = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    z.object({ adminKey: z.string().uuid(), pin: z.string().regex(/^\d{6}$/) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const expectedKey = process.env["ADMIN_PANEL_UUID"] ?? "";
+    const expectedPin = process.env["ADMIN_PANEL_PIN"] ?? "";
+    if (
+      !expectedKey ||
+      !expectedPin ||
+      !constantTimeEqual(data.adminKey, expectedKey) ||
+      !constantTimeEqual(data.pin, expectedPin)
+    ) {
+      throw new Error("PIN ou caminho inválido");
+    }
+    const payload = JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000 });
+    return { token: `${base64UrlEncode(payload)}.${await signAdminToken(payload)}` };
+  });
+
 export const claimAdmin = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ bootstrapSecret: z.string().min(32).max(256) }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        bootstrapSecret: z.string().min(32).max(256),
+        adminAccessToken: z.string().min(1).max(500),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     const expected = process.env["ADMIN_BOOTSTRAP_SECRET"] ?? "";
     if (!expected || !constantTimeEqual(data.bootstrapSecret, expected)) {
       throw new Error("Invalid bootstrap key");
@@ -501,7 +575,9 @@ export const claimAdmin = createServerFn({ method: "POST" })
 
 export const adminOverview = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .validator((d) => z.object({ adminAccessToken: z.string().min(1).max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     await assertAdmin(context.supabase, context.userId);
     const sb = await admin();
     const [d, w, pool] = await Promise.all([
@@ -530,8 +606,17 @@ export const adminOverview = createServerFn({ method: "POST" })
 
 export const reviewDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ id: z.string().uuid(), approve: z.boolean() }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        approve: z.boolean(),
+        adminAccessToken: z.string().min(1).max(500),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     await assertAdmin(context.supabase, context.userId);
     const { error } = await (
       await admin()
@@ -542,8 +627,17 @@ export const reviewDeposit = createServerFn({ method: "POST" })
 
 export const reviewWithdraw = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ id: z.string().uuid(), paid: z.boolean() }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        id: z.string().uuid(),
+        paid: z.boolean(),
+        adminAccessToken: z.string().min(1).max(500),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     await assertAdmin(context.supabase, context.userId);
     const { error } = await (
       await admin()

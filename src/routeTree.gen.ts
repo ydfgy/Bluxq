@@ -10,7 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CopyRouteImport } from './routes/copy'
@@ -20,15 +19,11 @@ import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WalletRouteImport } from './routes/wallet'
+import { Route as AdminAdminKeyRouteImport } from './routes/admin.$adminKey'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AdminRoute = AdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -76,10 +71,14 @@ const WalletRoute = WalletRouteImport.update({
   path: '/wallet',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AdminAdminKeyRoute = AdminAdminKeyRouteImport.update({
+  id: '/admin/$adminKey',
+  path: '/admin/$adminKey',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
@@ -89,10 +88,10 @@ export interface FileRoutesByFullPath {
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
+  '/admin/$adminKey': typeof AdminAdminKeyRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
@@ -102,11 +101,11 @@ export interface FileRoutesByTo {
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
+  '/admin/$adminKey': typeof AdminAdminKeyRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
@@ -116,12 +115,12 @@ export interface FileRoutesById {
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
+  '/admin/$adminKey': typeof AdminAdminKeyRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/admin'
     | '/auth'
     | '/convert'
     | '/copy'
@@ -131,10 +130,10 @@ export interface FileRouteTypes {
     | '/trade'
     | '/verify'
     | '/wallet'
+    | '/admin/$adminKey'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/admin'
     | '/auth'
     | '/convert'
     | '/copy'
@@ -144,10 +143,10 @@ export interface FileRouteTypes {
     | '/trade'
     | '/verify'
     | '/wallet'
+    | '/admin/$adminKey'
   id:
     | '__root__'
     | '/'
-    | '/admin'
     | '/auth'
     | '/convert'
     | '/copy'
@@ -157,11 +156,11 @@ export interface FileRouteTypes {
     | '/trade'
     | '/verify'
     | '/wallet'
+    | '/admin/$adminKey'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   ConvertRoute: typeof ConvertRoute
   CopyRoute: typeof CopyRoute
@@ -171,6 +170,7 @@ export interface RootRouteChildren {
   TradeRoute: typeof TradeRoute
   VerifyRoute: typeof VerifyRoute
   WalletRoute: typeof WalletRoute
+  AdminAdminKeyRoute: typeof AdminAdminKeyRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -180,13 +180,6 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/admin': {
-      id: '/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -252,12 +245,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/admin/$adminKey': {
+      id: '/admin/$adminKey'
+      path: '/admin/$adminKey'
+      fullPath: '/admin/$adminKey'
+      preLoaderRoute: typeof AdminAdminKeyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   ConvertRoute: ConvertRoute,
   CopyRoute: CopyRoute,
@@ -267,6 +266,7 @@ const rootRouteChildren: RootRouteChildren = {
   TradeRoute: TradeRoute,
   VerifyRoute: VerifyRoute,
   WalletRoute: WalletRoute,
+  AdminAdminKeyRoute: AdminAdminKeyRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

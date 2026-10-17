@@ -2,7 +2,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth, useIsAdmin, useProfile } from "@/hooks/use-auth";
+import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
 
@@ -26,7 +26,6 @@ export function Logo() {
 export function Navbar() {
   const { session } = useAuth();
   const { data: profile } = useProfile();
-  const { data: isAdmin } = useIsAdmin();
   const nav = useNavigate();
   const qc = useQueryClient();
   const link = "text-sm text-muted-foreground hover:text-foreground transition-colors";
@@ -70,11 +69,6 @@ export function Navbar() {
           <Link to="/referrals" className={link} activeProps={active}>
             Referrals
           </Link>
-          {isAdmin && (
-            <Link to="/admin" className={link} activeProps={active}>
-              Admin
-            </Link>
-          )}
         </nav>
         <div className="ml-auto flex items-center gap-3">
           {session && profile ? (
@@ -135,11 +129,6 @@ export function Navbar() {
         <Link to="/referrals" className={link} activeProps={active}>
           Referrals
         </Link>
-        {isAdmin && (
-          <Link to="/admin" className={link} activeProps={active}>
-            Admin
-          </Link>
-        )}
       </nav>
     </header>
   );

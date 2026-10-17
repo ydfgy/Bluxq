@@ -1,7 +1,6 @@
 {
   "routes": [
     { "path": "/", "title": "Home" },
-    { "path": "/admin", "title": "Admin" },
     { "path": "/auth", "title": "Authentication" },
     { "path": "/copy", "title": "Copy Trading" },
     { "path": "/convert", "title": "Conversor B$" },
