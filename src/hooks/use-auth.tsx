@@ -13,7 +13,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const qc = useQueryClient();
   useEffect(() => {
+    let mounted = true;
+    let authEventReceived = false;
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      authEventReceived = true;
+      if (!mounted) return;
       if (nextSession?.expires_at && nextSession.expires_at * 1000 <= Date.now()) {
         setSession(null);
       } else {
@@ -22,17 +26,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setReady(true);
       qc.invalidateQueries();
     });
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.expires_at && data.session.expires_at * 1000 <= Date.now()) {
-        // Do not call signOut here: a concurrent login could be cleared by this
-        // stale-session cleanup. A successful sign-in replaces the stored value.
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        // The auth event is newer than this initial snapshot. Never let a slow
+        // getSession() response overwrite a session established by a login.
+        if (!mounted || authEventReceived) return;
+        if (data.session?.expires_at && data.session.expires_at * 1000 <= Date.now()) {
+          setSession(null);
+        } else {
+          setSession(data.session);
+        }
+        setReady(true);
+      })
+      .catch((error: unknown) => {
+        if (!mounted || authEventReceived) return;
+        console.error("[Auth] Unable to restore saved session", error);
         setSession(null);
-      } else {
-        setSession(data.session);
-      }
-      setReady(true);
-    });
-    return () => data.subscription.unsubscribe();
+        setReady(true);
+      });
+    return () => {
+      mounted = false;
+      data.subscription.unsubscribe();
+    };
   }, [qc]);
 
   useEffect(() => {
