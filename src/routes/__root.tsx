@@ -141,7 +141,7 @@ function RootComponent() {
       <AuthProvider>
         <Navbar />
         <Outlet />
-        <Toaster theme="dark" position="top-center" />
+        <Toaster theme="dark" position="bottom-left" duration={3000} closeButton />
       </AuthProvider>
     </QueryClientProvider>
   );

@@ -55,11 +55,11 @@ export function PriceChart({
           timeScale: { timeVisible: true, secondsVisible: false },
         });
         const s = chart.addCandlestickSeries({
-          upColor: "#22c55e",
-          downColor: "#ef4444",
+          upColor: "#16a34a",
+          downColor: "#dc2626",
           borderVisible: false,
-          wickUpColor: "#22c55e",
-          wickDownColor: "#ef4444",
+          wickUpColor: "#16a34a",
+          wickDownColor: "#dc2626",
         });
         seriesRef.current = s;
         const r = await fetch(

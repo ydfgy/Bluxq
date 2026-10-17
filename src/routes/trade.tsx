@@ -220,7 +220,7 @@ function Trade() {
         .flatMap((p) => [
           {
             price: Number(p.entry_price),
-            color: p.side === "long" ? "#22c55e" : "#ef4444",
+            color: p.side === "long" ? "#16a34a" : "#dc2626",
             title: `${p.side === "long" ? "LONG" : "SHORT"} ${p.leverage}x entrada`,
           },
           { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidation" },
@@ -321,18 +321,18 @@ function Trade() {
     canvas.height = 700;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.fillStyle = "#050505";
+    context.fillStyle = "#16a34a";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#22c55e";
+    context.fillStyle = "#16a34a";
     context.font = "700 34px sans-serif";
     context.fillText("Bluxq", 70, 90);
     context.fillStyle = "#f4f4f5";
     context.font = "700 54px sans-serif";
     context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
-    context.fillStyle = position.side === "long" ? "#22c55e" : "#ef4444";
+    context.fillStyle = position.side === "long" ? "#16a34a" : "#dc2626";
     context.font = "700 34px monospace";
     context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
-    context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
+    context.fillStyle = pnl >= 0 ? "#16a34a" : "#dc2626";
     context.font = "700 72px monospace";
     context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
     context.font = "32px monospace";
