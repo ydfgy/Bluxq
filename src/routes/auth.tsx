@@ -32,6 +32,7 @@ function AuthPage() {
   const [rbx, setRbx] = useState("");
   const [referralCode, setReferralCode] = useState(ref?.toUpperCase() ?? "");
   const [busy, setBusy] = useState(false);
+  const [confirmationPending, setConfirmationPending] = useState(false);
   const nav = useNavigate();
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -50,17 +51,25 @@ function AuthPage() {
         });
         if (error) throw error;
         if (!data.session) {
-          const { error: loginError } = await supabase.auth.signInWithPassword({
-            email,
-            password: pw,
-          });
-          if (loginError) throw loginError;
+          setConfirmationPending(true);
+          setSignup(false);
+          setPw("");
+          toast.success("Cadastro iniciado. Confirme seu email antes de entrar.");
+          return;
         }
+        setConfirmationPending(false);
         toast.success("Account created successfully!");
         nav({ to: "/verify" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
-        if (error) throw error;
+        if (error) {
+          if (error.message.toLowerCase().includes("email not confirmed")) {
+            setConfirmationPending(true);
+            throw new Error("Confirme seu email pelo link enviado antes de entrar.");
+          }
+          throw error;
+        }
+        setConfirmationPending(false);
         nav({ to: "/verify" });
       }
     } catch (error: unknown) {
@@ -69,10 +78,42 @@ function AuthPage() {
       setBusy(false);
     }
   }
+  async function resendConfirmation() {
+    setBusy(true);
+    try {
+      const { error } = await supabase.auth.resend({ type: "signup", email });
+      if (error) throw error;
+      toast.success("Enviamos outro link de confirmação para seu email.");
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível reenviar o email.");
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <main className="mx-auto max-w-sm px-4 py-16">
       <h1 className="text-2xl font-bold">{signup ? "Create account" : "Entrar"}</h1>
       <form onSubmit={submit} className="mt-6 space-y-3">
+        {confirmationPending && (
+          <div
+            className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm"
+            role="status"
+          >
+            <p>
+              Confirme o endereço de email pelo link enviado para concluir o cadastro. Confira
+              também a pasta de spam.
+            </p>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              onClick={resendConfirmation}
+              disabled={busy || !email}
+            >
+              Reenviar email de confirmação
+            </Button>
+          </div>
+        )}
         <Input
           type="email"
           placeholder="Email"
