@@ -265,24 +265,35 @@ export const getAffiliateSummary = createServerFn({ method: "GET" })
         .from("affiliate_earnings")
         .select("amount, claimed_at")
         .eq("affiliate_id", context.userId)
+        .order("claimed_at", { ascending: false, nullsFirst: false })
         .limit(1000),
     ]);
     rpcError(profile.error);
     rpcError(invited.error);
     rpcError(earnings.error);
     const rows = earnings.data ?? [];
-    const pending = rows
-      .filter((row) => !row.claimed_at)
-      .reduce((sum, row) => sum + Number(row.amount), 0);
-    const claimed = rows
-      .filter((row) => row.claimed_at)
-      .reduce((sum, row) => sum + Number(row.amount), 0);
+    let pending = 0;
+    let claimed = 0;
+    const claimTotals = new Map<string, number>();
+    for (const row of rows) {
+      const amount = Number(row.amount);
+      if (!row.claimed_at) {
+        pending += amount;
+      } else {
+        claimed += amount;
+        claimTotals.set(row.claimed_at, (claimTotals.get(row.claimed_at) ?? 0) + amount);
+      }
+    }
     return {
       referralCode: profile.data?.referral_code ?? null,
       invitedCount: invited.count ?? 0,
       pending,
       claimed,
       total: pending + claimed,
+      recentClaims: [...claimTotals.entries()]
+        .map(([claimedAt, amount]) => ({ claimedAt, amount }))
+        .sort((a, b) => Date.parse(b.claimedAt) - Date.parse(a.claimedAt))
+        .slice(0, 3),
     };
   });
 
