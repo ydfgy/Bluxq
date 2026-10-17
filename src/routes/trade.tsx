@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { CoinRain } from "@/components/AppShell";
@@ -721,7 +721,7 @@ function Trade() {
             </button>
           </div>
           <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Margem ($BX)</label>
+            <label className="text-xs text-muted-foreground">Margem</label>
             <Input
               type="number"
               min={10}
@@ -766,12 +766,14 @@ function Trade() {
               <div className="flex items-center justify-between text-sm font-semibold">
                 <span>Total para abrir</span>
                 <span className="font-mono text-base font-bold text-primary">
-                  $BX {fmt(totalRequired)}
+                  <CurrencyAmount value={fmt(totalRequired)} />
                 </span>
               </div>
               <div className="mt-0.5 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Tamanho da posição</span>
-                <span className="font-mono text-sm font-bold text-primary">$BX {fmt(size)}</span>
+                <span className="font-mono text-sm font-bold text-primary">
+                  <CurrencyAmount value={fmt(size)} />
+                </span>
               </div>
             </div>
             {!session && (
@@ -781,17 +783,21 @@ function Trade() {
             )}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Margem da posição</span>
-              <span className="font-mono">$BX {fmt(m)}</span>
+              <span className="font-mono">
+                <CurrencyAmount value={fmt(m)} />
+              </span>
             </div>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Taxa de abertura (10%)</span>
-              <span className="font-mono">$BX {fmt(openingFee)}</span>
+              <span className="font-mono">
+                <CurrencyAmount value={fmt(openingFee)} />
+              </span>
             </div>
           </div>
           {profile && m >= 10 && shortfall > 0 && (
             <p role="status" className="text-xs leading-relaxed text-bear">
-              Saldo insuficiente: faltam $BX {fmt(shortfall)}. Margem máxima agora: $BX{" "}
-              {fmt(maxAffordableMargin)}.
+              Saldo insuficiente: faltam <CurrencyAmount value={fmt(shortfall)} />. Margem máxima
+              agora: <CurrencyAmount value={fmt(maxAffordableMargin)} />.
             </p>
           )}
           <button
@@ -826,8 +832,8 @@ function Trade() {
                 cls="text-bear"
               />
               <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-              <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
-              <Row k="Taxa de abertura" v={`${fmt(openingFee)} $BX`} />
+              <Row k="Maximum profit" v={<CurrencyAmount value={fmt(m * PROFIT_CAP)} />} />
+              <Row k="Taxa de abertura" v={<CurrencyAmount value={fmt(openingFee)} />} />
             </div>
           )}
           <div className="grid grid-cols-2 items-stretch gap-2">
@@ -983,7 +989,16 @@ function MarketIcon({ base }: { base: string }) {
   );
 }
 
-function Row({ k, v, cls = "" }: { k: string; v: string; cls?: string }) {
+function CurrencyAmount({ value }: { value: string }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      <img src="/bluxq-icon.png" alt="" className="h-4 w-4 object-contain" />
+      <span>{value}</span>
+    </span>
+  );
+}
+
+function Row({ k, v, cls = "" }: { k: string; v: ReactNode; cls?: string }) {
   return (
     <div className="flex justify-between">
       <span className="text-muted-foreground font-sans">{k}</span>
