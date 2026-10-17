@@ -720,10 +720,6 @@ function Trade() {
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Saldo</span>
-            <span className="font-mono text-gold">$BX {fmt(balance)}</span>
-          </div>
           <div className="space-y-1">
             <label className="text-xs text-muted-foreground">Margem ($BX)</label>
             <Input
@@ -762,17 +758,21 @@ function Trade() {
             />
             <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
               <span>{MIN_LEVERAGE}x mín.</span>
-              <span>arraste para ajustar</span>
               <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
             </div>
           </div>
           <div className="space-y-1 p-3 text-sm">
-            <div className="mb-2 flex items-center justify-between font-semibold">
-              <span>Total para abrir</span>
-              <span className="font-mono text-foreground">$BX {fmt(totalRequired)}</span>
+            <div className="mb-3">
+              <div className="flex items-center justify-between font-semibold">
+                <span>Total para abrir</span>
+                <span className="font-mono text-xl font-bold text-primary">
+                  $BX {fmt(totalRequired)}
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between">
+                <span className="text-xs text-muted-foreground">Tamanho da posição</span>
+                <span className="font-mono text-lg font-bold text-primary">$BX {fmt(size)}</span>
+              </div>
             </div>
             {!session && (
               <p className="mb-2 text-xs text-muted-foreground">
@@ -807,7 +807,6 @@ function Trade() {
           </button>
           {showOrderDetails && (
             <div className="space-y-1 p-3 font-mono text-xs">
-              <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
               <Row
                 k="Quantidade"
                 v={
