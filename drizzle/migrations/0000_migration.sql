@@ -132,7 +132,7 @@ declare p public.profiles; pl public.pool; v_borrowed numeric; v_reserved numeri
 begin
   if _side not in ('long','short') then raise exception 'Lado inválido'; end if;
   if _lev < 1 or _lev > 50 then raise exception 'Alavancagem deve ser entre 1x e 50x'; end if;
-  if _margin < 10 then raise exception 'Margem mínima é B$10'; end if;
+  if _margin < 10 then raise exception 'Margem mínima é $BX10'; end if;
   if _price is null or _price <= 0 then raise exception 'Preço indisponível'; end if;
   _margin := round(_margin, 2);
   select * into p from public.profiles where id = _user for update;
@@ -142,7 +142,7 @@ begin
   v_borrowed := _margin * (_lev - 1);
   v_reserved := _margin * 5; -- lucro máximo garantido pela pool
   if v_borrowed + v_reserved > (pl.total_assets - pl.total_reserved) then
-    raise exception 'Liquidez insuficiente na pool de alavancagem (disponível: B$%)', round(pl.total_assets - pl.total_reserved, 2);
+    raise exception 'Liquidez insuficiente na pool de alavancagem (disponível: $BX%)', round(pl.total_assets - pl.total_reserved, 2);
   end if;
   v_qty := (_margin * _lev) / _price;
   if _side = 'long' then v_liq := _price * (1 - 0.9 / _lev); else v_liq := _price * (1 + 0.9 / _lev); end if;
@@ -192,7 +192,7 @@ returns void language plpgsql security definer set search_path = public as $$
 declare p public.profiles; pl public.pool; v_shares numeric;
 begin
   _amount := round(_amount, 2);
-  if _amount < 1 then raise exception 'Valor mínimo B$1'; end if;
+  if _amount < 1 then raise exception 'Valor mínimo $BX1'; end if;
   select * into p from public.profiles where id = _user for update;
   if not p.verified then raise exception 'Verifique sua conta Roblox primeiro'; end if;
   if p.balance < _amount then raise exception 'Saldo insuficiente'; end if;
@@ -214,8 +214,8 @@ begin
   select * into s from public.stakes where user_id = _user for update;
   if not found or s.shares <= 0 then raise exception 'Você não tem stake'; end if;
   v_value := trunc(s.shares * pl.total_assets / pl.total_shares, 2);
-  if _amount > v_value then raise exception 'Você só tem B$% em stake', v_value; end if;
-  if _amount > pl.total_assets - pl.total_reserved then raise exception 'Liquidez em uso por operações abertas. Disponível agora: B$%', trunc(pl.total_assets - pl.total_reserved, 2); end if;
+  if _amount > v_value then raise exception 'Você só tem $BX% em stake', v_value; end if;
+  if _amount > pl.total_assets - pl.total_reserved then raise exception 'Liquidez em uso por operações abertas. Disponível agora: $BX%', trunc(pl.total_assets - pl.total_reserved, 2); end if;
   v_shares := least(s.shares, _amount * pl.total_shares / pl.total_assets);
   if _amount = v_value then v_shares := s.shares; end if;
   update public.stakes set shares = shares - v_shares, deposited = greatest(deposited - _amount, 0) where user_id = _user;
@@ -228,7 +228,7 @@ returns void language plpgsql security definer set search_path = public as $$
 declare p public.profiles;
 begin
   _amount := round(_amount, 2);
-  if _amount < 10 then raise exception 'Saque mínimo B$10'; end if;
+  if _amount < 10 then raise exception 'Saque mínimo $BX10'; end if;
   select * into p from public.profiles where id = _user for update;
   if not p.verified then raise exception 'Verifique sua conta Roblox primeiro'; end if;
   if p.balance < _amount then raise exception 'Saldo insuficiente'; end if;

@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 type Ctx = { session: Session | null; ready: boolean };
 const AuthCtx = createContext<Ctx>({ session: null, ready: false });
 const PROFILE_COLUMNS =
-  "id,roblox_username,roblox_user_id,roblox_display_name,avatar_url,verified,balance,created_at";
+  "id,roblox_username,roblox_user_id,roblox_display_name,avatar_url,is_anonymous,verified,balance,created_at";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);

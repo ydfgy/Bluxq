@@ -13,9 +13,9 @@ export const Route = createFileRoute("/auth")({
       .parse(s),
   head: () => ({
     meta: [
-      { title: "Sign in — BluxTrade" },
-      { name: "description", content: "Sign in or create your BluxTrade account" },
-      { property: "og:title", content: "Sign in — BluxTrade" },
+      { title: "Sign in — Bluxq" },
+      { name: "description", content: "Sign in or create your Bluxq account" },
+      { property: "og:title", content: "Sign in — Bluxq" },
       { property: "og:description", content: "Sign in or create your account" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },

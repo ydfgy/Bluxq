@@ -2,8 +2,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
-import { ChevronDown, ChevronRight, X } from "lucide-react";
 import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -29,17 +29,16 @@ import { getBinanceTickers } from "@/lib/market-data";
 import { connectOrderBookStream, fetchOrderBook, type OrderBook } from "@/lib/order-book";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Slider } from "@/components/ui/slider";
 
 export const Route = createFileRoute("/trade")({
   head: () => ({
     meta: [
-      { title: "Trade com alavancagem — BluxTrade" },
+      { title: "Trade com alavancagem — Bluxq" },
       {
         name: "description",
-        content: "Opere Long e Short em cripto real com Blux e alavancagem até 50x.",
+        content: "Opere Long e Short em cripto real com blux e alavancagem até 50x.",
       },
-      { property: "og:title", content: "Trade — BluxTrade" },
+      { property: "og:title", content: "Trade — Bluxq" },
       { property: "og:description", content: "Gráfico ao vivo, Long/Short e alavancagem até 50x." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -53,14 +52,6 @@ export const Route = createFileRoute("/trade")({
 });
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
-
-function marginWithinBudget(balance: number, fraction = 1) {
-  const budgetCents = Math.max(0, Math.floor(balance * fraction * 100 + 0.000001));
-  let marginCents = Math.floor(budgetCents / 1.1);
-  while (marginCents + Math.round(marginCents / 10) > budgetCents) marginCents -= 1;
-  while (marginCents + 1 + Math.round((marginCents + 1) / 10) <= budgetCents) marginCents += 1;
-  return marginCents / 100;
-}
 
 type PositionDetails = {
   id: string;
@@ -126,10 +117,13 @@ function Trade() {
   const [busy, setBusy] = useState(false);
   const [rain, setRain] = useState(0);
   const [marketMenuOpen, setMarketMenuOpen] = useState(false);
+  const [marketSearch, setMarketSearch] = useState("");
+  const [orderBookOpen, setOrderBookOpen] = useState(true);
+  const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
+  const [recentSide, setRecentSide] = useState<"all" | "long" | "short">("all");
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
-  const [orderPanelOpen, setOrderPanelOpen] = useState(true);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
@@ -164,6 +158,20 @@ function Trade() {
   const history = positions.filter((p) => p.status !== "open");
   const t = tickers?.[symbol];
   const currentPrice = price || Number(t?.lastPrice ?? 0);
+  const orderBookDepthMax = Math.max(
+    ...(orderBook?.asks ?? []).map((row) => row.total),
+    ...(orderBook?.bids ?? []).map((row) => row.total),
+    1,
+  );
+  const filteredMarkets = MARKETS.filter((market) => {
+    const query = marketSearch.trim().toLowerCase();
+    return !query || `${market.base} ${market.name}`.toLowerCase().includes(query);
+  });
+  const selectedMarket = MARKETS.find((market) => market.symbol === symbol) ?? MARKETS[0];
+  const recentPositions = [...platformPositions]
+    .filter((position) => recentSide === "all" || position.side === recentSide)
+    .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
+    .slice(0, 10);
 
   // preços ao vivo de todas as moedas com posição aberta
   const livePx = (s: string) =>
@@ -176,15 +184,8 @@ function Trade() {
     return () => clearInterval(t);
   }, [sync]);
 
-  const balance = Number(profile?.balance ?? 0);
-  const rawMargin = Number(margin);
-  const m = Number.isFinite(rawMargin) ? Math.round(rawMargin * 100) / 100 : 0;
-  const marginInCents = Math.round(m * 100);
-  const openingFee = Math.round(marginInCents / 10) / 100;
-  const totalRequired = Math.round((m + openingFee) * 100) / 100;
-  const maxAffordableMargin = marginWithinBudget(balance);
-  const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
-  const shortfall = Math.max(0, Math.round((totalRequired - balance) * 100) / 100);
+  const m = Number(margin) || 0;
+  const openingFee = m * 0.1;
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
@@ -216,13 +217,13 @@ function Trade() {
   async function go(side: "long" | "short") {
     setBusy(true);
     try {
-      if (!profile) {
-        throw new Error("Não foi possível carregar seu saldo. Tente novamente.");
-      }
-      if (!canAfford) {
+      if (m + openingFee > Number(profile?.balance ?? 0)) {
         throw new Error(
-          `Saldo insuficiente: esta ordem exige B$ ${fmt(totalRequired)} (margem + taxa). Saldo: B$ ${fmt(balance)}.`,
+          `Insufficient balance. You need $BX ${fmt(m + openingFee)} including the opening fee.`,
         );
+      }
+      if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
+        throw new Error("Preço de mercado indisponível. Aguarde a atualização e tente novamente.");
       }
       if (poolMaxLev < MIN_LEVERAGE)
         throw new Error(
@@ -245,7 +246,7 @@ function Trade() {
       const r = await close({ data: { id } });
       if (r.pnl > 0) setRain(Date.now());
       toast[r.pnl >= 0 ? "success" : "error"](
-        `Fechada: ${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)} B$ (taxa ${fmt(r.fee)})`,
+        `Fechada: ${r.pnl >= 0 ? "+" : ""}${fmt(r.pnl)} $BX (taxa ${fmt(r.fee)})`,
       );
       await qc.invalidateQueries({ queryKey: ["platform-open-positions"] });
       await qc.invalidateQueries({ queryKey: ["positions", session?.user.id] });
@@ -264,9 +265,9 @@ function Trade() {
   const unrealPct = openMargin ? (unreal / openMargin) * 100 : 0;
   function currentResultText() {
     return [
-      "BluxTrade — resultado atual",
+      "Bluxq — resultado atual",
       `Pares abertos: ${openPos.length}`,
-      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} B$ (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
+      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} $BX (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
       `Atualizado em: ${new Date().toLocaleString("pt-BR")}`,
     ].join("\n");
   }
@@ -279,7 +280,7 @@ function Trade() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = "bluxtrade-resultado-atual.txt";
+    link.download = "bluxq-resultado-atual.txt";
     link.click();
     URL.revokeObjectURL(url);
     toast.success("Resultado baixado");
@@ -303,7 +304,7 @@ function Trade() {
     context.fillRect(0, 0, canvas.width, canvas.height);
     context.fillStyle = "#22c55e";
     context.font = "700 34px sans-serif";
-    context.fillText("BluxTrade", 70, 90);
+    context.fillText("Bluxq", 70, 90);
     context.fillStyle = "#f4f4f5";
     context.font = "700 54px sans-serif";
     context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
@@ -312,7 +313,7 @@ function Trade() {
     context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
     context.fillStyle = pnl >= 0 ? "#22c55e" : "#ef4444";
     context.font = "700 72px monospace";
-    context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`, 70, 385);
+    context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
     context.font = "32px monospace";
     context.fillText(`${roe >= 0 ? "+" : ""}${roe.toFixed(2)}%`, 75, 440);
     context.fillStyle = "#d4d4d8";
@@ -329,139 +330,211 @@ function Trade() {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = `bluxtrade-${position.symbol.toLowerCase()}-${position.side}.png`;
+      link.download = `bluxq-${position.symbol.toLowerCase()}-${position.side}.png`;
       link.click();
       URL.revokeObjectURL(url);
     }, "image/png");
   }
 
   return (
-    <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
+    <main
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookOpen ? (orderBookSide === "left" ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_220px_320px]") : orderBookSide === "left" ? "lg:grid-cols-[40px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
+    >
       <CoinRain show={rain} />
-      {/* real market order book */}
-      <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
-        <div className="flex items-center justify-between border-b px-3 py-2">
-          <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
-          <span className="text-[10px] text-bull">● mercado ao vivo</span>
-        </div>
-        <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
-          <span>Price</span>
-          <span className="text-right">Qtd.</span>
-          <span className="text-right">Total</span>
-        </div>
-        <div className="px-2 font-mono text-[11px]">
-          <div className="space-y-0.5">
-            {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
-              <OrderRow key={`ask-${row.price}`} row={row} side="ask" />
-            ))}
-          </div>
-          <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
-            <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
-            <span className="text-[10px] font-normal text-muted-foreground">
-              {orderBook
-                ? `atualizado ${new Date(orderBook.updatedAt).toLocaleTimeString("pt-BR")}`
-                : "carregando"}
-            </span>
-          </div>
-          <div className="space-y-0.5">
-            {(orderBook?.bids ?? []).map((row) => (
-              <OrderRow key={`bid-${row.price}`} row={row} side="bid" />
-            ))}
-          </div>
-          {!orderBook && (
-            <div className="py-6 text-center font-sans text-xs text-muted-foreground">
-              Loading market levels…
-            </div>
-          )}
-        </div>
-        <div className="border-t px-2 py-2 font-mono text-[10px]">
-          <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span>Recently opened trades</span>
-            <span>Last 5</span>
-          </div>
-          <div className="space-y-0.5">
-            {[...platformPositions]
-              .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
-              .slice(0, 5)
-              .map((position) => {
-                const entry = Number(position.entry_price);
-                const value = entry * Number(position.qty);
-                return (
-                  <div
-                    key={`recent-${position.id}`}
-                    className="grid grid-cols-[1fr_auto] gap-2 rounded px-1 py-1"
+      {/* livro de ordens e posições abertas */}
+      <section
+        className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
+      >
+        <aside
+          className={`overflow-hidden rounded-xl bg-black ${orderBookOpen ? "lg:min-w-0" : "lg:w-10"}`}
+        >
+          {!orderBookOpen ? (
+            <button
+              type="button"
+              onClick={() => setOrderBookOpen(true)}
+              className="flex h-full min-h-24 w-full items-start justify-center py-4 text-muted-foreground hover:text-foreground"
+              aria-label="Abrir livro de ordens"
+              title="Abrir livro de ordens"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          ) : (
+            <>
+              <div className="flex items-center justify-between px-3 py-2">
+                <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setOrderBookSide("left")}
+                    className={`text-muted-foreground hover:text-foreground ${orderBookSide === "left" ? "text-primary" : ""}`}
+                    aria-label="Mover livro para a esquerda"
+                    title="Mover livro para a esquerda"
                   >
-                    <div>
-                      <div className={position.side === "long" ? "text-bull" : "text-bear"}>
-                        {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
-                        {position.leverage}x
-                      </div>
-                      <div className="text-muted-foreground">
-                        Faixa {fmtPrice(entry)} · Vol. {Number(position.qty).toPrecision(5)} ·
-                        Margem B$ {fmt(Number(position.margin))}
-                      </div>
-                    </div>
-                    <div className="text-right text-foreground">
-                      <div>B$ {fmt(value)}</div>
-                      <div className="text-muted-foreground">
-                        {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </div>
-                    </div>
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderBookOpen(false)}
+                    className="text-muted-foreground hover:text-foreground"
+                    aria-label="Minimizar livro de ordens"
+                    title="Minimizar livro de ordens"
+                  >
+                    <ChevronDown className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOrderBookSide("right")}
+                    className={`text-muted-foreground hover:text-foreground ${orderBookSide === "right" ? "text-primary" : ""}`}
+                    aria-label="Mover livro para a direita"
+                    title="Mover livro para a direita"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+              <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
+                <span>Price</span>
+                <span className="text-right">Qtd.</span>
+                <span className="text-right">Total</span>
+              </div>
+              <div className="px-2 font-mono text-[11px]">
+                <div className="space-y-0.5">
+                  {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
+                    <OrderRow
+                      key={`ask-${row.price}`}
+                      row={row}
+                      side="ask"
+                      depthMax={orderBookDepthMax}
+                    />
+                  ))}
+                </div>
+                <div className="my-2 flex items-center justify-between py-2 text-base font-bold">
+                  <span className="text-primary">
+                    {currentPrice ? fmtPrice(currentPrice) : "—"}
+                  </span>
+                  <span className="text-[10px] font-normal text-muted-foreground">
+                    {orderBook ? "LIVE" : "carregando"}
+                  </span>
+                </div>
+                <div className="space-y-0.5">
+                  {(orderBook?.bids ?? []).map((row) => (
+                    <OrderRow
+                      key={`bid-${row.price}`}
+                      row={row}
+                      side="bid"
+                      depthMax={orderBookDepthMax}
+                    />
+                  ))}
+                </div>
+                {!orderBook && (
+                  <div className="py-6 text-center font-sans text-xs text-muted-foreground">
+                    Loading market levels…
                   </div>
-                );
-              })}
-            {platformPositions.length === 0 && (
-              <div className="py-2 text-center text-muted-foreground">No open positions</div>
+                )}
+              </div>
+            </>
+          )}
+        </aside>
+
+        <aside className="rounded-xl bg-black p-3 font-mono text-[10px]">
+          <div className="mb-2 flex items-center justify-between text-muted-foreground">
+            <span>Opened positions</span>
+            <span>{recentPositions.length}/10</span>
+          </div>
+          <div className="mb-2 grid grid-cols-3 gap-1">
+            {(["all", "long", "short"] as const).map((side) => (
+              <button
+                key={side}
+                type="button"
+                onClick={() => setRecentSide(side)}
+                className={`rounded px-1.5 py-1 text-[10px] uppercase transition-colors ${recentSide === side ? "bg-bull text-black" : "bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground"}`}
+              >
+                {side}
+              </button>
+            ))}
+          </div>
+          <div className="space-y-0.5">
+            {recentPositions.map((position) => (
+              <div key={`recent-${position.id}`} className="rounded px-1 py-1 hover:bg-white/5">
+                <div className={position.side === "long" ? "text-bull" : "text-bear"}>
+                  {position.side.toUpperCase()} {position.symbol.replace("USDT", "")} ·{" "}
+                  {position.leverage}x
+                </div>
+                <div className="text-muted-foreground">
+                  Opened · Margem $BX {fmt(Number(position.margin))} ·{" "}
+                  {new Date(position.opened_at).toLocaleTimeString("pt-BR", {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+              </div>
+            ))}
+            {recentPositions.length === 0 && (
+              <div className="py-2 text-center text-muted-foreground">No opened positions</div>
             )}
           </div>
-        </div>
-      </aside>
+        </aside>
+      </section>
 
       {/* gráfico */}
-      <section className="space-y-3 order-1 lg:order-2 min-w-0">
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3">
+      <section
+        className={`order-1 min-w-0 space-y-3 ${orderBookSide === "left" ? "lg:order-2" : "lg:order-1"}`}
+      >
+        <div className="overflow-hidden rounded-xl bg-black">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 bg-black p-3">
             <div className="relative">
               <button
+                type="button"
                 onClick={() => setMarketMenuOpen((open) => !open)}
                 className="flex items-center gap-2 text-lg font-bold hover:text-primary"
               >
-                <MarketIcon
-                  base={
-                    MARKETS.find((mk) => mk.symbol === symbol)?.icon ??
-                    symbol.replace("USDT", "").toLowerCase()
-                  }
-                  size="md"
-                />
-                {symbol.replace("USDT", "")}/USDT{" "}
-                <span className="text-xs text-muted-foreground">⌄</span>
+                <MarketIcon base={selectedMarket.icon} />
+                <span>{selectedMarket.base}/USDT</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
               {marketMenuOpen && (
-                <div className="absolute left-0 top-10 z-30 w-52 rounded-lg border bg-card p-1 shadow-xl">
-                  {MARKETS.map((mk) => (
-                    <button
-                      key={mk.symbol}
-                      onClick={() => {
-                        setSymbol(mk.symbol);
-                        setPrice(0);
-                        setMarketMenuOpen(false);
-                      }}
-                      className={`flex w-full items-center justify-between rounded px-2 py-2 text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
-                    >
-                      <span className="flex items-center gap-2">
+                <div className="absolute left-0 top-11 z-30 w-72 rounded-xl border border-border bg-card p-2 shadow-xl">
+                  <div className="relative mb-2">
+                    <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <input
+                      autoFocus
+                      value={marketSearch}
+                      onChange={(event) => setMarketSearch(event.target.value)}
+                      placeholder="Buscar moeda..."
+                      className="h-9 w-full rounded-md border border-border bg-black pl-8 pr-3 text-sm outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div className="max-h-72 space-y-1 overflow-y-auto">
+                    {filteredMarkets.map((mk) => (
+                      <button
+                        type="button"
+                        key={mk.symbol}
+                        onClick={() => {
+                          setSymbol(mk.symbol);
+                          setPrice(0);
+                          setMarketMenuOpen(false);
+                          setMarketSearch("");
+                        }}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
+                      >
                         <MarketIcon base={mk.icon} />
-                        {mk.base}/USDT
-                      </span>
-                      <span className="font-mono text-xs text-muted-foreground">
-                        {tickers?.[mk.symbol]?.lastPrice
-                          ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice))
-                          : "—"}
-                      </span>
-                    </button>
-                  ))}
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-semibold">{mk.base}/USDT</span>
+                          <span className="block text-xs text-muted-foreground">{mk.name}</span>
+                        </span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {tickers?.[mk.symbol]?.lastPrice
+                            ? fmtPrice(Number(tickers[mk.symbol]?.lastPrice))
+                            : "—"}
+                        </span>
+                      </button>
+                    ))}
+                    {filteredMarkets.length === 0 && (
+                      <div className="p-4 text-center text-sm text-muted-foreground">
+                        Nenhuma moeda encontrada.
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>
@@ -484,14 +557,14 @@ function Trade() {
               ))}
             </div>
           </div>
-          <div className="h-[460px] p-1">
+          <div className="h-[460px] bg-black p-1">
             <PriceChart symbol={symbol} interval={interval} lines={lines} onPrice={setPrice} />
           </div>
         </div>
 
         {/* posições */}
-        <div className="rounded-xl border bg-card">
-          <div className="flex items-center gap-4 border-b px-3">
+        <div className="rounded-xl bg-black">
+          <div className="flex items-center gap-4 px-3">
             {(["open", "history"] as const).map((k) => (
               <button
                 key={k}
@@ -505,7 +578,7 @@ function Trade() {
               <div className="ml-auto flex items-center gap-2">
                 <span className={`font-mono text-sm ${unreal >= 0 ? "text-bull" : "text-bear"}`}>
                   PnL {unreal >= 0 ? "+" : ""}
-                  {fmt(unreal)} B$ ({unrealPct >= 0 ? "+" : ""}
+                  {fmt(unreal)} $BX ({unrealPct >= 0 ? "+" : ""}
                   {unrealPct.toFixed(2)}%)
                 </span>
                 <button
@@ -550,7 +623,7 @@ function Trade() {
                     <tr
                       key={p.id}
                       onClick={() => tab === "open" && setSelectedPosition(p as PositionDetails)}
-                      className="cursor-pointer border-t hover:bg-muted/40"
+                      className="cursor-pointer hover:bg-muted/40"
                     >
                       <td className="p-2 font-sans font-semibold">
                         {p.symbol.replace("USDT", "")}
@@ -604,170 +677,125 @@ function Trade() {
       </section>
 
       {/* ordem */}
-      {orderPanelOpen ? (
-        <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-              Nova ordem
+      <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
+        <div className="flex justify-between text-sm">
+          <span className="text-muted-foreground">Balance</span>
+          <span className="font-mono text-gold">$BX {fmt(profile?.balance)}</span>
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-muted-foreground">Margem ($BX)</label>
+          <Input
+            type="number"
+            min={10}
+            value={margin}
+            onChange={(e) => setMargin(e.target.value)}
+            className="font-mono"
+          />
+          <div className="flex gap-1">
+            {[0.1, 0.25, 0.5, 1].map((f) => (
+              <button
+                key={f}
+                onClick={() => setMargin(String(Math.floor(Number(profile?.balance ?? 0) * f)))}
+                className="flex-1 rounded border py-1 text-xs hover:bg-muted"
+              >
+                {f * 100}%
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">Alavancagem</span>
+            <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
+              {lev}x
             </span>
-            <button
-              type="button"
-              onClick={() => setOrderPanelOpen(false)}
-              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-              aria-label="Minimizar painel de ordem"
-              title="Minimizar"
-            >
-              <X aria-hidden="true" className="h-4 w-4" />
-            </button>
           </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-muted-foreground">Saldo</span>
-            <span className="font-mono text-gold">B$ {fmt(balance)}</span>
+          <input
+            aria-label="Arraste para escolher a alavancagem"
+            type="range"
+            min={MIN_LEVERAGE}
+            max={sliderMax}
+            step={1}
+            value={Math.min(lev, sliderMax)}
+            onChange={(event) => setLev(Number(event.target.value))}
+            className="blux-range"
+          />
+          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+            <span>{MIN_LEVERAGE}x mín.</span>
+            <span>arraste para ajustar</span>
+            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
           </div>
-          <div className="space-y-1">
-            <label className="text-xs text-muted-foreground">Margem (B$)</label>
-            <Input
-              type="number"
-              min={10}
-              step="0.01"
-              value={margin}
-              onChange={(e) => setMargin(e.target.value)}
-              className="font-mono"
-            />
-            <div className="flex gap-1">
-              {[0.1, 0.25, 0.5, 1].map((f) => (
-                <button
-                  key={f}
-                  onClick={() => {
-                    setMargin(marginWithinBudget(balance, f).toFixed(2));
-                  }}
-                  className="flex-1 rounded border py-1 text-xs hover:bg-muted"
-                >
-                  {f * 100}%
-                </button>
-              ))}
-            </div>
+          <div className="text-[11px] text-muted-foreground">
+            Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
           </div>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Alavancagem</span>
-              <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
-                {lev}x
-              </span>
-            </div>
-            <Slider
-              aria-label="Alavancagem"
-              min={MIN_LEVERAGE}
-              max={sliderMax}
-              step={1}
-              value={[Math.min(lev, sliderMax)]}
-              onValueChange={(v) => setLev(v[0] ?? MIN_LEVERAGE)}
-              className="py-2"
-            />
-            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-              <span>{MIN_LEVERAGE}x mín.</span>
-              <span>arraste para ajustar</span>
-              <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "unavailable"}</span>
-            </div>
-            <div className="text-[11px] text-muted-foreground">
-              Pool livre: <span className="font-mono text-gold">B$ {fmt(poolFree)}</span>
-            </div>
+        </div>
+        <div className="rounded-lg border border-border bg-black p-3 text-sm">
+          <div className="mb-2 flex items-center justify-between font-semibold">
+            <span>Total a debitar</span>
+            <span className="font-mono text-foreground">$BX {fmt(m + openingFee)}</span>
           </div>
-          <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-3 text-sm">
-            <span className="text-muted-foreground">Total para abrir</span>
-            <span className="font-mono font-bold text-primary">B$ {fmt(totalRequired)}</span>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Margem da posição</span>
+            <span className="font-mono">$BX {fmt(m)}</span>
           </div>
-          {profile && m >= 10 && shortfall > 0 && (
-            <p role="status" className="text-xs leading-relaxed text-bear">
-              Saldo insuficiente: faltam B$ {fmt(shortfall)}. Margem máxima agora: B${" "}
-              {fmt(maxAffordableMargin)}.
-            </p>
-          )}
-          <button
-            type="button"
-            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
-            onClick={() => setShowOrderDetails((value) => !value)}
-            aria-expanded={showOrderDetails}
-            aria-controls="order-details"
-          >
-            <span>Detalhes da operação</span>
-            <ChevronDown
-              aria-hidden="true"
-              className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
-            />
-          </button>
-          {showOrderDetails && (
-            <div
-              id="order-details"
-              className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono"
-            >
-              <Row k="Tamanho da posição" v={`${fmt(size)} B$`} />
-              <Row
-                k="Quantidade"
-                v={
-                  currentPrice
-                    ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
-                    : "—"
-                }
-              />
-              <Row
-                k="Liquidation Long"
-                v={currentPrice ? fmtPrice(liqLong) : "—"}
-                cls="text-bull"
-              />
-              <Row
-                k="Liquidation Short"
-                v={currentPrice ? fmtPrice(liqShort) : "—"}
-                cls="text-bear"
-              />
-              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-              <Row k="Lucro máximo" v={`${fmt(m * PROFIT_CAP)} B$`} />
-              <Row k="Taxa de abertura" v={`${fmt(openingFee)} B$`} />
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-2">
-            <Button
-              disabled={
-                busy ||
-                !currentPrice ||
-                m < 10 ||
-                !canAfford ||
-                poolMaxLev < MIN_LEVERAGE ||
-                lev > poolMaxLev
-              }
-              onClick={() => go("long")}
-              className="bg-bull text-bull-foreground hover:bg-bull/90"
-            >
-              Long ↑
-            </Button>
-            <Button
-              disabled={
-                busy ||
-                !currentPrice ||
-                m < 10 ||
-                !canAfford ||
-                poolMaxLev < MIN_LEVERAGE ||
-                lev > poolMaxLev
-              }
-              onClick={() => go("short")}
-              className="bg-bear text-bear-foreground hover:bg-bear/90"
-            >
-              Short ↓
-            </Button>
+          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+            <span>Taxa de abertura (10%)</span>
+            <span className="font-mono">$BX {fmt(openingFee)}</span>
           </div>
-        </aside>
-      ) : (
+        </div>
         <button
           type="button"
-          onClick={() => setOrderPanelOpen(true)}
-          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-l-lg border border-r-0 bg-card px-2 py-3 text-xs font-semibold text-muted-foreground shadow-lg hover:text-foreground lg:sticky lg:top-28 lg:col-start-3 lg:row-start-1 lg:h-fit lg:self-start"
-          aria-label="Abrir painel de ordem"
-          title="Abrir ordem"
+          className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+          onClick={() => setShowOrderDetails((value) => !value)}
         >
-          <ChevronRight aria-hidden="true" className="h-4 w-4" />
-          <span className="[writing-mode:vertical-rl]">Ordem</span>
+          <span>Operation details</span>
+          <span className="text-base">{showOrderDetails ? "⌃" : "⌄"}</span>
         </button>
-      )}
+        {showOrderDetails && (
+          <div className="space-y-1 rounded-lg bg-black p-3 font-mono text-xs">
+            <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
+            <Row
+              k="Quantidade"
+              v={
+                currentPrice
+                  ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                  : "—"
+              }
+            />
+            <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
+            <Row
+              k="Liquidation Short"
+              v={currentPrice ? fmtPrice(liqShort) : "—"}
+              cls="text-bear"
+            />
+            <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
+            <Row k="Opening fee" v={`${fmt(openingFee)} $BX (10% da margem)`} />
+            <Row k="Total required" v={`${fmt(m + openingFee)} $BX`} />
+          </div>
+        )}
+        <div className="grid grid-cols-[1fr_1px_1fr] items-stretch overflow-hidden rounded-lg border border-border">
+          <Button
+            disabled={
+              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
+            }
+            onClick={() => go("long")}
+            className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
+          >
+            Long ↑
+          </Button>
+          <span aria-hidden="true" className="my-2 w-px rotate-[12deg] bg-border" />
+          <Button
+            disabled={
+              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
+            }
+            onClick={() => go("short")}
+            className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
+          >
+            Short ↓
+          </Button>
+        </div>
+      </aside>
       {selectedPosition && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
@@ -779,7 +807,7 @@ function Trade() {
           >
             <div className="flex items-start justify-between">
               <div>
-                <div className="text-xs uppercase text-muted-foreground">Operação BluxTrade</div>
+                <div className="text-xs uppercase text-muted-foreground">Operação Bluxq</div>
                 <h2 className="mt-1 text-2xl font-bold">
                   {selectedPosition.symbol.replace("USDT", "")} / USDT
                 </h2>
@@ -798,7 +826,7 @@ function Trade() {
               {selectedPosition.side.toUpperCase()} {selectedPosition.leverage}x
             </div>
             <div className="mt-4 space-y-2 rounded-lg border p-3 font-mono text-sm">
-              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} B$`} />
+              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} $BX`} />
               <Row k="Quantidade" v={Number(selectedPosition.qty).toPrecision(7)} />
               <Row k="Entrada" v={fmtPrice(Number(selectedPosition.entry_price))} />
               <Row k="Price atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
@@ -816,7 +844,7 @@ function Trade() {
                   livePx(selectedPosition.symbol),
                   Number(selectedPosition.margin),
                 );
-                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} B$`;
+                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`;
               })()}
             </div>
             <div className="mt-5 flex gap-2">
@@ -837,14 +865,22 @@ function Trade() {
 function OrderRow({
   row,
   side,
+  depthMax,
 }: {
   row: { price: number; quantity: number; total: number };
   side: "ask" | "bid";
+  depthMax: number;
 }) {
+  const depth = Math.min(100, Math.max(2, (row.total / depthMax) * 100));
   return (
     <div
-      className={`grid grid-cols-3 gap-2 rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
+      className={`relative grid grid-cols-3 gap-2 overflow-hidden rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
     >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-y-0 right-0 opacity-10 ${side === "ask" ? "bg-bear" : "bg-bull"}`}
+        style={{ width: `${depth}%` }}
+      />
       <span>{fmtPrice(row.price)}</span>
       <span className="text-right text-foreground">{row.quantity.toPrecision(5)}</span>
       <span className="text-right text-foreground">{fmt(row.total)}</span>
@@ -860,31 +896,25 @@ function Stat({ k, v }: { k: string; v: string }) {
     </div>
   );
 }
+
+function MarketIcon({ base }: { base: string }) {
+  return (
+    <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 font-mono text-[9px] text-muted-foreground">
+      <img
+        src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
+        alt=""
+        className="h-7 w-7 rounded-full"
+        loading="lazy"
+      />
+    </span>
+  );
+}
+
 function Row({ k, v, cls = "" }: { k: string; v: string; cls?: string }) {
   return (
     <div className="flex justify-between">
       <span className="text-muted-foreground font-sans">{k}</span>
       <span className={cls}>{v}</span>
     </div>
-  );
-}
-
-function MarketIcon({ base, size = "sm" }: { base: string; size?: "sm" | "md" }) {
-  return (
-    <span
-      className={`relative grid shrink-0 place-items-center rounded-full bg-muted font-mono text-[9px] text-muted-foreground ${size === "md" ? "h-7 w-7" : "h-5 w-5"}`}
-    >
-      <span aria-hidden="true">{base.slice(0, 1).toUpperCase()}</span>
-      <img
-        src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
-        alt=""
-        className={`${size === "md" ? "h-7 w-7" : "h-5 w-5"} rounded-full`}
-        loading="lazy"
-        onError={(event) => {
-          event.currentTarget.style.display = "none";
-        }}
-      />
-      <span className="sr-only">{base}</span>
-    </span>
   );
 }

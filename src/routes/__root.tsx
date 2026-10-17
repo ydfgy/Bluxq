@@ -13,7 +13,7 @@ import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
-import { Navbar } from "@/components/AppShell";
+import { BRAND_ICON_SRC, Navbar } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -62,7 +62,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "BluxTrade — Trade cripto com Robux" },
+      { title: "Bluxq — Trade cripto com Robux" },
       {
         name: "description",
         content: "Opere BTC, ETH, SOL e mais com Robux, alavancagem e stake.",
@@ -76,7 +76,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: BRAND_ICON_SRC, type: "image/png", sizes: "256x256" },
+      { rel: "apple-touch-icon", href: BRAND_ICON_SRC, sizes: "256x256" },
     ],
   }),
   shellComponent: RootShell,

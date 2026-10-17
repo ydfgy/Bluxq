@@ -554,6 +554,20 @@ create policy "own profile"
   to authenticated
   using (id = auth.uid());
 
+alter table public.profiles
+  add column if not exists is_anonymous boolean not null default false;
+
+drop policy if exists "own profile update" on public.profiles;
+create policy "own profile update"
+  on public.profiles
+  for update
+  to authenticated
+  using (id = auth.uid())
+  with check (id = auth.uid());
+
+grant update (is_anonymous, avatar_url) on public.profiles to authenticated;
+grant select (is_anonymous) on public.profiles to authenticated;
+
 -- Keep the pending-deposit limit atomic under concurrent requests.
 create or replace function public.fn_request_deposit(_user uuid, _amount numeric)
 returns void

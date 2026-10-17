@@ -14,9 +14,9 @@ import { Input } from "@/components/ui/input";
 export const Route = createFileRoute("/stake")({
   head: () => ({
     meta: [
-      { title: "Stake — BluxTrade" },
-      { name: "description", content: "Stake Blux and earn from trader fees and losses." },
-      { property: "og:title", content: "Stake — BluxTrade" },
+      { title: "Stake — Bluxq" },
+      { name: "description", content: "Stake blux and earn from trader fees and losses." },
+      { property: "og:title", content: "Stake — Bluxq" },
       { property: "og:description", content: "Be the house: earn from fees and liquidations." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -77,27 +77,27 @@ function Stake() {
       <div>
         <h1 className="text-2xl font-bold">Stake — seja a casa</h1>
         <p className="text-muted-foreground text-sm mt-1">
-          Your Blux enter the pool that pays trader profits. You earn when traders lose or are
+          Your blux enter the pool that pays trader profits. You earn when traders lose or are
           liquidated, and receive {STAKER_SHARE * 100}% da taxa de {FEE_RATE * 100}% of every profit
           fee. If traders win, the pool decreases.
         </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
-        <Card k="Total na pool" v={`B$ ${fmt(pool?.total_assets)}`} />
-        <Card k="Reserved in positions" v={`B$ ${fmt(pool?.total_reserved)}`} />
-        <Card k="Livre p/ saque" v={`B$ ${fmt(free)}`} />
-        <Card k="Taxas p/ stakers" v={`B$ ${fmt(pool?.fees_to_stakers)}`} />
+        <Card k="Total na pool" v={`$BX ${fmt(pool?.total_assets)}`} />
+        <Card k="Reserved in positions" v={`$BX ${fmt(pool?.total_reserved)}`} />
+        <Card k="Livre p/ saque" v={`$BX ${fmt(free)}`} />
+        <Card k="Taxas p/ stakers" v={`$BX ${fmt(pool?.fees_to_stakers)}`} />
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         <section className="rounded-xl border bg-card p-5 space-y-2">
           <h2 className="font-bold">Seu stake</h2>
-          <div className="font-mono text-3xl text-gold">B$ {fmt(value)}</div>
+          <div className="font-mono text-3xl text-gold">$BX {fmt(value)}</div>
           <div className="text-sm">
             Depositado: <span className="font-mono">{fmt(mine?.deposited)}</span>
           </div>
           <div className={`text-sm font-mono ${profit >= 0 ? "text-bull" : "text-bear"}`}>
             Resultado: {profit >= 0 ? "+" : ""}
-            {fmt(profit)} B$
+            {fmt(profit)} $BX
           </div>
           <div className="text-sm text-muted-foreground">
             Sua fatia da pool: {share.toFixed(2)}%
@@ -105,11 +105,11 @@ function Stake() {
         </section>
         <section className="rounded-xl border bg-card p-5 space-y-3">
           <div className="text-sm text-muted-foreground">
-            Balance: <span className="font-mono text-gold">B$ {fmt(p?.balance)}</span>
+            Balance: <span className="font-mono text-gold">$BX {fmt(p?.balance)}</span>
           </div>
           <Input
             type="number"
-            placeholder="Quantidade de B$"
+            placeholder="Quantidade de $BX"
             value={a}
             onChange={(e) => setA(e.target.value)}
             className="font-mono"

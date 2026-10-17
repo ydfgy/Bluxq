@@ -43,16 +43,24 @@ export type Database = {
           amount: number;
           created_at: string;
           id: string;
+          asset: string | null;
+          network: string | null;
+          payment_method: string;
           reviewed_at: string | null;
           status: string;
+          transaction_hash: string | null;
           user_id: string;
         };
         Insert: {
           amount: number;
           created_at?: string;
           id?: string;
+          asset?: string | null;
+          network?: string | null;
+          payment_method?: string;
           reviewed_at?: string | null;
           status?: string;
+          transaction_hash?: string | null;
           user_id: string;
         };
         Update: {
@@ -183,6 +191,8 @@ export type Database = {
           created_at: string;
           email: string | null;
           id: string;
+          is_anonymous: boolean;
+          roblox_created_at: string | null;
           roblox_display_name: string | null;
           roblox_user_id: number | null;
           roblox_username: string;
@@ -197,6 +207,7 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id: string;
+          is_anonymous?: boolean;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username: string;
@@ -211,6 +222,8 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
+          is_anonymous?: boolean;
+          roblox_created_at?: string | null;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username?: string;
@@ -262,6 +275,10 @@ export type Database = {
           amount: number;
           created_at: string;
           id: string;
+          asset: string | null;
+          destination: string | null;
+          network: string | null;
+          payout_method: string;
           reviewed_at: string | null;
           status: string;
           user_id: string;
@@ -270,6 +287,10 @@ export type Database = {
           amount: number;
           created_at?: string;
           id?: string;
+          asset?: string | null;
+          destination?: string | null;
+          network?: string | null;
+          payout_method?: string;
           reviewed_at?: string | null;
           status?: string;
           user_id: string;
@@ -301,6 +322,17 @@ export type Database = {
         Args: { _amount: number; _user: string };
         Returns: undefined;
       };
+      fn_request_deposit_v2: {
+        Args: {
+          _amount: number;
+          _asset?: string | null;
+          _network?: string | null;
+          _payment_method: string;
+          _transaction_hash?: string | null;
+          _user: string;
+        };
+        Returns: undefined;
+      };
       fn_close_position: {
         Args: {
           _force_liq?: boolean;
@@ -323,6 +355,17 @@ export type Database = {
       };
       fn_request_withdraw: {
         Args: { _amount: number; _user: string };
+        Returns: undefined;
+      };
+      fn_request_withdraw_v2: {
+        Args: {
+          _amount: number;
+          _asset?: string | null;
+          _destination?: string | null;
+          _network?: string | null;
+          _payout_method: string;
+          _user: string;
+        };
         Returns: undefined;
       };
       fn_review_deposit: {

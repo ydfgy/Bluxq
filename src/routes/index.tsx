@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
+import { BrandIcon } from "@/components/AppShell";
 
 // No head() here: the home route inherits title/description/og/twitter from
 // __root.tsx, and ships no og:image so serve-time hosting can inject the
@@ -13,8 +14,8 @@ function Index() {
   return (
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-4xl items-center justify-center px-4 py-12">
       <section className="w-full rounded-xl border bg-card p-8 text-center sm:p-12">
-        <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gold text-2xl font-bold text-gold-foreground glow-gold">
-          B$
+        <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gold/10 p-2 ring-1 ring-gold/30">
+          <BrandIcon />
         </div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Trade real, com dados ao vivo
@@ -23,12 +24,20 @@ function Index() {
           Acompanhe BTC, ETH, SOL e outros mercados com candles da Binance, Long/Short e alavancagem
           de até 50x.
         </p>
-        <Link
-          to="/trade"
-          className="mt-7 inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
-        >
-          Abrir terminal de trade
-        </Link>
+        <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/trade"
+            className="inline-flex items-center justify-center rounded-md bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+          >
+            Abrir terminal de trade
+          </Link>
+          <Link
+            to="/terms"
+            className="inline-flex items-center justify-center rounded-md border px-5 py-2.5 text-sm font-semibold hover:bg-muted"
+          >
+            Termos
+          </Link>
+        </div>
       </section>
     </main>
   );
