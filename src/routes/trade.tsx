@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import { Protected, CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
@@ -52,6 +52,14 @@ export const Route = createFileRoute("/trade")({
 });
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
+
+function marginWithinBudget(balance: number, fraction = 1) {
+  const budgetCents = Math.max(0, Math.floor(balance * fraction * 100 + 0.000001));
+  let marginCents = Math.floor(budgetCents / 1.1);
+  while (marginCents + Math.round(marginCents / 10) > budgetCents) marginCents -= 1;
+  while (marginCents + 1 + Math.round((marginCents + 1) / 10) <= budgetCents) marginCents += 1;
+  return marginCents / 100;
+}
 
 type PositionDetails = {
   id: string;
@@ -124,6 +132,7 @@ function Trade() {
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
+  const [orderPanelOpen, setOrderPanelOpen] = useState(true);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
@@ -184,8 +193,15 @@ function Trade() {
     return () => clearInterval(t);
   }, [sync]);
 
-  const m = Number(margin) || 0;
-  const openingFee = m * 0.1;
+  const balance = Number(profile?.balance ?? 0);
+  const rawMargin = Number(margin);
+  const m = Number.isFinite(rawMargin) ? Math.round(rawMargin * 100) / 100 : 0;
+  const marginInCents = Math.round(m * 100);
+  const openingFee = Math.round(marginInCents / 10) / 100;
+  const totalRequired = Math.round((m + openingFee) * 100) / 100;
+  const maxAffordableMargin = marginWithinBudget(balance);
+  const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
+  const shortfall = Math.max(0, Math.round((totalRequired - balance) * 100) / 100);
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
@@ -217,9 +233,12 @@ function Trade() {
   async function go(side: "long" | "short") {
     setBusy(true);
     try {
-      if (m + openingFee > Number(profile?.balance ?? 0)) {
+      if (!profile) {
+        throw new Error("Não foi possível carregar seu saldo. Tente novamente.");
+      }
+      if (!canAfford) {
         throw new Error(
-          `Insufficient balance. You need $BX ${fmt(m + openingFee)} including the opening fee.`,
+          `Saldo insuficiente: esta ordem exige $BX ${fmt(totalRequired)} (margem + taxa). Saldo: $BX ${fmt(balance)}.`,
         );
       }
       if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
@@ -346,17 +365,21 @@ function Trade() {
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
         <aside
-          className={`overflow-hidden rounded-xl bg-black ${orderBookOpen ? "lg:min-w-0" : "lg:w-10"}`}
+          className={`overflow-hidden rounded-xl bg-black ${orderBookOpen ? "w-full lg:min-w-0" : "h-12 w-10 lg:h-fit"}`}
         >
           {!orderBookOpen ? (
             <button
               type="button"
               onClick={() => setOrderBookOpen(true)}
-              className="flex h-full min-h-24 w-full items-start justify-center py-4 text-muted-foreground hover:text-foreground"
+              className="flex h-12 w-full items-center justify-center text-muted-foreground hover:text-foreground lg:h-24 lg:items-start lg:py-4"
               aria-label="Abrir livro de ordens"
               title="Abrir livro de ordens"
             >
-              <ChevronLeft className="h-4 w-4" />
+              {orderBookSide === "left" ? (
+                <ChevronRight aria-hidden="true" className="h-4 w-4" />
+              ) : (
+                <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+              )}
             </button>
           ) : (
             <>
@@ -677,125 +700,174 @@ function Trade() {
       </section>
 
       {/* ordem */}
-      <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
-        <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Balance</span>
-          <span className="font-mono text-gold">$BX {fmt(profile?.balance)}</span>
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-muted-foreground">Margem ($BX)</label>
-          <Input
-            type="number"
-            min={10}
-            value={margin}
-            onChange={(e) => setMargin(e.target.value)}
-            className="font-mono"
-          />
-          <div className="flex gap-1">
-            {[0.1, 0.25, 0.5, 1].map((f) => (
-              <button
-                key={f}
-                onClick={() => setMargin(String(Math.floor(Number(profile?.balance ?? 0) * f)))}
-                className="flex-1 rounded border py-1 text-xs hover:bg-muted"
-              >
-                {f * 100}%
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Alavancagem</span>
-            <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
-              {lev}x
+      {orderPanelOpen ? (
+        <aside className="rounded-xl border bg-card p-4 space-y-4 order-3 h-fit lg:sticky lg:top-16">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+              Nova ordem
             </span>
+            <button
+              type="button"
+              onClick={() => setOrderPanelOpen(false)}
+              className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
+              aria-label="Minimizar painel de ordem"
+              title="Minimizar"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
           </div>
-          <input
-            aria-label="Arraste para escolher a alavancagem"
-            type="range"
-            min={MIN_LEVERAGE}
-            max={sliderMax}
-            step={1}
-            value={Math.min(lev, sliderMax)}
-            onChange={(event) => setLev(Number(event.target.value))}
-            className="blux-range"
-          />
-          <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-            <span>{MIN_LEVERAGE}x mín.</span>
-            <span>arraste para ajustar</span>
-            <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Saldo</span>
+            <span className="font-mono text-gold">$BX {fmt(balance)}</span>
           </div>
-          <div className="text-[11px] text-muted-foreground">
-            Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
+          <div className="space-y-1">
+            <label className="text-xs text-muted-foreground">Margem ($BX)</label>
+            <Input
+              type="number"
+              min={10}
+              value={margin}
+              onChange={(e) => setMargin(e.target.value)}
+              className="font-mono"
+            />
+            <div className="flex gap-1">
+              {[0.1, 0.25, 0.5, 1].map((f) => (
+                <button
+                  key={f}
+                  onClick={() => setMargin(marginWithinBudget(balance, f).toFixed(2))}
+                  className="flex-1 rounded border py-1 text-xs hover:bg-muted"
+                >
+                  {f * 100}%
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <div className="rounded-lg border border-border bg-black p-3 text-sm">
-          <div className="mb-2 flex items-center justify-between font-semibold">
-            <span>Total a debitar</span>
-            <span className="font-mono text-foreground">$BX {fmt(m + openingFee)}</span>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Alavancagem</span>
+              <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
+                {lev}x
+              </span>
+            </div>
+            <input
+              aria-label="Arraste para escolher a alavancagem"
+              type="range"
+              min={MIN_LEVERAGE}
+              max={sliderMax}
+              step={1}
+              value={Math.min(lev, sliderMax)}
+              onChange={(event) => setLev(Number(event.target.value))}
+              className="blux-range"
+            />
+            <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+              <span>{MIN_LEVERAGE}x mín.</span>
+              <span>arraste para ajustar</span>
+              <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
+            </div>
+            <div className="text-[11px] text-muted-foreground">
+              Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Margem da posição</span>
-            <span className="font-mono">$BX {fmt(m)}</span>
+          <div className="rounded-lg border border-border bg-black p-3 text-sm">
+            <div className="mb-2 flex items-center justify-between font-semibold">
+              <span>Total para abrir</span>
+              <span className="font-mono text-foreground">$BX {fmt(totalRequired)}</span>
+            </div>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>Margem da posição</span>
+              <span className="font-mono">$BX {fmt(m)}</span>
+            </div>
+            <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+              <span>Taxa de abertura (10%)</span>
+              <span className="font-mono">$BX {fmt(openingFee)}</span>
+            </div>
           </div>
-          <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-            <span>Taxa de abertura (10%)</span>
-            <span className="font-mono">$BX {fmt(openingFee)}</span>
+          {profile && m >= 10 && shortfall > 0 && (
+            <p role="status" className="text-xs leading-relaxed text-bear">
+              Saldo insuficiente: faltam $BX {fmt(shortfall)}. Margem máxima agora: $BX{" "}
+              {fmt(maxAffordableMargin)}.
+            </p>
+          )}
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setShowOrderDetails((value) => !value)}
+          >
+            <span>Detalhes da operação</span>
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showOrderDetails && (
+            <div className="space-y-1 rounded-lg bg-black p-3 font-mono text-xs">
+              <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
+              <Row
+                k="Quantidade"
+                v={
+                  currentPrice
+                    ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                    : "—"
+                }
+              />
+              <Row
+                k="Liquidation Long"
+                v={currentPrice ? fmtPrice(liqLong) : "—"}
+                cls="text-bull"
+              />
+              <Row
+                k="Liquidation Short"
+                v={currentPrice ? fmtPrice(liqShort) : "—"}
+                cls="text-bear"
+              />
+              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+              <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
+              <Row k="Taxa de abertura" v={`${fmt(openingFee)} $BX`} />
+            </div>
+          )}
+          <div className="grid grid-cols-[1fr_1px_1fr] items-stretch overflow-hidden rounded-lg border border-border">
+            <Button
+              disabled={
+                busy ||
+                !currentPrice ||
+                m < 10 ||
+                !canAfford ||
+                poolMaxLev < MIN_LEVERAGE ||
+                lev > poolMaxLev
+              }
+              onClick={() => go("long")}
+              className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
+            >
+              Long ↑
+            </Button>
+            <span aria-hidden="true" className="my-2 w-px rotate-[12deg] bg-border" />
+            <Button
+              disabled={
+                busy ||
+                !currentPrice ||
+                m < 10 ||
+                !canAfford ||
+                poolMaxLev < MIN_LEVERAGE ||
+                lev > poolMaxLev
+              }
+              onClick={() => go("short")}
+              className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
+            >
+              Short ↓
+            </Button>
           </div>
-        </div>
+        </aside>
+      ) : (
         <button
           type="button"
-          className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
-          onClick={() => setShowOrderDetails((value) => !value)}
+          onClick={() => setOrderPanelOpen(true)}
+          className="fixed right-0 top-1/2 z-30 flex -translate-y-1/2 items-center gap-1 rounded-l-lg border border-r-0 bg-card px-2 py-3 text-xs font-semibold text-muted-foreground shadow-lg hover:text-foreground lg:sticky lg:top-28 lg:col-start-3 lg:row-start-1 lg:h-fit lg:self-start"
+          aria-label="Abrir painel de ordem"
+          title="Abrir ordem"
         >
-          <span>Operation details</span>
-          <span className="text-base">{showOrderDetails ? "⌃" : "⌄"}</span>
+          <ChevronRight aria-hidden="true" className="h-4 w-4" />
+          <span className="[writing-mode:vertical-rl]">Ordem</span>
         </button>
-        {showOrderDetails && (
-          <div className="space-y-1 rounded-lg bg-black p-3 font-mono text-xs">
-            <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
-            <Row
-              k="Quantidade"
-              v={
-                currentPrice
-                  ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
-                  : "—"
-              }
-            />
-            <Row k="Liquidation Long" v={currentPrice ? fmtPrice(liqLong) : "—"} cls="text-bull" />
-            <Row
-              k="Liquidation Short"
-              v={currentPrice ? fmtPrice(liqShort) : "—"}
-              cls="text-bear"
-            />
-            <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
-            <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
-            <Row k="Opening fee" v={`${fmt(openingFee)} $BX (10% da margem)`} />
-            <Row k="Total required" v={`${fmt(m + openingFee)} $BX`} />
-          </div>
-        )}
-        <div className="grid grid-cols-[1fr_1px_1fr] items-stretch overflow-hidden rounded-lg border border-border">
-          <Button
-            disabled={
-              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
-            }
-            onClick={() => go("long")}
-            className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
-          >
-            Long ↑
-          </Button>
-          <span aria-hidden="true" className="my-2 w-px rotate-[12deg] bg-border" />
-          <Button
-            disabled={
-              busy || !currentPrice || m < 10 || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev
-            }
-            onClick={() => go("short")}
-            className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
-          >
-            Short ↓
-          </Button>
-        </div>
-      </aside>
+      )}
       {selectedPosition && (
         <div
           className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
