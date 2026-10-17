@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
 
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
+export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
 
 export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; className?: string }) {
   return (
@@ -18,15 +19,8 @@ export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; classNam
 
 export function Logo() {
   return (
-    <Link
-      to="/"
-      aria-label="Bluxq — início"
-      className="flex items-center gap-2 font-bold text-lg tracking-tight"
-    >
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-gold/10 p-1 ring-1 ring-gold/30">
-        <BrandIcon alt="" />
-      </span>
-      <span>Bluxq</span>
+    <Link to="/" aria-label="Bluxq — início" className="flex h-10 w-32 shrink-0 items-center">
+      <img src={BRAND_LOGO_SRC} alt="Bluxq" className="h-full w-full object-contain object-left" />
     </Link>
   );
 }
