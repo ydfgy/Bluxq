@@ -43,30 +43,32 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
         <Logo />
-        {session && (
-          <nav className="hidden md:flex items-center gap-5">
-            <Link to="/trade" className={link} activeProps={active}>
-              Trade
-            </Link>
+        <nav className="hidden md:flex items-center gap-5">
+          <Link to="/trade" className={link} activeProps={active}>
+            Trade
+          </Link>
+          {session && (
             <Link to="/wallet" className={link} activeProps={active}>
               Wallet
             </Link>
-            <Link to="/convert" className={link} activeProps={active}>
-              Converter
-            </Link>
+          )}
+          <Link to="/convert" className={link} activeProps={active}>
+            Converter
+          </Link>
+          {session && (
             <Link to="/stake" className={link} activeProps={active}>
               Stake
             </Link>
-            <Link to="/referrals" className={link} activeProps={active}>
-              Referrals
+          )}
+          <Link to="/referrals" className={link} activeProps={active}>
+            Referrals
+          </Link>
+          {isAdmin && (
+            <Link to="/admin" className={link} activeProps={active}>
+              Admin
             </Link>
-            {isAdmin && (
-              <Link to="/admin" className={link} activeProps={active}>
-                Admin
-              </Link>
-            )}
-          </nav>
-        )}
+          )}
+        </nav>
         <div className="ml-auto flex items-center gap-3">
           {session && profile ? (
             <>
@@ -99,30 +101,32 @@ export function Navbar() {
           )}
         </div>
       </div>
-      {session && (
-        <nav className="flex md:hidden items-center justify-around border-t py-2">
-          <Link to="/trade" className={link} activeProps={active}>
-            Trade
-          </Link>
+      <nav className="flex md:hidden items-center justify-around border-t py-2">
+        <Link to="/trade" className={link} activeProps={active}>
+          Trade
+        </Link>
+        {session && (
           <Link to="/wallet" className={link} activeProps={active}>
             Wallet
           </Link>
-          <Link to="/convert" className={link} activeProps={active}>
-            Converter
-          </Link>
+        )}
+        <Link to="/convert" className={link} activeProps={active}>
+          Converter
+        </Link>
+        {session && (
           <Link to="/stake" className={link} activeProps={active}>
             Stake
           </Link>
-          <Link to="/referrals" className={link} activeProps={active}>
-            Referrals
+        )}
+        <Link to="/referrals" className={link} activeProps={active}>
+          Referrals
+        </Link>
+        {isAdmin && (
+          <Link to="/admin" className={link} activeProps={active}>
+            Admin
           </Link>
-          {isAdmin && (
-            <Link to="/admin" className={link} activeProps={active}>
-              Admin
-            </Link>
-          )}
-        </nav>
-      )}
+        )}
+      </nav>
     </header>
   );
 }
@@ -139,7 +143,7 @@ export function Protected({
   const { data: profile, isLoading, isError } = useProfile();
   const nav = useNavigate();
   useEffect(() => {
-    if (ready && !session) nav({ to: "/auth", replace: true });
+    if (ready && !session) nav({ to: "/auth", search: { mode: "signup" }, replace: true });
     else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
   }, [ready, session, profile, requireVerified, nav]);
   if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {

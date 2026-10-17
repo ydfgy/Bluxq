@@ -1,10 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
 import { toast } from "sonner";
-import { Protected, CoinRain } from "@/components/AppShell";
+import { CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -44,11 +44,7 @@ export const Route = createFileRoute("/trade")({
       { name: "twitter:card", content: "summary" },
     ],
   }),
-  component: () => (
-    <Protected>
-      <Trade />
-    </Protected>
-  ),
+  component: Trade,
 });
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
@@ -115,6 +111,7 @@ function useOrderBook(symbol: string) {
 
 function Trade() {
   const { session } = useAuth();
+  const nav = useNavigate();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -149,6 +146,7 @@ function Trade() {
   const { data: positions = [] } = useQuery({
     queryKey: ["positions", session?.user.id],
     refetchInterval: 4000,
+    enabled: Boolean(session),
     queryFn: async () =>
       (
         await supabase
@@ -161,6 +159,7 @@ function Trade() {
   const { data: platformPositions = [] } = useQuery({
     queryKey: ["platform-open-positions"],
     refetchInterval: 1000,
+    enabled: Boolean(session),
     queryFn: () => platformOpen(),
   });
   const openPos = positions.filter((p) => p.status === "open");
@@ -187,11 +186,12 @@ function Trade() {
     s === symbol && currentPrice ? currentPrice : Number(tickers?.[s]?.lastPrice ?? 0);
 
   useEffect(() => {
+    if (!session) return;
     const t = setInterval(() => {
       sync().catch(() => {});
     }, 15000);
     return () => clearInterval(t);
-  }, [sync]);
+  }, [sync, session]);
 
   const balance = Number(profile?.balance ?? 0);
   const rawMargin = Number(margin);
@@ -231,6 +231,10 @@ function Trade() {
   );
 
   async function go(side: "long" | "short") {
+    if (!session) {
+      nav({ to: "/auth", search: { mode: "signup" } });
+      return;
+    }
     setBusy(true);
     try {
       if (!profile) {
@@ -785,6 +789,11 @@ function Trade() {
               <span>Total para abrir</span>
               <span className="font-mono text-foreground">$BX {fmt(totalRequired)}</span>
             </div>
+            {!session && (
+              <p className="mb-2 text-xs text-muted-foreground">
+                Explore o mercado livremente. Para enviar uma ordem, crie uma conta.
+              </p>
+            )}
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <span>Margem da posição</span>
               <span className="font-mono">$BX {fmt(m)}</span>
@@ -842,10 +851,8 @@ function Trade() {
               disabled={
                 busy ||
                 !currentPrice ||
-                m < 10 ||
-                !canAfford ||
-                poolMaxLev < MIN_LEVERAGE ||
-                lev > poolMaxLev
+                (Boolean(session) &&
+                  (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
               }
               onClick={() => go("long")}
               className="h-11 rounded-none bg-bull text-bull-foreground hover:bg-bull/90"
@@ -857,10 +864,8 @@ function Trade() {
               disabled={
                 busy ||
                 !currentPrice ||
-                m < 10 ||
-                !canAfford ||
-                poolMaxLev < MIN_LEVERAGE ||
-                lev > poolMaxLev
+                (Boolean(session) &&
+                  (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
               }
               onClick={() => go("short")}
               className="h-11 rounded-none bg-bear text-bear-foreground hover:bg-bear/90"
