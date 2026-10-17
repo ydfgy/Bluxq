@@ -359,7 +359,7 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[minmax(0,1fr)_220px_320px]"}`}
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[40px_minmax(0,1fr)_320px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
     >
       <CoinRain show={rain} />
       {/* livro de ordens e posições abertas */}
