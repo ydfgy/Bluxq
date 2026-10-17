@@ -359,7 +359,7 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_320px]" : "lg:grid-cols-[40px_minmax(0,1fr)_320px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_320px]" : "lg:grid-cols-[minmax(0,1fr)_40px_320px]"}`}
+      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[176px_minmax(0,1fr)_320px]" : "lg:grid-cols-[32px_minmax(0,1fr)_320px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_176px_320px]" : "lg:grid-cols-[minmax(0,1fr)_32px_320px]"}`}
     >
       <CoinRain show={rain} />
       {/* livro de ordens e posições abertas */}
@@ -367,7 +367,7 @@ function Trade() {
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
       >
         <aside
-          className={`overflow-hidden rounded-xl ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-10"}`}
+          className={`overflow-hidden rounded-xl ${orderBookOpen ? "w-full lg:min-w-0" : "h-fit w-8"}`}
         >
           {!orderBookOpen ? (
             <div className="flex min-h-14 w-full flex-col items-center justify-center gap-1 py-1">
@@ -380,7 +380,6 @@ function Trade() {
               >
                 <ArrowLeftRight aria-hidden="true" className="h-4 w-4" />
               </button>
-              <span className="h-px w-5 bg-border" />
               <button
                 type="button"
                 onClick={() => setOrderBookOpen(true)}
@@ -469,7 +468,7 @@ function Trade() {
                   </div>
                 )}
               </div>
-              <aside className="mt-3 rounded-xl bg-black p-3 font-mono text-[10px]">
+              <aside className="mt-3 p-3 font-mono text-[10px]">
                 <div className="mb-2 flex items-center justify-between text-muted-foreground">
                   <span>Recent positions</span>
                   <span>{recentPositions.length}/10</span>

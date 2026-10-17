@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { ArrowRightLeft } from "lucide-react";
+import { Protected } from "@/components/AppShell";
 import { useProfile } from "@/hooks/use-auth";
 import { Input } from "@/components/ui/input";
 
@@ -8,7 +9,11 @@ type Currency = "robux" | "blux";
 
 export const Route = createFileRoute("/convert")({
   head: () => ({ meta: [{ title: "Conversor — Bluxq" }] }),
-  component: Converter,
+  component: () => (
+    <Protected>
+      <Converter />
+    </Protected>
+  ),
 });
 
 function CurrencyIcon({ currency }: { currency: Currency }) {
