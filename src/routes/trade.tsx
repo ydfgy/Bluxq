@@ -731,14 +731,14 @@ function Trade() {
               min={10}
               value={margin}
               onChange={(e) => setMargin(e.target.value)}
-              className="font-mono"
+              className="border-0 bg-transparent font-mono shadow-none focus-visible:ring-0"
             />
             <div className="flex gap-1">
               {[0.1, 0.25, 0.5, 1].map((f) => (
                 <button
                   key={f}
                   onClick={() => setMargin(marginWithinBudget(balance, f).toFixed(2))}
-                  className="flex-1 rounded border py-1 text-xs hover:bg-muted"
+                  className="flex-1 rounded py-1 text-xs text-muted-foreground hover:bg-muted hover:text-foreground"
                 >
                   {f * 100}%
                 </button>
@@ -748,9 +748,7 @@ function Trade() {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Alavancagem</span>
-              <span className="rounded-md border border-primary/40 bg-primary/10 px-2 py-1 font-mono font-bold text-primary">
-                {lev}x
-              </span>
+              <span className="rounded-md px-2 py-1 font-mono font-bold text-primary">{lev}x</span>
             </div>
             <input
               aria-label="Arraste para escolher a alavancagem"
