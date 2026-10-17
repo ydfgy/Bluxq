@@ -761,17 +761,17 @@ function Trade() {
               <span>{poolMaxLev > 0 ? `${poolMaxLev}x máx.` : "indisponível"}</span>
             </div>
           </div>
-          <div className="space-y-1 p-3 text-sm">
-            <div className="mb-3">
-              <div className="flex items-center justify-between font-semibold">
+          <div className="space-y-1 px-1 py-2 text-sm">
+            <div className="mb-2">
+              <div className="flex items-center justify-between text-sm font-semibold">
                 <span>Total para abrir</span>
-                <span className="font-mono text-xl font-bold text-primary">
+                <span className="font-mono text-base font-bold text-primary">
                   $BX {fmt(totalRequired)}
                 </span>
               </div>
-              <div className="mt-1 flex items-center justify-between">
+              <div className="mt-0.5 flex items-center justify-between">
                 <span className="text-xs text-muted-foreground">Tamanho da posição</span>
-                <span className="font-mono text-lg font-bold text-primary">$BX {fmt(size)}</span>
+                <span className="font-mono text-sm font-bold text-primary">$BX {fmt(size)}</span>
               </div>
             </div>
             {!session && (
