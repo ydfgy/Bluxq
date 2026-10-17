@@ -13,7 +13,7 @@ import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
-import { Navbar } from "@/components/AppShell";
+import { BRAND_ICON_SRC, Navbar } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -76,8 +76,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap",
       },
-      { rel: "icon", href: "/bluxq-favicon.png", type: "image/png", sizes: "256x256" },
-      { rel: "apple-touch-icon", href: "/bluxq-favicon.png", sizes: "256x256" },
+      { rel: "icon", href: BRAND_ICON_SRC, type: "image/png", sizes: "256x256" },
+      { rel: "apple-touch-icon", href: BRAND_ICON_SRC, sizes: "256x256" },
     ],
   }),
   shellComponent: RootShell,

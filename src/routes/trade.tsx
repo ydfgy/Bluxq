@@ -153,6 +153,11 @@ function Trade() {
   const history = positions.filter((p) => p.status !== "open");
   const t = tickers?.[symbol];
   const currentPrice = price || Number(t?.lastPrice ?? 0);
+  const orderBookDepthMax = Math.max(
+    ...(orderBook?.asks ?? []).map((row) => row.total),
+    ...(orderBook?.bids ?? []).map((row) => row.total),
+    1,
+  );
 
   // preços ao vivo de todas as moedas com posição aberta
   const livePx = (s: string) =>
@@ -321,7 +326,7 @@ function Trade() {
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
       <CoinRain show={rain} />
       {/* real market order book */}
-      <aside className="rounded-xl border bg-card overflow-hidden order-2 lg:order-1">
+      <aside className="rounded-xl bg-card overflow-hidden order-2 lg:order-1">
         <div className="flex items-center justify-between border-b px-3 py-2">
           <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
         </div>
@@ -333,7 +338,12 @@ function Trade() {
         <div className="px-2 font-mono text-[11px]">
           <div className="space-y-0.5">
             {(orderBook?.asks.slice().reverse() ?? []).map((row) => (
-              <OrderRow key={`ask-${row.price}`} row={row} side="ask" />
+              <OrderRow
+                key={`ask-${row.price}`}
+                row={row}
+                side="ask"
+                depthMax={orderBookDepthMax}
+              />
             ))}
           </div>
           <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
@@ -346,7 +356,12 @@ function Trade() {
           </div>
           <div className="space-y-0.5">
             {(orderBook?.bids ?? []).map((row) => (
-              <OrderRow key={`bid-${row.price}`} row={row} side="bid" />
+              <OrderRow
+                key={`bid-${row.price}`}
+                row={row}
+                side="bid"
+                depthMax={orderBookDepthMax}
+              />
             ))}
           </div>
           {!orderBook && (
@@ -403,7 +418,7 @@ function Trade() {
 
       {/* gráfico */}
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
-        <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3">
             <div className="relative">
               <button
@@ -763,14 +778,22 @@ function Trade() {
 function OrderRow({
   row,
   side,
+  depthMax,
 }: {
   row: { price: number; quantity: number; total: number };
   side: "ask" | "bid";
+  depthMax: number;
 }) {
+  const depth = Math.min(100, Math.max(2, (row.total / depthMax) * 100));
   return (
     <div
-      className={`grid grid-cols-3 gap-2 rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
+      className={`relative grid grid-cols-3 gap-2 overflow-hidden rounded px-1 py-0.5 ${side === "ask" ? "text-bear" : "text-bull"}`}
     >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none absolute inset-y-0 right-0 opacity-10 ${side === "ask" ? "bg-bear" : "bg-bull"}`}
+        style={{ width: `${depth}%` }}
+      />
       <span>{fmtPrice(row.price)}</span>
       <span className="text-right text-foreground">{row.quantity.toPrecision(5)}</span>
       <span className="text-right text-foreground">{fmt(row.total)}</span>

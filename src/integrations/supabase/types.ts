@@ -191,6 +191,7 @@ export type Database = {
           created_at: string;
           email: string | null;
           id: string;
+          is_anonymous: boolean;
           roblox_created_at: string | null;
           roblox_display_name: string | null;
           roblox_user_id: number | null;
@@ -206,6 +207,7 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id: string;
+          is_anonymous?: boolean;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username: string;
@@ -220,6 +222,7 @@ export type Database = {
           created_at?: string;
           email?: string | null;
           id?: string;
+          is_anonymous?: boolean;
           roblox_created_at?: string | null;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;

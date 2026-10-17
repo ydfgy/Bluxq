@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
+import { BrandIcon } from "@/components/AppShell";
 
 // No head() here: the home route inherits title/description/og/twitter from
 // __root.tsx, and ships no og:image so serve-time hosting can inject the
@@ -14,7 +15,7 @@ function Index() {
     <main className="mx-auto flex min-h-[calc(100vh-3.5rem)] max-w-4xl items-center justify-center px-4 py-12">
       <section className="w-full rounded-xl border bg-card p-8 text-center sm:p-12">
         <div className="mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl bg-gold/10 p-2 ring-1 ring-gold/30">
-          <img src="/bluxq-favicon.png" alt="Bluxq" className="h-full w-full object-contain" />
+          <BrandIcon />
         </div>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
           Trade real, com dados ao vivo
