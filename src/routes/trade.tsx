@@ -20,6 +20,8 @@ import {
   fmtPrice,
   calcPnl,
   FEE_RATE,
+  PROFIT_CAP,
+  LIQ_LOSS,
   MIN_LEVERAGE,
   MAX_LEVERAGE,
 } from "@/lib/markets";
@@ -125,6 +127,7 @@ function Trade() {
   const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
   const [tab, setTab] = useState<"open" | "history">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
+  const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = useState(true);
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
@@ -201,6 +204,8 @@ function Trade() {
     m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
+  const liqLong = currentPrice * (1 - LIQ_LOSS / lev);
+  const liqShort = currentPrice * (1 + LIQ_LOSS / lev);
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -776,6 +781,43 @@ function Trade() {
               <span className="font-mono">$BX {fmt(size)}</span>
             </div>
           </div>
+          <button
+            type="button"
+            className="flex w-full items-center justify-between text-xs text-muted-foreground hover:text-foreground"
+            onClick={() => setShowOrderDetails((value) => !value)}
+          >
+            <span>Detalhes da operação</span>
+            <ChevronDown
+              aria-hidden="true"
+              className={`h-4 w-4 transition-transform ${showOrderDetails ? "rotate-180" : ""}`}
+            />
+          </button>
+          {showOrderDetails && (
+            <div className="space-y-1 p-3 font-mono text-xs">
+              <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
+              <Row
+                k="Quantidade"
+                v={
+                  currentPrice
+                    ? `${(size / currentPrice).toPrecision(5)} ${symbol.replace("USDT", "")}`
+                    : "—"
+                }
+              />
+              <Row
+                k="Liquidation Long"
+                v={currentPrice ? fmtPrice(liqLong) : "—"}
+                cls="text-bull"
+              />
+              <Row
+                k="Liquidation Short"
+                v={currentPrice ? fmtPrice(liqShort) : "—"}
+                cls="text-bear"
+              />
+              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+              <Row k="Maximum profit" v={`${fmt(m * PROFIT_CAP)} $BX`} />
+              <Row k="Taxa de abertura" v={`${fmt(openingFee)} $BX`} />
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-2 items-stretch">
             <Button
               disabled={
