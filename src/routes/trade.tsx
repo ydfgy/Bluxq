@@ -326,8 +326,8 @@ function Trade() {
     <main className="mx-auto max-w-[1600px] p-3 grid gap-3 lg:grid-cols-[220px_1fr_320px]">
       <CoinRain show={rain} />
       {/* real market order book */}
-      <aside className="rounded-xl bg-card overflow-hidden order-2 lg:order-1">
-        <div className="flex items-center justify-between border-b px-3 py-2">
+      <aside className="order-2 overflow-hidden rounded-xl bg-black lg:order-1">
+        <div className="flex items-center justify-between px-3 py-2">
           <span className="text-xs uppercase text-muted-foreground">Livro de ordens</span>
         </div>
         <div className="grid grid-cols-3 px-3 py-2 text-[10px] text-muted-foreground">
@@ -346,7 +346,7 @@ function Trade() {
               />
             ))}
           </div>
-          <div className="my-2 flex items-center justify-between border-y border-border/60 py-2 text-base font-bold">
+          <div className="my-2 flex items-center justify-between py-2 text-base font-bold">
             <span className="text-primary">{currentPrice ? fmtPrice(currentPrice) : "—"}</span>
             <span className="text-[10px] font-normal text-muted-foreground">
               {orderBook
@@ -370,7 +370,7 @@ function Trade() {
             </div>
           )}
         </div>
-        <div className="border-t px-2 py-2 font-mono text-[10px]">
+        <div className="px-2 py-2 font-mono text-[10px]">
           <div className="mb-1 flex items-center justify-between text-muted-foreground">
             <span>Recently opened trades</span>
             <span>Last 5</span>
@@ -418,8 +418,8 @@ function Trade() {
 
       {/* gráfico */}
       <section className="space-y-3 order-1 lg:order-2 min-w-0">
-        <div className="overflow-hidden rounded-xl bg-card shadow-sm">
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 border-b bg-card/95 p-3">
+        <div className="overflow-hidden rounded-xl bg-black">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 bg-black p-3">
             <div className="relative">
               <button
                 onClick={() => setMarketMenuOpen((open) => !open)}
@@ -470,14 +470,14 @@ function Trade() {
               ))}
             </div>
           </div>
-          <div className="h-[460px] p-1">
+          <div className="h-[460px] bg-black p-1">
             <PriceChart symbol={symbol} interval={interval} lines={lines} onPrice={setPrice} />
           </div>
         </div>
 
         {/* posições */}
-        <div className="rounded-xl border bg-card">
-          <div className="flex items-center gap-4 border-b px-3">
+        <div className="rounded-xl bg-black">
+          <div className="flex items-center gap-4 px-3">
             {(["open", "history"] as const).map((k) => (
               <button
                 key={k}
@@ -536,7 +536,7 @@ function Trade() {
                     <tr
                       key={p.id}
                       onClick={() => tab === "open" && setSelectedPosition(p as PositionDetails)}
-                      className="cursor-pointer border-t hover:bg-muted/40"
+                      className="cursor-pointer hover:bg-muted/40"
                     >
                       <td className="p-2 font-sans font-semibold">
                         {p.symbol.replace("USDT", "")}
@@ -642,7 +642,7 @@ function Trade() {
             Pool livre: <span className="font-mono text-gold">$BX {fmt(poolFree)}</span>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-muted/30 p-3 text-sm">
+        <div className="rounded-lg border border-border bg-black p-3 text-sm">
           <div className="mb-2 flex items-center justify-between font-semibold">
             <span>Total a debitar</span>
             <span className="font-mono text-foreground">$BX {fmt(m + openingFee)}</span>
@@ -665,7 +665,7 @@ function Trade() {
           <span className="text-base">{showOrderDetails ? "⌃" : "⌄"}</span>
         </button>
         {showOrderDetails && (
-          <div className="rounded-lg bg-muted/40 p-3 space-y-1 text-xs font-mono">
+          <div className="space-y-1 rounded-lg bg-black p-3 font-mono text-xs">
             <Row k="Tamanho da posição" v={`${fmt(size)} $BX`} />
             <Row
               k="Quantidade"

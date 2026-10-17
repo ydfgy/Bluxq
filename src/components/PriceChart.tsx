@@ -49,7 +49,7 @@ export function PriceChart({
         const muted = chartColor("--muted-foreground", "#94a3a0");
         chart = createChart(el.current, {
           autoSize: true,
-          layout: { background: { color: "transparent" }, textColor: muted },
+          layout: { background: { color: "#000000" }, textColor: muted },
           grid: { vertLines: { visible: false }, horzLines: { visible: false } },
           crosshair: { mode: CrosshairMode.Normal },
           timeScale: { timeVisible: true, secondsVisible: false },
