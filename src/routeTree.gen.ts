@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConvertRouteImport } from './routes/convert'
+import { Route as CopyRouteImport } from './routes/copy'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -38,6 +39,11 @@ const AuthRoute = AuthRouteImport.update({
 const ConvertRoute = ConvertRouteImport.update({
   id: '/convert',
   path: '/convert',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CopyRoute = CopyRouteImport.update({
+  id: '/copy',
+  path: '/copy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReferralsRoute = ReferralsRouteImport.update({
@@ -76,6 +82,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -88,6 +95,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -101,6 +109,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
+  '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/convert'
+    | '/copy'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -127,6 +137,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/convert'
+    | '/copy'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -139,6 +150,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/convert'
+    | '/copy'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -152,6 +164,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   ConvertRoute: typeof ConvertRoute
+  CopyRoute: typeof CopyRoute
   ReferralsRoute: typeof ReferralsRoute
   StakeRoute: typeof StakeRoute
   TermsRoute: typeof TermsRoute
@@ -188,6 +201,13 @@ declare module '@tanstack/react-router' {
       path: '/convert'
       fullPath: '/convert'
       preLoaderRoute: typeof ConvertRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/copy': {
+      id: '/copy'
+      path: '/copy'
+      fullPath: '/copy'
+      preLoaderRoute: typeof CopyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/referrals': {
@@ -240,6 +260,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   ConvertRoute: ConvertRoute,
+  CopyRoute: CopyRoute,
   ReferralsRoute: ReferralsRoute,
   StakeRoute: StakeRoute,
   TermsRoute: TermsRoute,
