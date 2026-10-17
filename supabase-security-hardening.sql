@@ -1,3 +1,6 @@
+-- DEPRECATED: use `DATABASE_URL=... node scripts/migrate.mjs` instead.
+-- This legacy snapshot may not include later migrations and is retained only
+-- for reference. Do not use it as the production deployment source of truth.
 begin;
 
 -- BluxTrade complete Supabase bootstrap: base schema, trading functions, and security hardening.
