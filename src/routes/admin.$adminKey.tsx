@@ -11,7 +11,6 @@ import {
   claimAdmin,
   reviewDeposit,
   reviewWithdraw,
-  setSecurityControl,
 } from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
@@ -20,14 +19,6 @@ import { Input } from "@/components/ui/input";
 type AdminRequest = {
   profile: { roblox_username: string; roblox_user_id: number | null } | undefined;
   user_id: string;
-};
-
-type SecurityReview = {
-  user_id: string;
-  status: "review" | "blocked";
-  manual_reason: string | null;
-  risk_score: number;
-  updated_at: string;
 };
 
 function errorMessage(error: unknown) {
@@ -62,7 +53,6 @@ function Admin() {
   const overview = useServerFn(adminOverview);
   const rd = useServerFn(reviewDeposit);
   const rw = useServerFn(reviewWithdraw);
-  const setSecurity = useServerFn(setSecurityControl);
   const [bootstrapSecret, setBootstrapSecret] = useState("");
   const [pin, setPin] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(null);
@@ -272,24 +262,6 @@ function Admin() {
             </Button>
           </div>
         ))}
-      </section>
-      <section className="rounded-xl border border-gold/20 bg-card">
-        <h2 className="border-b p-4 font-bold">Revisões de segurança ({data?.securityReviews?.length ?? 0})</h2>
-        <p className="px-4 pt-2 text-xs text-muted-foreground">
-          Contas sinalizadas por fingerprint duplicado ou comportamento transacional incomum. O bloqueio é explícito e reversível.
-        </p>
-        {(data?.securityReviews as SecurityReview[] | undefined)?.map((x) => (
-          <div key={x.user_id} className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0">
-            <span className="font-mono text-xs">{x.user_id.slice(0, 8)}…</span>
-            <span className="text-gold">{x.status === "blocked" ? "Bloqueada" : "Em revisão"}</span>
-            <span className="text-xs text-muted-foreground">Score {x.risk_score} · {x.manual_reason ?? "Sinal automático"}</span>
-            <span className="ml-auto flex gap-2">
-              <Button size="sm" variant="outline" onClick={() => run(() => setSecurity({ data: { userId: x.user_id, status: "clear", reason: "Revisão concluída", riskScore: 0, blockedUntil: null, adminAccessToken: accessToken! } }), "Conta liberada")}>Liberar</Button>
-              <Button size="sm" variant="destructive" onClick={() => run(() => setSecurity({ data: { userId: x.user_id, status: "blocked", reason: "Bloqueio manual por segurança", riskScore: 100, blockedUntil: null, adminAccessToken: accessToken! } }), "Conta bloqueada")}>Bloquear</Button>
-            </span>
-          </div>
-        ))}
-        {!data?.securityReviews?.length && <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma conta em revisão.</div>}
       </section>
     </main>
   );

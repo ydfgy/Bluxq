@@ -13,7 +13,7 @@ import { useEffect } from "react";
 
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
-import { BRAND_ICON_SRC, Navbar, SecurityNotice } from "@/components/AppShell";
+import { BRAND_ICON_SRC, Navbar } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -140,7 +140,6 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <Navbar />
-        <SecurityNotice />
         <Outlet />
         <footer className="border-t border-border/60 px-4 py-5 text-center text-xs leading-5 text-muted-foreground">
           Operações, saldos BX e transferências são registrados e estão sujeitos aos Termos da Bluxq.

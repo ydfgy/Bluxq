@@ -11,38 +11,6 @@ async function admin() {
   return supabaseAdmin;
 }
 
-type SecurityStatus = {
-  status: "clear" | "review" | "blocked";
-  risk_score: number;
-  reasons: string[];
-  transactions_allowed: boolean;
-};
-
-async function getSecurityStatusForUser(userId: string): Promise<SecurityStatus> {
-  const { data, error } = await (await admin()).rpc("fn_security_status", { _user: userId });
-  rpcError(error);
-  return (data?.[0] as SecurityStatus | undefined) ?? {
-    status: "clear",
-    risk_score: 0,
-    reasons: [],
-    transactions_allowed: true,
-  };
-}
-
-async function assertSecurityClear(userId: string, action: string) {
-  const status = await getSecurityStatusForUser(userId);
-  if (!status.transactions_allowed) {
-    const reason = status.reasons[0] ? ` Motivo registrado: ${status.reasons[0]}.` : "";
-    throw new Error(`Ação bloqueada para proteção da conta durante uma revisão de segurança.${reason} Solicite uma revisão se isso for um engano.`);
-  }
-  const { error } = await (await admin()).rpc("fn_record_security_event", {
-    _user: userId,
-    _event_type: `allowed_${action}`,
-    _metadata: { risk_score: status.risk_score },
-  });
-  rpcError(error);
-}
-
 function rpcError(error: { message: string; code?: string } | null) {
   if (!error) return;
   const clean = error.message.replace(/^.*?ERROR:\s*/, "").trim();
@@ -253,22 +221,6 @@ export const syncPositions = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-export const getSecurityStatus = createServerFn({ method: "GET" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => getSecurityStatusForUser(context.userId));
-
-export const registerFingerprint = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ fingerprintHash: z.string().regex(/^[a-f0-9]{64}$/) }).parse(d))
-  .handler(async ({ data, context }) => {
-    const { data: result, error } = await (await admin()).rpc("fn_register_fingerprint", {
-      _user: context.userId,
-      _fingerprint_hash: data.fingerprintHash,
-    });
-    rpcError(error);
-    return result?.[0] ?? { duplicate_accounts: 0, review_started: false };
-  });
-
 /** Returns sanitized open positions so the platform order book reflects real internal activity. */
 export const getPlatformOpenPositions = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -298,7 +250,6 @@ export const openPosition = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "open_position");
     await runLiquidations();
     const prices = await getBinancePrices([data.symbol]);
     const sb = await admin();
@@ -318,7 +269,6 @@ export const closePosition = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "close_position");
     const { data: pos, error: positionError } = await context.supabase
       .from("positions")
       .select("symbol")
@@ -345,7 +295,6 @@ export const stake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => amount.parse(d))
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "stake");
     const { error } = await (
       await admin()
     ).rpc("fn_stake", { _user: context.userId, _amount: data.amount });
@@ -357,7 +306,6 @@ export const unstake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => amount.parse(d))
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "unstake");
     const { error } = await (
       await admin()
     ).rpc("fn_unstake", { _user: context.userId, _amount: data.amount });
@@ -368,7 +316,6 @@ export const unstake = createServerFn({ method: "POST" })
 export const claimAffiliate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    await assertSecurityClear(context.userId, "claim_affiliate");
     const { data: value, error } = await (
       await admin()
     ).rpc("fn_claim_affiliate", {
@@ -449,7 +396,6 @@ export const donateToUser = createServerFn({ method: "POST" })
     z.object({ recipientId: z.string().uuid(), amount: z.number().finite().min(1).max(1_000_000) }).parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "donate");
     const { error } = await (await admin()).rpc("fn_donate", {
       _sender: context.userId,
       _recipient: data.recipientId,
@@ -473,7 +419,6 @@ export const requestDeposit = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "request_deposit");
     const { error } = await (
       await admin()
     ).rpc("fn_request_deposit_v2", {
@@ -502,7 +447,6 @@ export const requestWithdraw = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertSecurityClear(context.userId, "request_withdraw");
     const { error } = await (
       await admin()
     ).rpc("fn_request_withdraw_v2", {
@@ -701,7 +645,7 @@ export const adminOverview = createServerFn({ method: "POST" })
     await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     await assertAdmin(context.supabase, context.userId);
     const sb = await admin();
-    const [d, w, pool, security] = await Promise.all([
+    const [d, w, pool] = await Promise.all([
       sb
         .from("deposits")
         .select("id, user_id, amount, payment_method, asset, network, transaction_hash, created_at")
@@ -715,17 +659,10 @@ export const adminOverview = createServerFn({ method: "POST" })
         .order("created_at")
         .limit(200),
       sb.from("pool").select("total_assets, total_reserved, platform_revenue").single(),
-      sb
-        .from("security_controls")
-        .select("user_id, status, manual_reason, risk_score, blocked_until, updated_at")
-        .neq("status", "clear")
-        .order("updated_at", { ascending: false })
-        .limit(200),
     ]);
     rpcError(d.error);
     rpcError(w.error);
     rpcError(pool.error);
-    rpcError(security.error);
     const ids = [...new Set([...(d.data ?? []), ...(w.data ?? [])].map((x) => x.user_id))];
     const { data: profs, error: profileError } = ids.length
       ? await sb.from("profiles").select("id, roblox_username, roblox_user_id").in("id", ids)
@@ -739,7 +676,6 @@ export const adminOverview = createServerFn({ method: "POST" })
       deposits: (d.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       withdrawals: (w.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       pool: pool.data,
-      securityReviews: security.data ?? [],
     };
   });
 
@@ -781,32 +717,6 @@ export const reviewWithdraw = createServerFn({ method: "POST" })
     const { error } = await (
       await admin()
     ).rpc("fn_review_withdraw", { _id: data.id, _paid: data.paid });
-    rpcError(error);
-    return { ok: true };
-  });
-
-export const setSecurityControl = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .validator((d) =>
-    z.object({
-      userId: z.string().uuid(),
-      status: z.enum(["clear", "review", "blocked"]),
-      reason: z.string().trim().max(500).nullable().optional(),
-      riskScore: z.number().int().min(0).max(100).default(0),
-      blockedUntil: z.string().datetime().nullable().optional(),
-      adminAccessToken: z.string().min(1).max(500),
-    }).parse(d),
-  )
-  .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
-    await assertAdmin(context.supabase, context.userId);
-    const { error } = await (await admin()).rpc("fn_set_security_control", {
-      _user: data.userId,
-      _status: data.status,
-      _reason: data.reason ?? null,
-      _risk_score: data.riskScore,
-      _blocked_until: data.blockedUntil ?? null,
-    });
     rpcError(error);
     return { ok: true };
   });
