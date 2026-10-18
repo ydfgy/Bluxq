@@ -45,17 +45,20 @@ export function CaptureProtection() {
     blockDisplayCaptureApi();
 
     let blackoutTimer: number | undefined;
+    let persistentBlackout = false;
 
     const clearBlackout = () => {
       if (blackoutTimer !== undefined) window.clearTimeout(blackoutTimer);
       blackoutTimer = undefined;
+      persistentBlackout = false;
       document.documentElement.removeAttribute(BLACKOUT_ATTRIBUTE);
     };
 
-    const blackoutFor = (duration: number) => {
+    const blackoutFor = (duration: number, persistent = false) => {
+      persistentBlackout = persistent;
       document.documentElement.setAttribute(BLACKOUT_ATTRIBUTE, BLACKOUT_VALUE);
       if (blackoutTimer !== undefined) window.clearTimeout(blackoutTimer);
-      blackoutTimer = window.setTimeout(clearBlackout, duration);
+      if (!persistent) blackoutTimer = window.setTimeout(clearBlackout, duration);
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -68,7 +71,7 @@ export function CaptureProtection() {
         const isAlreadyBlack =
           document.documentElement.getAttribute(BLACKOUT_ATTRIBUTE) === BLACKOUT_VALUE;
         if (isAlreadyBlack) clearBlackout();
-        else blackoutFor(30 * 60 * 1000);
+        else blackoutFor(30 * 60 * 1000, true);
         event.preventDefault();
         event.stopPropagation();
         event.stopImmediatePropagation();
@@ -82,10 +85,33 @@ export function CaptureProtection() {
       event.stopImmediatePropagation();
     };
 
+    const onBlur = () =>
+      blackoutFor(persistentBlackout ? 30 * 60 * 1000 : 1500, persistentBlackout);
+    const onFocus = () => {
+      if (!persistentBlackout) window.setTimeout(clearBlackout, 250);
+    };
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "hidden") {
+        blackoutFor(persistentBlackout ? 30 * 60 * 1000 : 1500, persistentBlackout);
+      } else onFocus();
+    };
+    const onBeforePrint = () => blackoutFor(60 * 1000);
+    const onAfterPrint = () => clearBlackout();
+
     document.addEventListener("keydown", onKeyDown, true);
+    window.addEventListener("blur", onBlur);
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
+      window.removeEventListener("blur", onBlur);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
       clearBlackout();
     };
   }, []);
