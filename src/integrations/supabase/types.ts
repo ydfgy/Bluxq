@@ -73,30 +73,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      donations: {
-        Row: {
-          id: string;
-          donor_id: string;
-          recipient_id: string;
-          amount: number;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          donor_id: string;
-          recipient_id: string;
-          amount: number;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          donor_id?: string;
-          recipient_id?: string;
-          amount?: number;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
       pool: {
         Row: {
           fees_to_stakers: number;
@@ -390,40 +366,6 @@ export type Database = {
           _payout_method: string;
           _user: string;
         };
-        Returns: undefined;
-      };
-      fn_get_leaderboard: {
-        Args: Record<PropertyKey, never>;
-        Returns: {
-          rank: number;
-          user_id: string;
-          username: string;
-          display_name: string | null;
-          avatar_url: string | null;
-          is_anonymous: boolean;
-          profit: number;
-          margin: number;
-          profit_percentage: number;
-          trades: number;
-        }[];
-      };
-      fn_get_public_profile: {
-        Args: { _user: string };
-        Returns: {
-          user_id: string;
-          username: string;
-          display_name: string | null;
-          avatar_url: string | null;
-          is_anonymous: boolean;
-          profit: number;
-          margin: number;
-          profit_percentage: number;
-          trades: number;
-          received_donations: number;
-        }[];
-      };
-      fn_donate: {
-        Args: { _sender: string; _recipient: string; _amount: number };
         Returns: undefined;
       };
       fn_review_deposit: {
