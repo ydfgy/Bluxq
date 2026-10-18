@@ -2,9 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { getFingerprintHash } from "@/lib/fingerprint";
+import { registerFingerprint } from "@/lib/blux.functions";
 
 export const Route = createFileRoute("/auth")({
   validateSearch: (s) =>
@@ -33,6 +36,7 @@ function AuthPage() {
   const [referralCode, setReferralCode] = useState(ref?.toUpperCase() ?? "");
   const [busy, setBusy] = useState(false);
   const nav = useNavigate();
+  const register = useServerFn(registerFingerprint);
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
@@ -57,12 +61,19 @@ function AuthPage() {
           if (loginError) throw loginError;
         }
         toast.success("Account created successfully!");
-        nav({ to: "/verify" });
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
-        nav({ to: "/verify" });
       }
+      const fingerprintHash = await getFingerprintHash();
+      if (fingerprintHash) {
+        try {
+          await register({ data: { fingerprintHash } });
+        } catch (fingerprintError) {
+          console.warn("[Security] Unable to register browser hash", fingerprintError);
+        }
+      }
+      nav({ to: "/verify" });
     } catch (error: unknown) {
       toast.error(error instanceof Error ? error.message : "Unable to complete authentication.");
     } finally {
@@ -107,6 +118,10 @@ function AuthPage() {
         <Button className="w-full" disabled={busy}>
           {signup ? "Create account" : "Entrar"}
         </Button>
+        <p className="pt-2 text-center text-xs leading-5 text-muted-foreground">
+          Para reduzir contas duplicadas e abuso, a Bluxq usa um identificador criptográfico derivado do navegador.
+          Os sinais brutos não são enviados nem armazenados.
+        </p>
       </form>
       <button className="mt-4 text-sm text-muted-foreground" onClick={() => setSignup(!signup)}>
         {signup ? "Already have an account? Sign in" : "Need an account? Create one"}

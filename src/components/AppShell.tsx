@@ -1,8 +1,10 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
+import { useServerFn } from "@tanstack/react-start";
+import { getSecurityStatus } from "@/lib/blux.functions";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
 
@@ -137,6 +139,24 @@ export function Navbar() {
         </Link>
       </nav>
     </header>
+  );
+}
+
+export function SecurityNotice() {
+  const { session } = useAuth();
+  const load = useServerFn(getSecurityStatus);
+  const { data } = useQuery({
+    queryKey: ["security-status", session?.user.id],
+    enabled: !!session,
+    queryFn: () => load(),
+    staleTime: 30_000,
+  });
+  if (!session || !data || data.status === "clear") return null;
+  return (
+    <div className="border-b border-gold/20 bg-gold/5 px-4 py-2 text-center text-xs leading-5 text-gold">
+      Esta conta está em revisão de segurança. Operações financeiras permanecem bloqueadas até a análise.
+      Se isso for um engano, solicite uma revisão ao suporte.
+    </div>
   );
 }
 

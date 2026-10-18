@@ -258,6 +258,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      security_controls: {
+        Row: {
+          user_id: string;
+          status: string;
+          manual_reason: string | null;
+          risk_score: number;
+          blocked_until: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          user_id: string;
+          status?: string;
+          manual_reason?: string | null;
+          risk_score?: number;
+          blocked_until?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          status?: string;
+          manual_reason?: string | null;
+          risk_score?: number;
+          blocked_until?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      security_events: {
+        Row: {
+          id: string;
+          user_id: string;
+          event_type: string;
+          metadata: Json;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          event_type: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          event_type?: string;
+          metadata?: Json;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       stakes: {
         Row: {
           deposited: number;
@@ -424,6 +475,33 @@ export type Database = {
       };
       fn_donate: {
         Args: { _sender: string; _recipient: string; _amount: number };
+        Returns: undefined;
+      };
+      fn_security_status: {
+        Args: { _user: string };
+        Returns: {
+          status: string;
+          risk_score: number;
+          reasons: string[];
+          transactions_allowed: boolean;
+        }[];
+      };
+      fn_register_fingerprint: {
+        Args: { _user: string; _fingerprint_hash: string };
+        Returns: { duplicate_accounts: number; review_started: boolean }[];
+      };
+      fn_record_security_event: {
+        Args: { _user: string; _event_type: string; _metadata?: Json };
+        Returns: undefined;
+      };
+      fn_set_security_control: {
+        Args: {
+          _user: string;
+          _status: string;
+          _reason?: string | null;
+          _risk_score?: number;
+          _blocked_until?: string | null;
+        };
         Returns: undefined;
       };
       fn_review_deposit: {
