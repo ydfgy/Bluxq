@@ -112,6 +112,57 @@ html[data-capture-shield="black"] .capture-blackout {
   display: block;
 }
 
+html[data-capture-tool] .capture-blackout {
+  display: block;
+}
+
+.capture-noise {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.035;
+  mix-blend-mode: screen;
+}
+
+.capture-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  transform: rotate(-24deg) scale(1.2);
+  opacity: 0.045;
+  color: var(--color-foreground);
+  font-family: var(--font-mono);
+  font-size: clamp(0.52rem, 1vw, 0.75rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  white-space: nowrap;
+}
+
+.capture-legal-notice {
+  position: fixed;
+  right: 0.75rem;
+  bottom: 0.5rem;
+  z-index: 2147483646;
+  margin: 0;
+  pointer-events: none;
+  user-select: none;
+  color: color-mix(in oklab, var(--color-foreground) 38%, transparent);
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+}
+
 @utility glow-bull {
   box-shadow: var(--glow-bull);
 }
