@@ -371,6 +371,40 @@ export const getAffiliateSummary = createServerFn({ method: "GET" })
     };
   });
 
+export const getLeaderboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { data, error } = await (await admin()).rpc("fn_get_leaderboard");
+    rpcError(error);
+    return data ?? [];
+  });
+
+export const getPublicProfile = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ userId: z.string().uuid() }).parse(d))
+  .handler(async ({ data }) => {
+    const { data: profile, error } = await (await admin()).rpc("fn_get_public_profile", {
+      _user: data.userId,
+    });
+    rpcError(error);
+    return profile?.[0] ?? null;
+  });
+
+export const donateToUser = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    z.object({ recipientId: z.string().uuid(), amount: z.number().finite().min(1).max(1_000_000) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (await admin()).rpc("fn_donate", {
+      _sender: context.userId,
+      _recipient: data.recipientId,
+      _amount: data.amount,
+    });
+    rpcError(error);
+    return { ok: true, senderId: context.userId };
+  });
+
 export const requestDeposit = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) =>
