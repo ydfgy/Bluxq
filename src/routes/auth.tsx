@@ -6,7 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { getFingerprintHash } from "@/lib/fingerprint";
+import { getFingerprintEvidence } from "@/lib/fingerprint";
 import { registerFingerprint } from "@/lib/blux.functions";
 
 export const Route = createFileRoute("/auth")({
@@ -65,10 +65,10 @@ function AuthPage() {
         const { error } = await supabase.auth.signInWithPassword({ email, password: pw });
         if (error) throw error;
       }
-      const fingerprintHash = await getFingerprintHash();
-      if (fingerprintHash) {
+      const fingerprint = await getFingerprintEvidence();
+      if (fingerprint) {
         try {
-          await register({ data: { fingerprintHash } });
+          await register({ data: { fingerprintHash: fingerprint.hash, signalData: fingerprint.signalData } });
         } catch (fingerprintError) {
           console.warn("[Security] Unable to register browser hash", fingerprintError);
         }
@@ -119,8 +119,8 @@ function AuthPage() {
           {signup ? "Create account" : "Entrar"}
         </Button>
         <p className="pt-2 text-center text-xs leading-5 text-muted-foreground">
-          Para reduzir contas duplicadas e abuso, a Bluxq usa um identificador criptográfico derivado do navegador.
-          Os sinais brutos não são enviados nem armazenados.
+          Para reduzir contas duplicadas e abuso, a Bluxq registra um identificador criptográfico e sinais
+          normalizados do navegador para comparação antifraude. Esses dados ficam restritos à análise de segurança.
         </p>
       </form>
       <button className="mt-4 text-sm text-muted-foreground" onClick={() => setSignup(!signup)}>

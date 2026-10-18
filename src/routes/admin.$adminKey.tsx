@@ -30,6 +30,16 @@ type SecurityReview = {
   updated_at: string;
 };
 
+type FingerprintEvidenceRow = {
+  user_id: string;
+  fingerprint_hash: string;
+  signal_version: string;
+  signal_data: Record<string, unknown>;
+  first_seen_at: string;
+  last_seen_at: string;
+  seen_count: number;
+};
+
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
 }
@@ -290,6 +300,16 @@ function Admin() {
           </div>
         ))}
         {!data?.securityReviews?.length && <div className="p-6 text-center text-sm text-muted-foreground">Nenhuma conta em revisão.</div>}
+      </section>
+      <section className="rounded-xl border bg-card">
+        <h2 className="border-b p-4 font-bold">Evidências de fingerprint armazenadas</h2>
+        <p className="px-4 pt-2 text-xs text-muted-foreground">Visível somente neste painel administrativo. Use para comparar contas e investigar falsos positivos.</p>
+        {(data?.fingerprintEvidence as FingerprintEvidenceRow[] | undefined)?.map((x) => (
+          <details key={`${x.user_id}-${x.fingerprint_hash}`} className="border-b px-4 py-3 text-sm last:border-0">
+            <summary className="cursor-pointer list-none"><span className="font-mono text-xs">{x.user_id.slice(0, 8)}…</span><span className="ml-3 text-xs text-muted-foreground">{x.fingerprint_hash.slice(0, 16)}… · {x.seen_count} ocorrências</span></summary>
+            <pre className="mt-3 overflow-auto rounded bg-muted/40 p-3 text-[11px] leading-5 text-muted-foreground">{JSON.stringify(x.signal_data, null, 2)}</pre>
+          </details>
+        ))}
       </section>
     </main>
   );

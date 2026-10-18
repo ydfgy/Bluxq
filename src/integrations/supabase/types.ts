@@ -38,6 +38,39 @@ export type Database = {
         };
         Relationships: [];
       };
+      account_fingerprints: {
+        Row: {
+          id: string;
+          user_id: string;
+          fingerprint_hash: string;
+          signal_version: string;
+          signal_data: Json;
+          first_seen_at: string;
+          last_seen_at: string;
+          seen_count: number;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          fingerprint_hash: string;
+          signal_version?: string;
+          signal_data?: Json;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          seen_count?: number;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          fingerprint_hash?: string;
+          signal_version?: string;
+          signal_data?: Json;
+          first_seen_at?: string;
+          last_seen_at?: string;
+          seen_count?: number;
+        };
+        Relationships: [];
+      };
       deposits: {
         Row: {
           amount: number;
@@ -487,7 +520,7 @@ export type Database = {
         }[];
       };
       fn_register_fingerprint: {
-        Args: { _user: string; _fingerprint_hash: string };
+        Args: { _user: string; _fingerprint_hash: string; _signal_data?: Json };
         Returns: { duplicate_accounts: number; review_started: boolean }[];
       };
       fn_record_security_event: {
