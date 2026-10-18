@@ -14,6 +14,7 @@ import { useEffect } from "react";
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/hooks/use-auth";
 import { BRAND_ICON_SRC, Navbar } from "@/components/AppShell";
+import { CaptureProtection } from "@/components/CaptureProtection";
 import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
@@ -139,6 +140,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <CaptureProtection />
         <Navbar />
         <Outlet />
         <Toaster theme="dark" position="bottom-left" duration={3000} closeButton />

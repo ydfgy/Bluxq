@@ -99,6 +99,19 @@
   }
 }
 
+.capture-blackout {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  background: #000;
+  pointer-events: none;
+}
+
+html[data-capture-shield="black"] .capture-blackout {
+  display: block;
+}
+
 @utility glow-bull {
   box-shadow: var(--glow-bull);
 }
