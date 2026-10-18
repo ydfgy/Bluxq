@@ -97,6 +97,9 @@ export function CaptureProtection() {
     };
     const onBeforePrint = () => blackoutFor(60 * 1000);
     const onAfterPrint = () => clearBlackout();
+    const preventPrintAndCopy = (event: Event) => {
+      event.preventDefault();
+    };
 
     document.addEventListener("keydown", onKeyDown, true);
     window.addEventListener("blur", onBlur);
@@ -104,6 +107,10 @@ export function CaptureProtection() {
     document.addEventListener("visibilitychange", onVisibilityChange);
     window.addEventListener("beforeprint", onBeforePrint);
     window.addEventListener("afterprint", onAfterPrint);
+    document.addEventListener("contextmenu", preventPrintAndCopy, true);
+    document.addEventListener("copy", preventPrintAndCopy, true);
+    document.addEventListener("cut", preventPrintAndCopy, true);
+    document.addEventListener("dragstart", preventPrintAndCopy, true);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
@@ -112,6 +119,10 @@ export function CaptureProtection() {
       document.removeEventListener("visibilitychange", onVisibilityChange);
       window.removeEventListener("beforeprint", onBeforePrint);
       window.removeEventListener("afterprint", onAfterPrint);
+      document.removeEventListener("contextmenu", preventPrintAndCopy, true);
+      document.removeEventListener("copy", preventPrintAndCopy, true);
+      document.removeEventListener("cut", preventPrintAndCopy, true);
+      document.removeEventListener("dragstart", preventPrintAndCopy, true);
       clearBlackout();
     };
   }, []);

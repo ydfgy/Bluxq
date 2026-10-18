@@ -108,6 +108,13 @@
   pointer-events: none;
 }
 
+@media print {
+  html,
+  body {
+    display: none !important;
+  }
+}
+
 html[data-capture-shield="black"] .capture-blackout {
   display: block;
 }
