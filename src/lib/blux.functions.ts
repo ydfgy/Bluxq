@@ -259,20 +259,11 @@ export const getSecurityStatus = createServerFn({ method: "GET" })
 
 export const registerFingerprint = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) =>
-    z.object({
-      fingerprintHash: z.string().regex(/^[a-f0-9]{64}$/),
-      signalData: z.record(z.string(), z.union([z.string(), z.number(), z.null()])).refine(
-        (value) => JSON.stringify(value).length <= 24_000,
-        "Fingerprint evidence too large",
-      ),
-    }).parse(d),
-  )
+  .validator((d) => z.object({ fingerprintHash: z.string().regex(/^[a-f0-9]{64}$/) }).parse(d))
   .handler(async ({ data, context }) => {
     const { data: result, error } = await (await admin()).rpc("fn_register_fingerprint", {
       _user: context.userId,
       _fingerprint_hash: data.fingerprintHash,
-      _signal_data: data.signalData,
     });
     rpcError(error);
     return result?.[0] ?? { duplicate_accounts: 0, review_started: false };
@@ -710,7 +701,7 @@ export const adminOverview = createServerFn({ method: "POST" })
     await assertAdminPanelAccess(data.adminAccessToken, context.userId);
     await assertAdmin(context.supabase, context.userId);
     const sb = await admin();
-    const [d, w, pool, security, fingerprints] = await Promise.all([
+    const [d, w, pool, security] = await Promise.all([
       sb
         .from("deposits")
         .select("id, user_id, amount, payment_method, asset, network, transaction_hash, created_at")
@@ -730,17 +721,11 @@ export const adminOverview = createServerFn({ method: "POST" })
         .neq("status", "clear")
         .order("updated_at", { ascending: false })
         .limit(200),
-      sb
-        .from("account_fingerprints")
-        .select("user_id, fingerprint_hash, signal_version, signal_data, first_seen_at, last_seen_at, seen_count")
-        .order("last_seen_at", { ascending: false })
-        .limit(500),
     ]);
     rpcError(d.error);
     rpcError(w.error);
     rpcError(pool.error);
     rpcError(security.error);
-    rpcError(fingerprints.error);
     const ids = [...new Set([...(d.data ?? []), ...(w.data ?? [])].map((x) => x.user_id))];
     const { data: profs, error: profileError } = ids.length
       ? await sb.from("profiles").select("id, roblox_username, roblox_user_id").in("id", ids)
@@ -755,7 +740,6 @@ export const adminOverview = createServerFn({ method: "POST" })
       withdrawals: (w.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       pool: pool.data,
       securityReviews: security.data ?? [],
-      fingerprintEvidence: fingerprints.data ?? [],
     };
   });
 
