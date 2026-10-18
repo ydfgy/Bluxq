@@ -13,7 +13,6 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as ConvertRouteImport } from './routes/convert'
 import { Route as CopyRouteImport } from './routes/copy'
-import { Route as RankingRouteImport } from './routes/ranking'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TermsRouteImport } from './routes/terms'
@@ -21,7 +20,6 @@ import { Route as TradeRouteImport } from './routes/trade'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as AdminAdminKeyRouteImport } from './routes/admin.$adminKey'
-import { Route as ProfileUserIdRouteImport } from './routes/profile.$userId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -41,11 +39,6 @@ const ConvertRoute = ConvertRouteImport.update({
 const CopyRoute = CopyRouteImport.update({
   id: '/copy',
   path: '/copy',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RankingRoute = RankingRouteImport.update({
-  id: '/ranking',
-  path: '/ranking',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReferralsRoute = ReferralsRouteImport.update({
@@ -83,18 +76,12 @@ const AdminAdminKeyRoute = AdminAdminKeyRouteImport.update({
   path: '/admin/$adminKey',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileUserIdRoute = ProfileUserIdRouteImport.update({
-  id: '/profile/$userId',
-  path: '/profile/$userId',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
-  '/ranking': typeof RankingRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -102,14 +89,12 @@ export interface FileRoutesByFullPath {
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
-  '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
-  '/ranking': typeof RankingRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -117,7 +102,6 @@ export interface FileRoutesByTo {
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
-  '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -125,7 +109,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
-  '/ranking': typeof RankingRoute
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRoute
   '/terms': typeof TermsRoute
@@ -133,7 +116,6 @@ export interface FileRoutesById {
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
-  '/profile/$userId': typeof ProfileUserIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -142,7 +124,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/convert'
     | '/copy'
-    | '/ranking'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -150,14 +131,12 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
-    | '/profile/$userId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/convert'
     | '/copy'
-    | '/ranking'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -165,14 +144,12 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
-    | '/profile/$userId'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/convert'
     | '/copy'
-    | '/ranking'
     | '/referrals'
     | '/stake'
     | '/terms'
@@ -180,7 +157,6 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
-    | '/profile/$userId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -188,7 +164,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   ConvertRoute: typeof ConvertRoute
   CopyRoute: typeof CopyRoute
-  RankingRoute: typeof RankingRoute
   ReferralsRoute: typeof ReferralsRoute
   StakeRoute: typeof StakeRoute
   TermsRoute: typeof TermsRoute
@@ -196,7 +171,6 @@ export interface RootRouteChildren {
   VerifyRoute: typeof VerifyRoute
   WalletRoute: typeof WalletRoute
   AdminAdminKeyRoute: typeof AdminAdminKeyRoute
-  ProfileUserIdRoute: typeof ProfileUserIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -227,13 +201,6 @@ declare module '@tanstack/react-router' {
       path: '/copy'
       fullPath: '/copy'
       preLoaderRoute: typeof CopyRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ranking': {
-      id: '/ranking'
-      path: '/ranking'
-      fullPath: '/ranking'
-      preLoaderRoute: typeof RankingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/referrals': {
@@ -285,13 +252,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile/$userId': {
-      id: '/profile/$userId'
-      path: '/profile/$userId'
-      fullPath: '/profile/$userId'
-      preLoaderRoute: typeof ProfileUserIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -300,7 +260,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   ConvertRoute: ConvertRoute,
   CopyRoute: CopyRoute,
-  RankingRoute: RankingRoute,
   ReferralsRoute: ReferralsRoute,
   StakeRoute: StakeRoute,
   TermsRoute: TermsRoute,
@@ -308,7 +267,6 @@ const rootRouteChildren: RootRouteChildren = {
   VerifyRoute: VerifyRoute,
   WalletRoute: WalletRoute,
   AdminAdminKeyRoute: AdminAdminKeyRoute,
-  ProfileUserIdRoute: ProfileUserIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

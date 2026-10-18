@@ -141,10 +141,6 @@ function RootComponent() {
       <AuthProvider>
         <Navbar />
         <Outlet />
-        <footer className="border-t border-border/60 px-4 py-5 text-center text-xs leading-5 text-muted-foreground">
-          Operações, saldos BX e transferências são registrados e estão sujeitos aos Termos da Bluxq.
-          Consulte as regras antes de operar.
-        </footer>
         <Toaster theme="dark" position="bottom-left" duration={3000} closeButton />
       </AuthProvider>
     </QueryClientProvider>
