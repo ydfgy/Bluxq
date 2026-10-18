@@ -22,14 +22,17 @@ function blockDisplayCaptureApi() {
   if (!mediaDevices?.getDisplayMedia) return;
 
   const rejectCapture = async () => {
-    throw new DOMException("Screen capture is disabled.", "NotAllowedError");
+    throw new DOMException(
+      "A captura de tela está desabilitada nesta plataforma.",
+      "NotAllowedError",
+    );
   };
 
   try {
     mediaDevices.getDisplayMedia = rejectCapture;
   } catch {
-    // Alguns navegadores protegem a propriedade; o cabeçalho do servidor
-    // continua bloqueando display capture independentemente desta barreira.
+    // Alguns navegadores protegem a propriedade. A Permissions-Policy do servidor
+    // continua sendo aplicada independentemente desta barreira de JavaScript.
   }
 }
 
@@ -42,6 +45,10 @@ export function CaptureProtection() {
       event.preventDefault();
       event.stopPropagation();
       event.stopImmediatePropagation();
+
+      // Em browsers que expõem a área de transferência, evita que um PrintScreen
+      // deixe uma imagem disponível para colagem. A permissão pode ser recusada.
+      void navigator.clipboard?.writeText("").catch(() => undefined);
     };
 
     const onKeyUp = (event: KeyboardEvent) => {
@@ -50,14 +57,39 @@ export function CaptureProtection() {
       event.stopPropagation();
     };
 
+    const onContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    const onCopy = (event: ClipboardEvent) => {
+      event.preventDefault();
+    };
+
+    const onCut = (event: ClipboardEvent) => {
+      event.preventDefault();
+    };
+
     document.addEventListener("keydown", onKeyDown, true);
     document.addEventListener("keyup", onKeyUp, true);
+    document.addEventListener("contextmenu", onContextMenu, true);
+    document.addEventListener("copy", onCopy, true);
+    document.addEventListener("cut", onCut, true);
 
     return () => {
       document.removeEventListener("keydown", onKeyDown, true);
       document.removeEventListener("keyup", onKeyUp, true);
+      document.removeEventListener("contextmenu", onContextMenu, true);
+      document.removeEventListener("copy", onCopy, true);
+      document.removeEventListener("cut", onCut, true);
     };
   }, []);
 
-  return null;
+  return (
+    <div className="capture-watermark" aria-hidden="true">
+      <span>BLUXQ • CONTEÚDO PROTEGIDO</span>
+      <span>BLUXQ • CONTEÚDO PROTEGIDO</span>
+      <span>BLUXQ • CONTEÚDO PROTEGIDO</span>
+      <span>BLUXQ • CONTEÚDO PROTEGIDO</span>
+    </div>
+  );
 }
