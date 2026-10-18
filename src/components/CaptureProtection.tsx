@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import { useEffect } from "react";
 
 const SCREENSHOT_KEYS = new Set(["PrintScreen", "Snapshot"]);
 const MAC_SCREENSHOT_KEYS = new Set(["3", "4"]);
-const CAPTURE_TOOL_NAMES = ["obs", "loom", "xsplit", "streamlabs", "bandicam", "camtasia"];
 const BLACKOUT_ATTRIBUTE = "data-capture-shield";
 const BLACKOUT_VALUE = "black";
 
@@ -37,55 +35,12 @@ function blockDisplayCaptureApi() {
   try {
     mediaDevices.getDisplayMedia = rejectCapture;
   } catch {
-    // Alguns navegadores protegem a propriedade; a Permissions-Policy do servidor
+    // Alguns navegadores protegem a propriedade; o cabeçalho do servidor
     // continua bloqueando display capture independentemente desta barreira.
   }
 }
 
-function CaptureNoise() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    const context = canvas?.getContext("2d", { alpha: true });
-    if (!canvas || !context) return;
-
-    const render = () => {
-      const width = Math.max(1, Math.ceil(window.innerWidth / 4));
-      const height = Math.max(1, Math.ceil(window.innerHeight / 4));
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
-      }
-      const image = context.createImageData(width, height);
-      for (let index = 0; index < image.data.length; index += 4) {
-        if (Math.random() > 0.35) continue;
-        const value = Math.random() > 0.5 ? 255 : 0;
-        image.data[index] = value;
-        image.data[index + 1] = value;
-        image.data[index + 2] = value;
-        image.data[index + 3] = 42;
-      }
-      context.putImageData(image, 0, 0);
-    };
-
-    render();
-    const timer = window.setInterval(render, 140);
-    window.addEventListener("resize", render);
-    return () => {
-      window.clearInterval(timer);
-      window.removeEventListener("resize", render);
-    };
-  }, []);
-
-  return <canvas ref={canvasRef} className="capture-noise" aria-hidden="true" />;
-}
-
 export function CaptureProtection() {
-  const { session } = useAuth();
-  const [watermarkTime, setWatermarkTime] = useState(() => new Date().toISOString());
-  const [captureToolDetected, setCaptureToolDetected] = useState(false);
-
   useEffect(() => {
     blockDisplayCaptureApi();
 
@@ -161,55 +116,5 @@ export function CaptureProtection() {
     };
   }, []);
 
-  useEffect(() => {
-    const updateWatermark = () => setWatermarkTime(new Date().toISOString());
-    const timer = window.setInterval(updateWatermark, 30_000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const detectCaptureTools = async () => {
-      try {
-        const devices = await navigator.mediaDevices?.enumerateDevices();
-        const labels = (devices ?? []).map((device) => device.label.toLowerCase());
-        const detected = labels.some((label) =>
-          CAPTURE_TOOL_NAMES.some((name) => label.includes(name)),
-        );
-        setCaptureToolDetected(detected);
-        document.documentElement.toggleAttribute("data-capture-tool", detected);
-      } catch {
-        // Os labels podem ficar vazios sem permissão de mídia; nesse caso não há
-        // como identificar software externo pelo navegador.
-      }
-    };
-
-    void detectCaptureTools();
-    const timer = window.setInterval(detectCaptureTools, 15_000);
-    navigator.mediaDevices?.addEventListener("devicechange", detectCaptureTools);
-    return () => {
-      window.clearInterval(timer);
-      navigator.mediaDevices?.removeEventListener("devicechange", detectCaptureTools);
-      document.documentElement.removeAttribute("data-capture-tool");
-    };
-  }, []);
-
-  const userId = session?.user.id;
-  const watermark = userId ? `BLUXQ • ${userId} • ${watermarkTime}` : `BLUXQ • ${watermarkTime}`;
-
-  return (
-    <>
-      <div className="capture-blackout" aria-hidden="true" />
-      <CaptureNoise />
-      <div className="capture-watermark" aria-hidden="true">
-        <span>{watermark}</span>
-        <span>{watermark}</span>
-        <span>{watermark}</span>
-      </div>
-      <p className="capture-legal-notice" aria-hidden="true">
-        {captureToolDetected
-          ? "Ferramenta de captura detectada. O acesso visual foi restringido."
-          : "Uso, reprodução ou captura não autorizada podem violar os Termos da plataforma."}
-      </p>
-    </>
-  );
+  return <div className="capture-blackout" aria-hidden="true" />;
 }
