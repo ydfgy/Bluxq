@@ -99,6 +99,35 @@
   }
 }
 
+/* Camada de dissuasão para conteúdo sensível. Não impede captura externa do SO. */
+.capture-watermark {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  align-items: center;
+  justify-items: center;
+  pointer-events: none;
+  user-select: none;
+  overflow: hidden;
+  transform: rotate(-24deg) scale(1.25);
+  opacity: 0.045;
+  color: var(--color-foreground);
+  font-family: var(--font-mono);
+  font-size: clamp(0.65rem, 1.4vw, 0.9rem);
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+@media print {
+  body {
+    display: none !important;
+  }
+}
+
 @utility glow-bull {
   box-shadow: var(--glow-bull);
 }
