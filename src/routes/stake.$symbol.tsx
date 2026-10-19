@@ -1,8 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { BarChart3, Clock3, X } from "lucide-react";
+import { ArrowLeft, BarChart3, Clock3 } from "lucide-react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { MarketIcon } from "@/components/MarketIcon";
@@ -98,6 +98,7 @@ function PoolDetails() {
   const profit = value - deposited;
   const allocation = Number(amount) || 0;
   const balance = Number(profile?.balance ?? 0);
+  const amountIsValid = Number.isFinite(allocation) && allocation > 0;
   const firstNav = Number(insight?.daily?.[0]?.nav ?? 1);
   const return14d = firstNav ? (nav / firstNav - 1) * 100 : 0;
   const rateReference = totalAssets > 0 ? Number(pool?.fees_to_stakers ?? 0) / totalAssets : 0;
@@ -136,6 +137,12 @@ function PoolDetails() {
     );
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-8">
+      <Link
+        to="/stake"
+        className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" /> Voltar para todas as pools
+      </Link>
       <div className="flex items-center gap-3">
         <MarketIcon base={market?.icon ?? symbol.replace("USDT", "")} size="lg" />
         <div>
@@ -245,8 +252,9 @@ function PoolDetails() {
             </div>
             <Input
               type="number"
-              min="1"
-              max={balance}
+              min="0.01"
+              max={Math.max(balance, value)}
+              step="any"
               value={amount}
               onChange={(event) => setAmount(event.target.value)}
               placeholder="Quanto deseja alocar?"
@@ -264,9 +272,17 @@ function PoolDetails() {
                 </button>
               ))}
             </div>
+            {amount && !amountIsValid && (
+              <p className="text-xs text-bear">Informe um valor maior que zero.</p>
+            )}
+            {amountIsValid && allocation > balance && allocation > value && (
+              <p className="text-xs text-bear">
+                O valor supera seu saldo e sua posição nesta pool.
+              </p>
+            )}
             <div className="grid gap-2 sm:grid-cols-2">
               <Button
-                disabled={busy || !allocation || allocation > balance}
+                disabled={busy || !amountIsValid || allocation > balance}
                 onClick={() =>
                   run(() => stake({ data: { symbol, amount: allocation } }), "BLUX alocado na pool")
                 }
@@ -275,7 +291,7 @@ function PoolDetails() {
               </Button>
               <Button
                 variant="outline"
-                disabled={busy || !allocation || allocation > value}
+                disabled={busy || !amountIsValid || allocation > value}
                 onClick={() =>
                   run(() => unstake({ data: { symbol, amount: allocation } }), "Alocação retirada")
                 }

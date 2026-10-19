@@ -1,6 +1,7 @@
 import { Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { Moon, Sun } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
@@ -20,6 +21,39 @@ export function Logo() {
     <Link to="/" aria-label="Bluxq — início" className="flex h-10 w-32 shrink-0 items-center">
       <img src={BRAND_LOGO_SRC} alt="Bluxq" className="h-full w-full object-contain object-left" />
     </Link>
+  );
+}
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    const saved = window.localStorage.getItem("bluxq-theme");
+    const next = saved === "light" || saved === "dark" ? saved : "dark";
+    setTheme(next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.classList.toggle("light", next === "light");
+  }, []);
+
+  function toggleTheme() {
+    const next = theme === "dark" ? "light" : "dark";
+    setTheme(next);
+    window.localStorage.setItem("bluxq-theme", next);
+    document.documentElement.classList.toggle("dark", next === "dark");
+    document.documentElement.classList.toggle("light", next === "light");
+  }
+
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="icon"
+      onClick={toggleTheme}
+      aria-label={theme === "dark" ? "Ativar modo claro" : "Ativar modo escuro"}
+      title={theme === "dark" ? "Modo claro" : "Modo escuro"}
+    >
+      {theme === "dark" ? <Sun /> : <Moon />}
+    </Button>
   );
 }
 
@@ -66,6 +100,7 @@ export function Navbar() {
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-3">
+          <ThemeToggle />
           {session && profile ? (
             <>
               <Link
