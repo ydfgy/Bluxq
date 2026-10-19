@@ -250,6 +250,17 @@ function PoolDetails() {
               Você empresta BLUX para {market?.base ?? symbol}. As taxas das operações deste mercado
               aumentam o valor das suas cotas.
             </div>
+            {balance <= 0 && (
+              <div className="rounded-lg border border-gold/30 bg-gold/10 p-3 text-sm">
+                <div className="font-semibold text-gold">Saldo insuficiente para começar</div>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Sua Wallet está com $BX 0,00. Faça um depósito e volte para esta pool para alocar.
+                </p>
+                <Button asChild variant="outline" size="sm" className="mt-3">
+                  <Link to="/wallet">Ir para Wallet</Link>
+                </Button>
+              </div>
+            )}
             <Input
               type="number"
               min="0.01"
