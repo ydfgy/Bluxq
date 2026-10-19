@@ -259,7 +259,7 @@ function Trade() {
           },
           { price: Number(p.liq_price), color: "#f59e0b", title: "Liquidation" },
         ]),
-    [JSON.stringify(openPos.map((p) => p.id)), symbol],
+    [openPos, symbol],
   );
 
   async function go(side: "long" | "short") {

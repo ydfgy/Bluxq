@@ -5,6 +5,7 @@
     { "path": "/copy", "title": "Copy Trading" },
     { "path": "/referrals", "title": "Referrals" },
     { "path": "/stake", "title": "Stake" },
+    { "path": "/stake/:symbol", "title": "Pool details" },
     { "path": "/trade", "title": "Trade" },
     { "path": "/verify", "title": "Roblox verification" },
     { "path": "/wallet", "title": "Wallet" }

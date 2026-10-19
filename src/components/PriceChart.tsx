@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, Time } from "lightweight-charts";
 
 export type Line = { price: number; color: string; title: string };
 
@@ -29,15 +30,15 @@ export function PriceChart({
   onPrice: (p: number) => void;
 }) {
   const el = useRef<HTMLDivElement>(null);
-  const seriesRef = useRef<any>(null);
-  const priceLines = useRef<any[]>([]);
+  const seriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
+  const priceLines = useRef<IPriceLine[]>([]);
   const cb = useRef(onPrice);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   cb.current = onPrice;
 
   useEffect(() => {
-    let chart: any;
+    let chart: IChartApi | undefined;
     let ws: WebSocket | null = null;
     let dead = false;
     setStatus("loading");
@@ -62,25 +63,38 @@ export function PriceChart({
           wickDownColor: "#dc2626",
         });
         seriesRef.current = s;
+        const encodedSymbol = encodeURIComponent(symbol);
+        const encodedInterval = encodeURIComponent(interval);
         const r = await fetch(
-          `https://data-api.binance.vision/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=500`,
+          `https://data-api.binance.vision/api/v3/klines?symbol=${encodedSymbol}&interval=${encodedInterval}&limit=500`,
           { signal: AbortSignal.timeout(12000) },
         );
         if (!r.ok) throw new Error(`Binance respondeu ${r.status}`);
-        const k = (await r.json()) as any[];
-        if (dead) return;
-        if (!Array.isArray(k) || !k.length)
+        const k = (await r.json()) as unknown;
+        if (!Array.isArray(k) || !k.length || !k.every(Array.isArray)) {
           throw new Error("Nenhum candle disponível para este par");
-        s.setData(
-          k.map((x) => ({
-            time: Math.floor(Number(x[0]) / 1000),
-            open: +x[1],
-            high: +x[2],
-            low: +x[3],
-            close: +x[4],
-          })),
-        );
-        cb.current(+k[k.length - 1][4]);
+        }
+        const candles: CandlestickData<Time>[] = k.map((row) => {
+          const [timestamp, open, high, low, close] = row;
+          const values = [timestamp, open, high, low, close].map(Number);
+          const [timestampValue, openValue, highValue, lowValue, closeValue] = values;
+          if (
+            values.length !== 5 ||
+            values.some((value) => !Number.isFinite(value)) ||
+            values.some((value) => value <= 0)
+          ) {
+            throw new Error("A Binance retornou um candle inválido");
+          }
+          return {
+            time: Math.floor(timestampValue! / 1000) as Time,
+            open: openValue!,
+            high: highValue!,
+            low: lowValue!,
+            close: closeValue!,
+          };
+        });
+        s.setData(candles);
+        cb.current(candles[candles.length - 1]?.close ?? 0);
         setStatus("ready");
         ws = new WebSocket(
           `wss://data-stream.binance.vision/ws/${symbol.toLowerCase()}@kline_${interval}`,
@@ -88,15 +102,21 @@ export function PriceChart({
         ws.onmessage = (m) => {
           if (dead) return;
           try {
-            const d = JSON.parse(m.data).k;
+            const payload = JSON.parse(m.data) as {
+              k?: { t?: number; o?: string; h?: string; l?: string; c?: string };
+            };
+            const d = payload.k;
+            const values = [d?.t, d?.o, d?.h, d?.l, d?.c].map(Number);
+            const [timestampValue, openValue, highValue, lowValue, closeValue] = values;
+            if (values.some((value) => !Number.isFinite(value) || value <= 0)) return;
             s.update({
-              time: Math.floor(Number(d.t) / 1000),
-              open: +d.o,
-              high: +d.h,
-              low: +d.l,
-              close: +d.c,
+              time: Math.floor(timestampValue! / 1000) as Time,
+              open: openValue!,
+              high: highValue!,
+              low: lowValue!,
+              close: closeValue!,
             });
-            cb.current(+d.c);
+            cb.current(closeValue!);
           } catch {
             /* ignora mensagens inválidas do stream */
           }

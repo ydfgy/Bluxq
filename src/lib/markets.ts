@@ -26,8 +26,7 @@ export const MAX_LEVERAGE = 50;
 export const fmt = (n: number | string | null | undefined, d = 2) =>
   Number(n ?? 0).toLocaleString("pt-BR", { minimumFractionDigits: d, maximumFractionDigits: d });
 
-export const fmtPrice = (n: number) =>
-  n >= 100 ? fmt(n, 2) : n >= 1 ? fmt(n, 4) : fmt(n, 6);
+export const fmtPrice = (n: number) => (n >= 100 ? fmt(n, 2) : n >= 1 ? fmt(n, 4) : fmt(n, 6));
 
 export function calcPnl(side: string, qty: number, entry: number, price: number, margin: number) {
   const raw = side === "long" ? qty * (price - entry) : qty * (entry - price);

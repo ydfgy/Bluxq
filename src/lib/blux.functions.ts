@@ -75,7 +75,7 @@ function base64UrlDecode(value: string) {
 }
 
 async function signAdminToken(payload: string) {
-  const secret = `${process.env["ADMIN_PANEL_UUID"] ?? ""}:${process.env["ADMIN_PANEL_PIN"] ?? ""}`;
+  const secret = `${process.env["ADMIN_PANEL_UUID"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -663,15 +663,33 @@ export const verifyRoblox = createServerFn({ method: "POST" })
 export const authenticateAdminPanel = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) =>
-    z.object({ adminKey: z.string().uuid(), pin: z.string().regex(/^\d{6}$/) }).parse(d),
+    z
+      .object({
+        adminKey: z
+          .string()
+          .trim()
+          .min(16)
+          .max(128)
+          .regex(/^[A-Za-z0-9_-]+$/),
+        pin: z
+          .string()
+          .trim()
+          .regex(/^\d{6}$/),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     checkAdminAuthRateLimit(context.userId);
-    const expectedKey = process.env["ADMIN_PANEL_UUID"] ?? "";
-    const expectedPin = process.env["ADMIN_PANEL_PIN"] ?? "";
+    const expectedKey = process.env["ADMIN_PANEL_UUID"]?.trim() ?? "";
+    const expectedPin = process.env["ADMIN_PANEL_PIN"]?.trim() ?? "";
+    if (!expectedKey || !expectedPin) {
+      console.error("[Bluxq] Admin panel is not configured", {
+        hasUuid: Boolean(expectedKey),
+        hasPin: Boolean(expectedPin),
+      });
+      throw new Error("Painel administrativo não configurado no servidor");
+    }
     if (
-      !expectedKey ||
-      !expectedPin ||
       !constantTimeEqual(data.adminKey, expectedKey) ||
       !constantTimeEqual(data.pin, expectedPin)
     ) {

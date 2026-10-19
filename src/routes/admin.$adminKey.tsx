@@ -76,12 +76,20 @@ function Admin() {
     }
   }
 
-  const { data } = useQuery({
+  const { data, error: adminError } = useQuery({
     queryKey: ["admin", accessToken],
     enabled: !!isAdmin && !!accessToken,
     refetchInterval: 5000,
     queryFn: () => overview({ data: { adminAccessToken: accessToken! } }),
   });
+
+  useEffect(() => {
+    if (!(adminError instanceof Error)) return;
+    if (!adminError.message.includes("expirado ou inválido")) return;
+    sessionStorage.removeItem("bluxq-admin-access");
+    setAccessToken(null);
+    toast.error("A sessão administrativa expirou. Informe o PIN novamente.");
+  }, [adminError]);
 
   async function run(fn: () => Promise<unknown>, msg: string) {
     try {
