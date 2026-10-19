@@ -157,7 +157,7 @@ function PoolDetails() {
         <Card k="Taxas stakers" v={`$BX ${fmt(pool.fees_to_stakers)}`} />
       </div>
       <section className="space-y-5">
-        <div className="rounded-xl border bg-card p-5">
+        <div className="rounded-xl bg-card p-5">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="font-bold">Rendimento dos últimos 14 dias</h2>
@@ -188,7 +188,7 @@ function PoolDetails() {
             )}
           </div>
         </div>
-        <div className="rounded-xl border bg-card p-5">
+        <div className="rounded-xl bg-card p-5">
           <div className="mb-3 flex items-center justify-between">
             <h2 className="font-bold">Top 10 traders desta pool</h2>
             <span className="text-xs text-muted-foreground">últimos 14 dias</span>
@@ -206,7 +206,7 @@ function PoolDetails() {
               </thead>
               <tbody>
                 {(insight?.traders ?? []).map((trader) => (
-                  <tr key={trader.rank} className="border-t border-border/60">
+                  <tr key={trader.rank}>
                     <td className="py-2 font-mono text-primary">{trader.rank}</td>
                     <td className="py-2 font-semibold">{trader.displayName}</td>
                     <td className="py-2 font-mono">
@@ -233,7 +233,7 @@ function PoolDetails() {
             </table>
           </div>
         </div>
-        <section className="rounded-xl border bg-card p-5">
+        <section className="rounded-xl bg-card p-5">
           <div className="flex items-center justify-between">
             <h2 className="font-bold">Alocar nesta pool</h2>
             <span className="text-xs text-muted-foreground">Saldo $BX {fmt(balance)}</span>
@@ -283,7 +283,7 @@ function PoolDetails() {
                 Retirar
               </Button>
             </div>
-            <div className="space-y-1 border-t pt-3 text-sm">
+            <div className="space-y-1 pt-3 text-sm">
               <Row k="Sua posição" v={`$BX ${fmt(value)}`} />
               <Row k="Capital depositado" v={`$BX ${fmt(deposited)}`} />
               <Row
@@ -298,7 +298,7 @@ function PoolDetails() {
             </div>
           </div>
         </section>
-        <section className="rounded-xl border border-primary/20 bg-primary/5 p-5">
+        <section className="rounded-xl bg-primary/5 p-5">
           <div className="flex items-center gap-2 text-sm font-semibold">
             <Clock3 className="h-4 w-4 text-primary" />
             Simulação de retorno
@@ -331,7 +331,7 @@ function PoolDetails() {
 }
 function Card({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl bg-card p-4">
       <div className="text-xs text-muted-foreground">{k}</div>
       <div className="font-mono text-lg">{v}</div>
     </div>

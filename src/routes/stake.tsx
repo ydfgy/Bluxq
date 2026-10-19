@@ -77,7 +77,7 @@ function Stake() {
         <Card k="Janela de dados" v="14 dias" />
       </div>
       {isLoading ? (
-        <div className="rounded-xl border p-10 text-center text-muted-foreground">
+        <div className="rounded-xl bg-card/60 p-10 text-center text-muted-foreground">
           Carregando pools…
         </div>
       ) : (
@@ -90,7 +90,7 @@ function Stake() {
               <a
                 key={pool.symbol}
                 href={`/stake/${encodeURIComponent(pool.symbol)}`}
-                className="block rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
+                className="block rounded-xl bg-card p-4 text-left transition hover:bg-primary/5"
               >
                 <div className="flex items-center justify-between">
                   <span className="flex items-center gap-2 font-bold">
@@ -119,7 +119,7 @@ function Stake() {
         </section>
       )}
       {!isLoading && filtered.length === 0 && (
-        <div className="rounded-xl border p-10 text-center text-sm text-muted-foreground">
+        <div className="rounded-xl bg-card/60 p-10 text-center text-sm text-muted-foreground">
           Nenhuma pool encontrada.
         </div>
       )}
@@ -129,7 +129,7 @@ function Stake() {
 
 function Card({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl bg-card p-4">
       <div className="text-xs text-muted-foreground">{k}</div>
       <div className="font-mono text-lg">{v}</div>
     </div>

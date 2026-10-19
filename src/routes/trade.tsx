@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { CoinRain } from "@/components/AppShell";
+import { MarketIcon } from "@/components/MarketIcon";
 import { PriceChart, type Line } from "@/components/PriceChart";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -548,7 +549,7 @@ function Trade() {
                 onClick={() => setMarketMenuOpen((open) => !open)}
                 className="flex items-center gap-2 text-lg font-bold hover:text-primary"
               >
-                <MarketIcon base={selectedMarket.icon} />
+                <MarketIcon base={selectedMarket.icon} size="sm" />
                 <span>{selectedMarket.base}/USDT</span>
                 <ChevronDown className="h-4 w-4 text-muted-foreground" />
               </button>
@@ -577,7 +578,7 @@ function Trade() {
                         }}
                         className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm hover:bg-muted ${symbol === mk.symbol ? "bg-muted" : ""}`}
                       >
-                        <MarketIcon base={mk.icon} />
+                        <MarketIcon base={mk.icon} size="sm" />
                         <span className="min-w-0 flex-1">
                           <span className="block font-semibold">{mk.base}/USDT</span>
                           <span className="block text-xs text-muted-foreground">{mk.name}</span>
@@ -1168,25 +1169,6 @@ function Stat({ k, v }: { k: string; v: string }) {
       <div className="text-muted-foreground">{k}</div>
       <div className="font-mono">{v}</div>
     </div>
-  );
-}
-
-function MarketIcon({ base }: { base: string }) {
-  const [broken, setBroken] = useState(false);
-  return (
-    <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 font-mono text-[9px] text-muted-foreground">
-      {broken ? (
-        <span aria-hidden="true">{base.slice(0, 3).toUpperCase()}</span>
-      ) : (
-        <img
-          src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base.toLowerCase()}.png`}
-          alt={`${base} icon`}
-          className="h-7 w-7 rounded-full object-contain"
-          loading="lazy"
-          onError={() => setBroken(true)}
-        />
-      )}
-    </span>
   );
 }
 
