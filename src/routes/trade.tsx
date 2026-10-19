@@ -2,7 +2,17 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { ArrowLeftRight, ChevronDown, ChevronLeft, ChevronRight, Search, X } from "lucide-react";
+import {
+  ArrowLeftRight,
+  BarChart3,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Search,
+  ShieldCheck,
+  TrendingUp,
+  X,
+} from "lucide-react";
 import { toast } from "sonner";
 import { CoinRain } from "@/components/AppShell";
 import { PriceChart, type Line } from "@/components/PriceChart";
@@ -125,7 +135,7 @@ function Trade() {
   const [marketSearch, setMarketSearch] = useState("");
   const [orderBookOpen, setOrderBookOpen] = useState(true);
   const [orderBookSide, setOrderBookSide] = useState<"left" | "right">("right");
-  const [tab, setTab] = useState<"open" | "history">("open");
+  const [tab, setTab] = useState<"open" | "history" | "top">("open");
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = useState(true);
@@ -165,6 +175,20 @@ function Trade() {
   });
   const openPos = positions.filter((p) => p.status === "open");
   const history = positions.filter((p) => p.status !== "open");
+  const realizedPnl = history.reduce((total, position) => total + Number(position.pnl ?? 0), 0);
+  const realizedMargin = history.reduce(
+    (total, position) => total + Number(position.margin ?? 0),
+    0,
+  );
+  const realizedPct = realizedMargin ? (realizedPnl / realizedMargin) * 100 : 0;
+  const winningTrades = history.filter((position) => Number(position.pnl ?? 0) > 0).length;
+  const performanceValues = history
+    .slice()
+    .reverse()
+    .reduce<number[]>((values, position) => {
+      values.push((values.at(-1) ?? 0) + Number(position.pnl ?? 0));
+      return values;
+    }, []);
   const t = tickers?.[symbol];
   const currentPrice = price || Number(t?.lastPrice ?? 0);
   const orderBookDepthMax = Math.max(
@@ -594,13 +618,17 @@ function Trade() {
         {/* posições */}
         <div className="rounded-xl bg-black">
           <div className="flex items-center gap-4 px-3">
-            {(["open", "history"] as const).map((k) => (
+            {(["open", "history", "top"] as const).map((k) => (
               <button
                 key={k}
                 onClick={() => setTab(k)}
                 className={`py-2 text-sm ${tab === k ? "border-b-2 border-primary font-semibold" : "text-muted-foreground"}`}
               >
-                {k === "open" ? `Open positions (${openPos.length})` : "History"}
+                {k === "open"
+                  ? `Open positions (${openPos.length})`
+                  : k === "history"
+                    ? "History"
+                    : "Top trades"}
               </button>
             ))}
             {tab === "open" && openPos.length > 0 && (
@@ -625,83 +653,99 @@ function Trade() {
               </div>
             )}
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-xs text-muted-foreground">
-                <tr className="text-left">
-                  <th className="p-2">Par</th>
-                  <th>Lado</th>
-                  <th>Margem</th>
-                  <th>Tamanho</th>
-                  <th>Entrada</th>
-                  <th>{tab === "open" ? "Atual" : "Saída"}</th>
-                  <th>Liquidation</th>
-                  <th>PnL</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody className="font-mono">
-                {(tab === "open" ? openPos : history).map((p) => {
-                  const px = tab === "open" ? livePx(p.symbol) : Number(p.exit_price ?? 0);
-                  const pnl =
-                    tab === "open"
-                      ? calcPnl(p.side, Number(p.qty), Number(p.entry_price), px, Number(p.margin))
-                      : Number(p.pnl ?? 0);
-                  const roe = (pnl / Number(p.margin)) * 100;
-                  return (
-                    <tr
-                      key={p.id}
-                      onClick={() => tab === "open" && setSelectedPosition(p as PositionDetails)}
-                      className="cursor-pointer hover:bg-muted/40"
-                    >
-                      <td className="p-2 font-sans font-semibold">
-                        {p.symbol.replace("USDT", "")}
-                      </td>
-                      <td className={p.side === "long" ? "text-bull" : "text-bear"}>
-                        {p.side.toUpperCase()} {p.leverage}x
-                      </td>
-                      <td>{fmt(p.margin)}</td>
-                      <td>{fmt(Number(p.margin) * p.leverage)}</td>
-                      <td>{fmtPrice(Number(p.entry_price))}</td>
-                      <td>{px ? fmtPrice(px) : "—"}</td>
-                      <td className="text-gold">{fmtPrice(Number(p.liq_price))}</td>
-                      <td className={pnl >= 0 ? "text-bull" : "text-bear"}>
-                        {pnl >= 0 ? "+" : ""}
-                        {fmt(pnl)} <span className="text-xs">({roe.toFixed(1)}%)</span>
-                      </td>
-                      <td className="pr-2 text-right">
-                        {tab === "open" ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              void doClose(p.id);
-                            }}
-                          >
-                            Fechar
-                          </Button>
-                        ) : (
-                          <span
-                            className={`font-sans text-xs ${p.status === "liquidated" ? "text-bear" : "text-muted-foreground"}`}
-                          >
-                            {p.status === "liquidated" ? "Liquidada" : "Fechada"}
-                          </span>
-                        )}
+          {tab === "top" ? (
+            <TopTrades
+              history={history}
+              realizedPnl={realizedPnl}
+              realizedPct={realizedPct}
+              winningTrades={winningTrades}
+              performanceValues={performanceValues}
+            />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-xs text-muted-foreground">
+                  <tr className="text-left">
+                    <th className="p-2">Par</th>
+                    <th>Lado</th>
+                    <th>Margem</th>
+                    <th>Tamanho</th>
+                    <th>Entrada</th>
+                    <th>{tab === "open" ? "Atual" : "Saída"}</th>
+                    <th>Liquidation</th>
+                    <th>PnL</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody className="font-mono">
+                  {(tab === "open" ? openPos : history).map((p) => {
+                    const px = tab === "open" ? livePx(p.symbol) : Number(p.exit_price ?? 0);
+                    const pnl =
+                      tab === "open"
+                        ? calcPnl(
+                            p.side,
+                            Number(p.qty),
+                            Number(p.entry_price),
+                            px,
+                            Number(p.margin),
+                          )
+                        : Number(p.pnl ?? 0);
+                    const roe = (pnl / Number(p.margin)) * 100;
+                    return (
+                      <tr
+                        key={p.id}
+                        onClick={() => tab === "open" && setSelectedPosition(p as PositionDetails)}
+                        className="cursor-pointer hover:bg-muted/40"
+                      >
+                        <td className="p-2 font-sans font-semibold">
+                          {p.symbol.replace("USDT", "")}
+                        </td>
+                        <td className={p.side === "long" ? "text-bull" : "text-bear"}>
+                          {p.side.toUpperCase()} {p.leverage}x
+                        </td>
+                        <td>{fmt(p.margin)}</td>
+                        <td>{fmt(Number(p.margin) * p.leverage)}</td>
+                        <td>{fmtPrice(Number(p.entry_price))}</td>
+                        <td>{px ? fmtPrice(px) : "—"}</td>
+                        <td className="text-gold">{fmtPrice(Number(p.liq_price))}</td>
+                        <td className={pnl >= 0 ? "text-bull" : "text-bear"}>
+                          {pnl >= 0 ? "+" : ""}
+                          {fmt(pnl)} <span className="text-xs">({roe.toFixed(1)}%)</span>
+                        </td>
+                        <td className="pr-2 text-right">
+                          {tab === "open" ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                void doClose(p.id);
+                              }}
+                            >
+                              Fechar
+                            </Button>
+                          ) : (
+                            <span
+                              className={`font-sans text-xs ${p.status === "liquidated" ? "text-bear" : "text-muted-foreground"}`}
+                            >
+                              {p.status === "liquidated" ? "Liquidada" : "Fechada"}
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(tab === "open" ? openPos : history).length === 0 && (
+                    <tr>
+                      <td colSpan={9} className="p-6 text-center font-sans text-muted-foreground">
+                        Nada aqui ainda.
                       </td>
                     </tr>
-                  );
-                })}
-                {(tab === "open" ? openPos : history).length === 0 && (
-                  <tr>
-                    <td colSpan={9} className="p-6 text-center font-sans text-muted-foreground">
-                      Nada aqui ainda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       </section>
 
@@ -943,6 +987,148 @@ function Trade() {
   );
 }
 
+type TopTradePosition = {
+  symbol: string;
+  side: string;
+  pnl: number | string | null;
+  margin: number | string;
+  leverage: number;
+};
+
+function TopTrades({
+  history,
+  realizedPnl,
+  realizedPct,
+  winningTrades,
+  performanceValues,
+}: {
+  history: TopTradePosition[];
+  realizedPnl: number;
+  realizedPct: number;
+  winningTrades: number;
+  performanceValues: number[];
+}) {
+  const width = 560;
+  const height = 190;
+  const pad = 18;
+  const maxAbs = Math.max(1, ...performanceValues.map((value) => Math.abs(value)));
+  const points = performanceValues
+    .map((value, index) => {
+      const x = pad + (index / Math.max(1, performanceValues.length - 1)) * (width - pad * 2);
+      const y = height / 2 - (value / maxAbs) * (height / 2 - pad);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    })
+    .join(" ");
+  const bestTrade = history.reduce<TopTradePosition | null>(
+    (best, position) =>
+      !best || Number(position.pnl ?? 0) > Number(best.pnl ?? 0) ? position : best,
+    null,
+  );
+  const winRate = history.length ? (winningTrades / history.length) * 100 : 0;
+
+  return (
+    <div className="grid gap-4 p-3 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+        <MetricCard
+          icon={<TrendingUp className="h-4 w-4" />}
+          label="Resultado total"
+          value={`${realizedPnl >= 0 ? "+" : ""}${fmt(realizedPnl)} $BX`}
+          tone={realizedPnl >= 0 ? "bull" : "bear"}
+        />
+        <MetricCard
+          icon={<BarChart3 className="h-4 w-4" />}
+          label="Percentual de lucro"
+          value={`${realizedPct >= 0 ? "+" : ""}${realizedPct.toFixed(2)}%`}
+          tone={realizedPct >= 0 ? "bull" : "bear"}
+        />
+        <MetricCard
+          icon={<ShieldCheck className="h-4 w-4" />}
+          label="Taxa de acerto"
+          value={`${winRate.toFixed(1)}% (${winningTrades}/${history.length})`}
+        />
+        <div className="rounded-lg border border-border/70 bg-card/70 p-3">
+          <div className="text-xs text-muted-foreground">Melhor operação</div>
+          <div className="mt-1 font-mono text-sm text-gold">
+            {bestTrade
+              ? `${bestTrade.symbol.replace("USDT", "")}/${bestTrade.side.toUpperCase()} · +${fmt(Number(bestTrade.pnl ?? 0))} $BX`
+              : "Nenhuma operação fechada"}
+          </div>
+        </div>
+      </div>
+      <div className="rounded-lg border border-border/70 bg-card/70 p-3">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <div className="text-sm font-semibold">Evolução do resultado</div>
+            <div className="text-xs text-muted-foreground">
+              PnL acumulado das operações fechadas
+            </div>
+          </div>
+          <span className="font-mono text-xs text-muted-foreground">{history.length} trades</span>
+        </div>
+        {performanceValues.length ? (
+          <svg
+            viewBox={`0 0 ${width} ${height}`}
+            className="h-44 w-full"
+            role="img"
+            aria-label="Gráfico de evolução do lucro"
+          >
+            <line
+              x1={pad}
+              x2={width - pad}
+              y1={height / 2}
+              y2={height / 2}
+              stroke="currentColor"
+              strokeOpacity="0.2"
+            />
+            <polyline
+              points={points}
+              fill="none"
+              stroke={realizedPnl >= 0 ? "#16a34a" : "#dc2626"}
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        ) : (
+          <div className="grid h-44 place-items-center text-center text-sm text-muted-foreground">
+            Feche sua primeira operação para visualizar o gráfico.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: ReactNode;
+  label: string;
+  value: string;
+  tone?: "bull" | "bear";
+}) {
+  return (
+    <div className="rounded-lg border border-border/70 bg-card/70 p-3">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span
+          className={tone === "bear" ? "text-bear" : tone === "bull" ? "text-bull" : "text-primary"}
+        >
+          {icon}
+        </span>
+        {label}
+      </div>
+      <div
+        className={`mt-1 font-mono text-lg font-semibold ${tone === "bear" ? "text-bear" : tone === "bull" ? "text-bull" : "text-foreground"}`}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
 function OrderRow({
   row,
   side,
@@ -979,14 +1165,20 @@ function Stat({ k, v }: { k: string; v: string }) {
 }
 
 function MarketIcon({ base }: { base: string }) {
+  const [broken, setBroken] = useState(false);
   return (
     <span className="grid h-7 w-7 shrink-0 place-items-center overflow-hidden rounded-full bg-white/10 font-mono text-[9px] text-muted-foreground">
-      <img
-        src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base}.png`}
-        alt=""
-        className="h-7 w-7 rounded-full"
-        loading="lazy"
-      />
+      {broken ? (
+        <span aria-hidden="true">{base.slice(0, 3).toUpperCase()}</span>
+      ) : (
+        <img
+          src={`https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@master/128/color/${base.toLowerCase()}.png`}
+          alt={`${base} icon`}
+          className="h-7 w-7 rounded-full object-contain"
+          loading="lazy"
+          onError={() => setBroken(true)}
+        />
+      )}
     </span>
   );
 }
