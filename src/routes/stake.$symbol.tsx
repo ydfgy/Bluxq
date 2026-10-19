@@ -1,8 +1,8 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ArrowLeft, BarChart3, Clock3, X } from "lucide-react";
+import { BarChart3, Clock3, X } from "lucide-react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { MarketIcon } from "@/components/MarketIcon";
@@ -43,7 +43,6 @@ type Insight = {
 
 function PoolDetails() {
   const { symbol } = Route.useParams();
-  const navigate = useNavigate();
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
@@ -137,14 +136,6 @@ function PoolDetails() {
     );
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-8">
-      <button
-        type="button"
-        onClick={() => navigate({ to: "/stake" })}
-        className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Voltar para pools
-      </button>
       <div className="flex items-center gap-3">
         <MarketIcon base={market?.icon ?? symbol.replace("USDT", "")} size="lg" />
         <div>

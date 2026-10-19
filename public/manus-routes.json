@@ -3,7 +3,6 @@
     { "path": "/", "title": "Home" },
     { "path": "/auth", "title": "Authentication" },
     { "path": "/copy", "title": "Copy Trading" },
-    { "path": "/convert", "title": "Conversor B$" },
     { "path": "/referrals", "title": "Referrals" },
     { "path": "/stake", "title": "Stake" },
     { "path": "/trade", "title": "Trade" },
