@@ -20,6 +20,7 @@ import { Route as TradeRouteImport } from './routes/trade'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as AdminAdminKeyRouteImport } from './routes/admin.$adminKey'
+import { Route as StakeSymbolRouteImport } from './routes/stake.$symbol'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -76,6 +77,11 @@ const AdminAdminKeyRoute = AdminAdminKeyRouteImport.update({
   path: '/admin/$adminKey',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StakeSymbolRoute = StakeSymbolRouteImport.update({
+  id: '/$symbol',
+  path: '/$symbol',
+  getParentRoute: () => StakeRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -83,12 +89,13 @@ export interface FileRoutesByFullPath {
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
-  '/stake': typeof StakeRoute
+  '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
+  '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -96,12 +103,13 @@ export interface FileRoutesByTo {
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
-  '/stake': typeof StakeRoute
+  '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
+  '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -110,12 +118,13 @@ export interface FileRoutesById {
   '/convert': typeof ConvertRoute
   '/copy': typeof CopyRoute
   '/referrals': typeof ReferralsRoute
-  '/stake': typeof StakeRoute
+  '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/admin/$adminKey': typeof AdminAdminKeyRoute
+  '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -131,6 +140,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
+    | '/stake/$symbol'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -144,6 +154,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
+    | '/stake/$symbol'
   id:
     | '__root__'
     | '/'
@@ -157,6 +168,7 @@ export interface FileRouteTypes {
     | '/verify'
     | '/wallet'
     | '/admin/$adminKey'
+    | '/stake/$symbol'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -165,7 +177,7 @@ export interface RootRouteChildren {
   ConvertRoute: typeof ConvertRoute
   CopyRoute: typeof CopyRoute
   ReferralsRoute: typeof ReferralsRoute
-  StakeRoute: typeof StakeRoute
+  StakeRoute: typeof StakeRouteWithChildren
   TermsRoute: typeof TermsRoute
   TradeRoute: typeof TradeRoute
   VerifyRoute: typeof VerifyRoute
@@ -252,8 +264,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAdminKeyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/stake/$symbol': {
+      id: '/stake/$symbol'
+      path: '/$symbol'
+      fullPath: '/stake/$symbol'
+      preLoaderRoute: typeof StakeSymbolRouteImport
+      parentRoute: typeof StakeRoute
+    }
   }
 }
+
+interface StakeRouteChildren {
+  StakeSymbolRoute: typeof StakeSymbolRoute
+}
+
+const StakeRouteChildren: StakeRouteChildren = {
+  StakeSymbolRoute: StakeSymbolRoute,
+}
+
+const StakeRouteWithChildren = StakeRoute._addFileChildren(StakeRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -261,7 +290,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConvertRoute: ConvertRoute,
   CopyRoute: CopyRoute,
   ReferralsRoute: ReferralsRoute,
-  StakeRoute: StakeRoute,
+  StakeRoute: StakeRouteWithChildren,
   TermsRoute: TermsRoute,
   TradeRoute: TradeRoute,
   VerifyRoute: VerifyRoute,
