@@ -313,6 +313,106 @@ export const unstake = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const marketStake = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    amount.extend({ symbol: z.string().refine((s) => SYMBOLS.includes(s)) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_market_stake", {
+      _user: context.userId,
+      _symbol: data.symbol,
+      _amount: data.amount,
+    });
+    rpcError(error);
+    return { ok: true };
+  });
+
+export const marketUnstake = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    amount.extend({ symbol: z.string().refine((s) => SYMBOLS.includes(s)) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_market_unstake", {
+      _user: context.userId,
+      _symbol: data.symbol,
+      _amount: data.amount,
+    });
+    rpcError(error);
+    return { ok: true };
+  });
+
+export const getMarketPoolInsights = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ symbol: z.string().refine((s) => SYMBOLS.includes(s)) }).parse(d))
+  .handler(async ({ data }) => {
+    const sb = await admin();
+    const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString();
+    const [daily, positions] = await Promise.all([
+      sb
+        .from("market_pool_daily")
+        .select("day, total_assets, total_reserved, total_shares, fees_to_stakers, nav")
+        .eq("symbol", data.symbol)
+        .gte("day", since.slice(0, 10))
+        .order("day", { ascending: true })
+        .limit(14),
+      sb
+        .from("positions")
+        .select("user_id, margin, leverage, pnl, fee, status, opened_at, closed_at")
+        .eq("symbol", data.symbol)
+        .gte("opened_at", since)
+        .order("opened_at", { ascending: false })
+        .limit(1000),
+    ]);
+    rpcError(daily.error);
+    rpcError(positions.error);
+    const byUser = new Map<
+      string,
+      { trades: number; open: number; volume: number; pnl: number; fees: number }
+    >();
+    for (const row of positions.data ?? []) {
+      const current = byUser.get(row.user_id) ?? { trades: 0, open: 0, volume: 0, pnl: 0, fees: 0 };
+      current.trades += 1;
+      current.open += row.status === "open" ? 1 : 0;
+      current.volume += Number(row.margin ?? 0) * Number(row.leverage ?? 0);
+      current.pnl += Number(row.pnl ?? 0);
+      current.fees += Number(row.fee ?? 0);
+      byUser.set(row.user_id, current);
+    }
+    const ids = [...byUser.keys()];
+    const { data: profiles, error: profilesError } = ids.length
+      ? await sb
+          .from("profiles")
+          .select("id, roblox_username, roblox_display_name, avatar_url, is_anonymous")
+          .in("id", ids)
+          .limit(1000)
+      : { data: [], error: null };
+    rpcError(profilesError);
+    const profileMap = new Map((profiles ?? []).map((profile) => [profile.id, profile]));
+    const traders = ids
+      .map((id) => ({ userId: id, ...byUser.get(id)!, profile: profileMap.get(id) }))
+      .sort((a, b) => b.volume - a.volume)
+      .slice(0, 10)
+      .map((trader, index) => ({
+        rank: index + 1,
+        trades: trader.trades,
+        open: trader.open,
+        volume: trader.volume,
+        pnl: trader.pnl,
+        fees: trader.fees,
+        displayName: trader.profile?.is_anonymous
+          ? "Trader anônimo"
+          : trader.profile?.roblox_display_name || trader.profile?.roblox_username || "Trader",
+        avatarUrl: trader.profile?.is_anonymous ? null : (trader.profile?.avatar_url ?? null),
+      }));
+    return { daily: daily.data ?? [], traders };
+  });
+
 export const claimAffiliate = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

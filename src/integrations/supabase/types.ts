@@ -252,6 +252,56 @@ export type Database = {
         };
         Relationships: [];
       };
+      market_pools: {
+        Row: {
+          symbol: string;
+          total_assets: number;
+          total_shares: number;
+          total_reserved: number;
+          platform_revenue: number;
+          fees_to_stakers: number;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["market_pools"]["Row"]> & { symbol: string };
+        Update: Partial<Database["public"]["Tables"]["market_pools"]["Row"]>;
+        Relationships: [];
+      };
+      market_stakes: {
+        Row: {
+          user_id: string;
+          symbol: string;
+          shares: number;
+          deposited: number;
+          started_at: string;
+          last_reward_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["market_stakes"]["Row"]> & {
+          user_id: string;
+          symbol: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["market_stakes"]["Row"]>;
+        Relationships: [];
+      };
+      market_pool_daily: {
+        Row: {
+          symbol: string;
+          day: string;
+          total_assets: number;
+          total_reserved: number;
+          total_shares: number;
+          fees_to_stakers: number;
+          platform_revenue: number;
+          nav: number;
+          created_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["market_pool_daily"]["Row"]> & {
+          symbol: string;
+          day: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["market_pool_daily"]["Row"]>;
+        Relationships: [];
+      };
       user_roles: {
         Row: {
           id: string;
@@ -381,6 +431,15 @@ export type Database = {
         Args: { _amount: number; _user: string };
         Returns: undefined;
       };
+      fn_market_stake: {
+        Args: { _amount: number; _symbol: string; _user: string };
+        Returns: undefined;
+      };
+      fn_market_unstake: {
+        Args: { _amount: number; _symbol: string; _user: string };
+        Returns: undefined;
+      };
+      fn_snapshot_all_market_pools: { Args: Record<string, never>; Returns: undefined };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];

@@ -142,10 +142,17 @@ function Trade() {
   const { data: tickers } = useTickers();
   const orderBook = useOrderBook(symbol);
   const { data: pool } = useQuery({
-    queryKey: ["pool"],
+    queryKey: ["market-pool", symbol],
     refetchInterval: 5000,
-    queryFn: async () =>
-      (await supabase.from("pool").select("total_assets,total_reserved").single()).data,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_pools")
+        .select("total_assets,total_reserved")
+        .eq("symbol", symbol)
+        .single();
+      if (error) throw error;
+      return data;
+    },
   });
   const open = useServerFn(openPosition);
   const close = useServerFn(closePosition);
