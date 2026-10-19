@@ -86,11 +86,11 @@ function Stake() {
             const reserved = Number(pool.total_reserved);
             const assets = Number(pool.total_assets);
             return (
-              <button
+              <Link
                 key={pool.symbol}
-                type="button"
-
-                className="rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
+                to="/stake/$symbol"
+                params={{ symbol: pool.symbol }}
+                className="block rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-bold">{market?.base ?? pool.symbol}</span>
@@ -109,7 +109,7 @@ function Stake() {
                 <div className="mt-1 text-[10px] text-muted-foreground">
                   {fmt(reserved)} reservado
                 </div>
-              </button>
+              </Link>
             );
           })}
         </section>
