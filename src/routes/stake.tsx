@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
 import { Protected } from "@/components/AppShell";
+import { MarketIcon } from "@/components/MarketIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { fmt, MARKETS } from "@/lib/markets";
 import { Input } from "@/components/ui/input";
@@ -93,7 +94,10 @@ function Stake() {
                 className="block rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-bold">{market?.base ?? pool.symbol}</span>
+                  <span className="flex items-center gap-2 font-bold">
+                    <MarketIcon base={market?.icon ?? pool.symbol.replace("USDT", "")} size="sm" />
+                    {market?.base ?? pool.symbol}
+                  </span>
                   <span className="text-[10px] uppercase text-bull">Ativa</span>
                 </div>
                 <div className="mt-3 font-mono text-lg">$BX {fmt(assets)}</div>

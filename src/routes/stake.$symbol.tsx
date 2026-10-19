@@ -5,6 +5,7 @@ import { useState } from "react";
 import { ArrowLeft, BarChart3, Clock3, X } from "lucide-react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
+import { MarketIcon } from "@/components/MarketIcon";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getMarketPoolInsights, marketStake, marketUnstake } from "@/lib/blux.functions";
@@ -53,7 +54,11 @@ function PoolDetails() {
   const [duration, setDuration] = useState(30);
   const [busy, setBusy] = useState(false);
   const market = MARKETS.find((item) => item.symbol === symbol);
-  const { data: pool } = useQuery({
+  const {
+    data: pool,
+    isLoading: poolLoading,
+    isError: poolError,
+  } = useQuery({
     queryKey: ["market-pool", symbol],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -118,9 +123,17 @@ function PoolDetails() {
     }
   }
 
-  if (!pool)
+  if (poolLoading)
     return (
-      <main className="mx-auto max-w-5xl p-6 text-muted-foreground">Pool não encontrada.</main>
+      <main className="mx-auto max-w-5xl p-6 text-muted-foreground">
+        Carregando informações da pool…
+      </main>
+    );
+  if (poolError || !pool)
+    return (
+      <main className="mx-auto max-w-5xl p-6 text-muted-foreground">
+        Pool não encontrada ou indisponível no momento.
+      </main>
     );
   return (
     <main className="mx-auto max-w-5xl space-y-5 px-4 py-8">
@@ -132,14 +145,19 @@ function PoolDetails() {
         <ArrowLeft className="h-4 w-4" />
         Voltar para pools
       </button>
-      <div>
-        <div className="text-xs uppercase tracking-[0.16em] text-primary">
-          Pool {market?.base ?? symbol}
+      <div className="flex items-center gap-3">
+        <MarketIcon base={market?.icon ?? symbol.replace("USDT", "")} size="lg" />
+        <div>
+          <div className="text-xs uppercase tracking-[0.16em] text-primary">
+            Pool {market?.base ?? symbol.replace("USDT", "")}
+          </div>
+          <h1 className="mt-1 text-2xl font-bold">
+            {market?.base ?? symbol.replace("USDT", "")}/USDT
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Informações, rendimento e alocação desta pool.
+          </p>
         </div>
-        <h1 className="mt-1 text-2xl font-bold">{market?.name ?? symbol}/USDT</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Detalhes exclusivos desta pool. As métricas abaixo não misturam outros mercados.
-        </p>
       </div>
       <div className="grid gap-3 sm:grid-cols-4">
         <Card k="Total na pool" v={`$BX ${fmt(totalAssets)}`} />
