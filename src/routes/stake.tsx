@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
@@ -86,9 +86,10 @@ function Stake() {
             const reserved = Number(pool.total_reserved);
             const assets = Number(pool.total_assets);
             return (
-              <a
+              <Link
                 key={pool.symbol}
-                href={`/stake/${pool.symbol}`}
+                to="/stake/$symbol"
+                params={{ symbol: pool.symbol }}
                 className="block rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
               >
                 <div className="flex items-center justify-between">
@@ -109,7 +110,7 @@ function Stake() {
                   {fmt(reserved)} reservado
                 </div>
                 <div className="mt-3 text-xs font-semibold text-primary">Abrir pool →</div>
-              </a>
+              </Link>
             );
           })}
         </section>
