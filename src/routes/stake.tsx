@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { Search, X } from "lucide-react";
@@ -19,7 +19,6 @@ export const Route = createFileRoute("/stake")({
 type Pool = { symbol: string; total_assets: number; total_reserved: number };
 
 function Stake() {
-  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const { data: pools = [], isLoading } = useQuery({
     queryKey: ["market-pools"],
@@ -90,7 +89,7 @@ function Stake() {
               <button
                 key={pool.symbol}
                 type="button"
-                onClick={() => navigate({ to: "/stake/$symbol", params: { symbol: pool.symbol } })}
+
                 className="rounded-xl border bg-card p-4 text-left transition hover:border-primary/70 hover:bg-primary/5"
               >
                 <div className="flex items-center justify-between">
