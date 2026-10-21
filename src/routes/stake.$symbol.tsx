@@ -42,7 +42,8 @@ type Insight = {
 };
 
 function PoolDetails() {
-  const { symbol } = Route.useParams();
+  const { symbol: rawSymbol } = Route.useParams();
+  const symbol = rawSymbol.trim().toUpperCase();
   const { session } = useAuth();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
@@ -53,12 +54,14 @@ function PoolDetails() {
   const [duration, setDuration] = useState(30);
   const [busy, setBusy] = useState(false);
   const market = MARKETS.find((item) => item.symbol === symbol);
+  const isKnownMarket = Boolean(market);
   const {
     data: pool,
     isLoading: poolLoading,
     isError: poolError,
   } = useQuery({
     queryKey: ["market-pool", symbol],
+    enabled: isKnownMarket,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("market_pools")
@@ -71,7 +74,7 @@ function PoolDetails() {
   });
   const { data: mine } = useQuery({
     queryKey: ["market-stake", session?.user.id, symbol],
-    enabled: Boolean(session),
+    enabled: Boolean(session) && isKnownMarket,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("market_stakes")
@@ -85,7 +88,7 @@ function PoolDetails() {
   });
   const { data: insight } = useQuery({
     queryKey: ["market-insights", symbol],
-    enabled: Boolean(session),
+    enabled: Boolean(session) && isKnownMarket,
     refetchInterval: 15000,
     queryFn: () => readInsights({ data: { symbol } }) as Promise<Insight>,
   });
@@ -123,6 +126,24 @@ function PoolDetails() {
     }
   }
 
+  if (!isKnownMarket)
+    return (
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-8">
+        <Link
+          to="/stake"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" /> Voltar para todas as pools
+        </Link>
+        <section className="rounded-xl border border-bear/30 bg-card p-6">
+          <h1 className="text-xl font-bold">Moeda não encontrada</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            O símbolo “{rawSymbol}” não corresponde a uma pool disponível. Escolha uma moeda na
+            lista de Stake para abrir uma pool válida.
+          </p>
+        </section>
+      </main>
+    );
   if (poolLoading)
     return (
       <main className="mx-auto max-w-5xl p-6 text-muted-foreground">
@@ -131,8 +152,20 @@ function PoolDetails() {
     );
   if (poolError || !pool)
     return (
-      <main className="mx-auto max-w-5xl p-6 text-muted-foreground">
-        Pool não encontrada ou indisponível no momento.
+      <main className="mx-auto max-w-5xl space-y-4 px-4 py-8">
+        <Link
+          to="/stake"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" /> Voltar para todas as pools
+        </Link>
+        <section className="rounded-xl border border-bear/30 bg-card p-6">
+          <h1 className="text-xl font-bold">Não foi possível abrir esta pool</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            A moeda é válida, mas os dados da pool não responderam. Volte à lista e tente abrir
+            novamente.
+          </p>
+        </section>
       </main>
     );
   return (
