@@ -41,6 +41,7 @@ function StakeDetails() {
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
+  const [action, setAction] = useState<"stake" | "unstake">("stake");
   const [busy, setBusy] = useState(false);
   const stake = useServerFn(marketStake);
   const unstake = useServerFn(marketUnstake);
@@ -92,15 +93,18 @@ function StakeDetails() {
   const reserved = Number(pool?.total_reserved ?? 0);
   const available = Math.max(0, totalAssets - reserved);
   const balance = Number(profile?.balance ?? 0);
+  const positionValue = Number(position?.deposited ?? 0);
   const numericAmount = Number(amount);
   const amountError =
     amount && (!Number.isFinite(numericAmount) || numericAmount <= 0)
       ? "Informe um valor maior que zero."
-      : numericAmount > balance
+      : action === "stake" && numericAmount > balance
         ? "O valor excede seu saldo disponível."
-        : numericAmount > available
+        : action === "stake" && numericAmount > available
           ? "O valor excede a liquidez disponível da pool."
-          : "";
+          : action === "unstake" && numericAmount > positionValue
+            ? "O valor excede sua posição nesta pool."
+            : "";
 
   async function run(action: "stake" | "unstake") {
     const value = Number(amount);
@@ -164,29 +168,35 @@ function StakeDetails() {
         />
       </section>
 
-      <section className="overflow-hidden rounded-xl border bg-transparent">
-        <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
-          <BarChart3 className="h-4 w-4 text-primary" />
-          Volume histórico da pool ($BX)
-        </div>
-        <div className="h-[300px] bg-black px-4 py-5 sm:h-[360px]">
-          <PoolVolumeChart data={history} current={totalAssets} />
-        </div>
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
-        <div className="grid content-start gap-3 sm:grid-cols-3">
-          <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
-          <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
-          <Info title="Sua posição" value={`${fmt(position?.deposited)} $BX`} />
+      <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-4">
+          <div className="overflow-hidden rounded-xl border bg-transparent">
+            <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
+              <BarChart3 className="h-4 w-4 text-primary" />
+              Volume histórico da pool ($BX)
+            </div>
+            <div className="h-[300px] bg-black px-4 py-5 sm:h-[360px]">
+              <PoolVolumeChart data={history} current={totalAssets} />
+            </div>
+          </div>
+          <div className="grid content-start gap-3 sm:grid-cols-3">
+            <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
+            <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
+            <Info title="Sua posição" value={`${fmt(positionValue)} $BX`} />
+          </div>
         </div>
         <AllocationPanel
           session={Boolean(session)}
           balance={balance}
+          action={action}
+          setAction={(nextAction) => {
+            setAction(nextAction);
+            setAmount("");
+          }}
           amount={amount}
           setAmount={setAmount}
           amountError={amountError}
-          position={Number(position?.deposited ?? 0)}
+          position={positionValue}
           busy={busy}
           onStake={() => run("stake")}
           onUnstake={() => run("unstake")}
@@ -227,6 +237,8 @@ function Info({ title, value }: { title: string; value: string }) {
 function AllocationPanel({
   session,
   balance,
+  action,
+  setAction,
   amount,
   setAmount,
   amountError,
@@ -237,6 +249,8 @@ function AllocationPanel({
 }: {
   session: boolean;
   balance: number;
+  action: "stake" | "unstake";
+  setAction: (action: "stake" | "unstake") => void;
   amount: string;
   setAmount: (value: string) => void;
   amountError: string;
@@ -246,8 +260,8 @@ function AllocationPanel({
   onUnstake: () => void;
 }) {
   return (
-    <section className="rounded-xl border border-primary/40 p-4">
-      <h2 className="font-semibold">Alocar na pool</h2>
+    <section className="rounded-xl border border-primary/40 p-4 lg:sticky lg:top-4">
+      <h2 className="font-semibold">Gerenciar stake</h2>
       {!session ? (
         <div className="mt-4 space-y-3">
           <p className="text-sm leading-relaxed text-muted-foreground">
@@ -259,12 +273,40 @@ function AllocationPanel({
         </div>
       ) : (
         <div className="mt-4 space-y-3">
+          <div
+            className="grid grid-cols-2 rounded-lg border bg-muted/30 p-1"
+            role="tablist"
+            aria-label="Ação do stake"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={action === "stake"}
+              className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${action === "stake" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setAction("stake")}
+            >
+              Adicionar
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={action === "unstake"}
+              className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${action === "unstake" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              onClick={() => setAction("unstake")}
+            >
+              Retirar
+            </button>
+          </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Saldo disponível</span>
-            <span className="font-mono">{fmt(balance)} $BX</span>
+            <span className="text-muted-foreground">
+              {action === "stake" ? "Saldo disponível" : "Sua posição"}
+            </span>
+            <span className="font-mono">{fmt(action === "stake" ? balance : position)} $BX</span>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="stake-amount">Valor da alocação</Label>
+            <Label htmlFor="stake-amount">
+              {action === "stake" ? "Valor para adicionar" : "Valor para retirar"}
+            </Label>
             <div className="relative">
               <Input
                 id="stake-amount"
@@ -283,28 +325,20 @@ function AllocationPanel({
             <button
               type="button"
               className="text-xs text-primary hover:underline"
-              onClick={() => setAmount(Math.max(0, balance).toFixed(2))}
+              onClick={() =>
+                setAmount(Math.max(0, action === "stake" ? balance : position).toFixed(2))
+              }
             >
-              Usar saldo máximo
+              Usar máximo
             </button>
           </div>
           <Button
             className="w-full"
             disabled={busy || Boolean(amountError) || !amount}
-            onClick={onStake}
+            onClick={action === "stake" ? onStake : onUnstake}
           >
-            {busy ? "Confirmando…" : "Alocar na pool"}
+            {busy ? "Confirmando…" : action === "stake" ? "Adicionar à pool" : "Retirar da pool"}
           </Button>
-          {position > 0 && (
-            <Button
-              variant="outline"
-              className="w-full"
-              disabled={busy || !amount}
-              onClick={onUnstake}
-            >
-              Retirar da pool
-            </Button>
-          )}
           <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
             Sua posição acompanha o volume e as taxas da pool em $BX.
           </p>
