@@ -132,35 +132,33 @@ function StakeDetails() {
   }
 
   return (
-    <main className="mx-auto max-w-6xl space-y-3 px-4 py-6 sm:px-6 lg:px-8">
-      <section className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <header className="flex shrink-0 items-center gap-3">
-          <MarketIcon base={market.base} size="md" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Pool {market.base}</h1>
-              <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
-                Ativa
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">Liquidez da pool em $BX</p>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4 md:min-w-[520px]">
-          <PoolStat label="Volume da pool" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
-          <PoolStat
-            label="Disponível"
-            value={poolLoading ? "…" : `${fmt(available)} $BX`}
-            tone="bull"
-          />
-          <PoolStat label="Reservado" value={`${fmt(reserved)} $BX`} />
-          <PoolStat
-            label="Taxas para stakers"
-            value={`${fmt(pool?.fees_to_stakers)} $BX`}
-            tone="primary"
-          />
+    <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
+      <header className="flex items-center gap-3">
+        <MarketIcon base={market.base} size="md" />
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="text-2xl font-bold">Pool {market.base}</h1>
+          <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
+            Ativa
+          </span>
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            Liquidez da pool em $BX
+          </span>
         </div>
+      </header>
+
+      <section className="grid grid-cols-2 gap-x-4 border-y py-2 sm:grid-cols-4 sm:divide-x sm:divide-border/70">
+        <PoolStat label="Volume da pool" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
+        <PoolStat
+          label="Disponível"
+          value={poolLoading ? "…" : `${fmt(available)} $BX`}
+          tone="bull"
+        />
+        <PoolStat label="Reservado" value={`${fmt(reserved)} $BX`} />
+        <PoolStat
+          label="Taxas para stakers"
+          value={`${fmt(pool?.fees_to_stakers)} $BX`}
+          tone="primary"
+        />
       </section>
 
       <section className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_340px]">
@@ -213,7 +211,7 @@ function PoolStat({
   const color =
     tone === "primary" ? "text-primary" : tone === "bull" ? "text-bull" : "text-foreground";
   return (
-    <div className="px-0 py-1.5">
+    <div className="px-3 py-1.5 first:pl-0 sm:pl-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={`mt-1 font-mono text-sm font-bold ${color}`}>{value}</div>
     </div>
