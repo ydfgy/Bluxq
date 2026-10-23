@@ -110,7 +110,7 @@ function StakeDetails() {
       </Link>
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <section className="space-y-6">
-          <div className="rounded-2xl border bg-card p-6 sm:p-8">
+          <div className="rounded-2xl border bg-transparent p-6 sm:p-8">
             <div className="flex flex-wrap items-center gap-4">
               <MarketIcon base={market.base} size="lg" />
               <div>
@@ -154,7 +154,7 @@ function StakeDetails() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-gold/40 bg-card p-6 lg:sticky lg:top-24 lg:self-start">
+        <section className="rounded-2xl border border-primary/40 bg-transparent p-6 lg:sticky lg:top-24 lg:self-start">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold">Alocar na pool</h2>
@@ -204,7 +204,7 @@ function StakeDetails() {
                   Usar saldo máximo
                 </button>
               </div>
-              <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
+              <div className="rounded-lg border border-primary/15 bg-primary/5 p-3 text-xs text-muted-foreground">
                 <div className="flex justify-between">
                   <span>Você está alocando</span>
                   <span className="font-mono text-foreground">{fmt(numericAmount)} $BX</span>
@@ -245,7 +245,7 @@ function StakeDetails() {
 
 function Stat({ label, value, tone }: { label: string; value: string; tone?: "bull" }) {
   return (
-    <div className="rounded-lg border bg-background/40 p-4">
+    <div className="rounded-lg border bg-transparent p-4">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className={`mt-2 font-mono text-sm font-bold ${tone === "bull" ? "text-bull" : ""}`}>
         {value}
@@ -255,7 +255,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "bu
 }
 function Info({ icon, title, text }: { icon: ReactNode; title: string; text: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border bg-transparent p-4">
       <div className="mb-3 grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
         {icon}
       </div>

@@ -64,7 +64,7 @@ function StakeOverview() {
       ) : (
         <>
           {isError && (
-            <div className="rounded-xl border border-gold/30 bg-gold/5 p-4 text-sm text-gold">
+            <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-primary">
               Os valores das pools estão temporariamente indisponíveis, mas você ainda pode abrir
               qualquer moeda para ver seus detalhes.
             </div>
@@ -81,7 +81,7 @@ function StakeOverview() {
                   key={market.symbol}
                   to="/stake/$symbol"
                   params={{ symbol: market.symbol }}
-                  className="group rounded-xl border bg-card p-5 transition-colors hover:border-gold/60 hover:bg-gold/[0.04]"
+                  className="group rounded-xl border bg-transparent p-5 transition-colors hover:border-primary/60 hover:bg-primary/[0.04]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
@@ -91,7 +91,7 @@ function StakeOverview() {
                         <div className="text-xs text-muted-foreground">{market.name}</div>
                       </div>
                     </div>
-                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-gold" />
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
                   <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
                     <div>
