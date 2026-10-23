@@ -66,7 +66,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Bluxq — Trade cripto com Robux" },
       {
         name: "description",
-        content: "Opere BTC, ETH, SOL e mais com Robux, alavancagem e stake.",
+        content: "Opere BTC, ETH, SOL e mais com Robux e alavancagem.",
       },
     ],
     links: [
