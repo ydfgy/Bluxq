@@ -4,6 +4,7 @@ import { ArrowRight } from "lucide-react";
 import { MarketIcon } from "@/components/MarketIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { MARKETS, fmt } from "@/lib/markets";
+import { getBinanceTickers } from "@/lib/market-data";
 
 export const Route = createFileRoute("/stake")({
   head: () => ({
@@ -47,6 +48,12 @@ function StakeOverview() {
       return (data ?? []) as Pool[];
     },
   });
+  const { data: tickers = {} } = useQuery({
+    queryKey: ["market-tickers", "stake"],
+    enabled: isOverview,
+    refetchInterval: 10000,
+    queryFn: () => getBinanceTickers(MARKETS.map((market) => market.symbol)),
+  });
 
   if (!isOverview) {
     return <Outlet />;
@@ -72,20 +79,16 @@ function StakeOverview() {
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {MARKETS.map((market) => {
               const pool = poolBySymbol.get(market.symbol);
-              const available = Math.max(
-                0,
-                Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0),
-              );
               return (
                 <Link
                   key={market.symbol}
                   to="/stake/$symbol"
                   params={{ symbol: market.symbol }}
-                  className="group rounded-xl border bg-transparent p-5 transition-colors hover:border-primary/60 hover:bg-primary/[0.04]"
+                  className="group rounded-xl border bg-transparent px-4 py-3 transition-colors hover:border-primary/60 hover:bg-primary/[0.04]"
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3">
-                      <MarketIcon base={market.base} size="md" />
+                      <MarketIcon base={market.base} size="sm" />
                       <div>
                         <div className="font-bold">{market.base}</div>
                         <div className="text-xs text-muted-foreground">{market.name}</div>
@@ -93,23 +96,21 @@ function StakeOverview() {
                     </div>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
-                  <div className="mt-6 grid grid-cols-2 gap-3 text-sm">
+                  <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div>
-                      <div className="text-xs text-muted-foreground">Liquidez</div>
+                      <div className="text-[11px] text-muted-foreground">Pool total</div>
                       <div className="mt-1 font-mono">
                         {pool ? `${fmt(pool.total_assets)} $BX` : "—"}
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Disponível</div>
-                      <div className="mt-1 font-mono text-bull">
-                        {pool ? `${fmt(available)} $BX` : "—"}
+                      <div className="text-[11px] text-muted-foreground">Volume 24h</div>
+                      <div className="mt-1 font-mono text-primary">
+                        {tickers[market.symbol]
+                          ? `$${fmt(Number(tickers[market.symbol].quoteVolume) / 1e6, 1)}M`
+                          : "—"}
                       </div>
                     </div>
-                  </div>
-                  <div className="mt-5 flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                    <span>Pool {market.base}/$BX</span>
-                    <span className="text-gold">Ver detalhes</span>
                   </div>
                 </Link>
               );

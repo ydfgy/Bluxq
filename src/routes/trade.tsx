@@ -125,7 +125,11 @@ function Trade() {
   const nav = useNavigate();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
-  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [symbol, setSymbol] = useState(() => {
+    if (typeof window === "undefined") return "BTCUSDT";
+    const requested = new URLSearchParams(window.location.search).get("symbol");
+    return MARKETS.some((market) => market.symbol === requested) ? requested! : "BTCUSDT";
+  });
   const [interval, setIntervalV] = useState("15m");
   const [price, setPrice] = useState(0);
   const [margin, setMargin] = useState("100");
