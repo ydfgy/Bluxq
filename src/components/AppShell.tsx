@@ -56,6 +56,9 @@ export function Navbar() {
               Copy
             </Link>
           )}
+          <Link to="/stake" className={link} activeProps={active}>
+            Stake
+          </Link>
           <Link to="/referrals" className={link} activeProps={active}>
             Referrals
           </Link>
@@ -106,6 +109,9 @@ export function Navbar() {
             Copy
           </Link>
         )}
+        <Link to="/stake" className={link} activeProps={active}>
+          Stake
+        </Link>
         <Link to="/referrals" className={link} activeProps={active}>
           Referrals
         </Link>
