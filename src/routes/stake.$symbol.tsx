@@ -6,7 +6,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Protected } from "@/components/AppShell";
 import { MarketIcon } from "@/components/MarketIcon";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,11 +17,7 @@ export const Route = createFileRoute("/stake/$symbol")({
   head: ({ params }) => ({
     meta: [{ title: `Stake ${params.symbol.replace("USDT", "")} — Bluxq` }],
   }),
-  component: () => (
-    <Protected>
-      <StakeDetails />
-    </Protected>
-  ),
+  component: StakeDetails,
 });
 
 function StakeDetails() {
@@ -159,7 +154,7 @@ function StakeDetails() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-primary/40 bg-card p-6 lg:sticky lg:top-24 lg:self-start">
+        <section className="rounded-2xl border border-gold/40 bg-card p-6 lg:sticky lg:top-24 lg:self-start">
           <div className="flex items-center justify-between gap-3">
             <div>
               <h2 className="text-xl font-bold">Alocar na pool</h2>
@@ -167,68 +162,81 @@ function StakeDetails() {
             </div>
             <MarketIcon base={market.base} size="sm" />
           </div>
-          <div className="mt-6 space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Saldo disponível</span>
-              <span className="font-mono">{fmt(balance)} $BX</span>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="stake-amount">Valor da alocação</Label>
-              <div className="relative">
-                <Input
-                  id="stake-amount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={amount}
-                  onChange={(event) => setAmount(event.target.value)}
-                  placeholder="0,00"
-                  className="pr-14 font-mono text-lg"
-                  aria-invalid={Boolean(amountError)}
-                />
-                <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">$BX</span>
-              </div>
-              {amountError && <p className="text-xs text-bear">{amountError}</p>}
-              <button
-                type="button"
-                className="text-xs text-primary hover:underline"
-                onClick={() => setAmount(String(Math.max(0, balance).toFixed(2)))}
-              >
-                Usar saldo máximo
-              </button>
-            </div>
-            <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
-              <div className="flex justify-between">
-                <span>Você está alocando</span>
-                <span className="font-mono text-foreground">{fmt(numericAmount)} $BX</span>
-              </div>
-              <div className="mt-2 flex justify-between">
-                <span>Sua posição atual</span>
-                <span className="font-mono text-foreground">{fmt(position?.deposited)} $BX</span>
-              </div>
-            </div>
-            <Button
-              className="w-full"
-              disabled={busy || Boolean(amountError) || !amount}
-              onClick={() => run("stake")}
-            >
-              {busy ? "Confirmando…" : "Confirmar alocação"}
-            </Button>
-            {Number(position?.deposited ?? 0) > 0 && (
-              <Button
-                variant="outline"
-                className="w-full"
-                disabled={busy || !amount}
-                onClick={() => run("unstake")}
-              >
-                Retirar valor da pool
+          {!session ? (
+            <div className="mt-6 space-y-4">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Entre na sua conta para consultar seu saldo e alocar valor nesta pool.
+              </p>
+              <Button asChild className="w-full">
+                <Link to="/auth">Entrar para fazer stake</Link>
               </Button>
-            )}
-            <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
-              Ao confirmar, você concorda com os termos de staking da plataforma. A posição será
-              atualizada após a confirmação.
-            </p>
-          </div>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Saldo disponível</span>
+                <span className="font-mono">{fmt(balance)} $BX</span>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stake-amount">Valor da alocação</Label>
+                <div className="relative">
+                  <Input
+                    id="stake-amount"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={amount}
+                    onChange={(event) => setAmount(event.target.value)}
+                    placeholder="0,00"
+                    className="pr-14 font-mono text-lg"
+                    aria-invalid={Boolean(amountError)}
+                  />
+                  <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">
+                    $BX
+                  </span>
+                </div>
+                {amountError && <p className="text-xs text-bear">{amountError}</p>}
+                <button
+                  type="button"
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => setAmount(String(Math.max(0, balance).toFixed(2)))}
+                >
+                  Usar saldo máximo
+                </button>
+              </div>
+              <div className="rounded-lg bg-muted/60 p-3 text-xs text-muted-foreground">
+                <div className="flex justify-between">
+                  <span>Você está alocando</span>
+                  <span className="font-mono text-foreground">{fmt(numericAmount)} $BX</span>
+                </div>
+                <div className="mt-2 flex justify-between">
+                  <span>Sua posição atual</span>
+                  <span className="font-mono text-foreground">{fmt(position?.deposited)} $BX</span>
+                </div>
+              </div>
+              <Button
+                className="w-full"
+                disabled={busy || Boolean(amountError) || !amount}
+                onClick={() => run("stake")}
+              >
+                {busy ? "Confirmando…" : "Confirmar alocação"}
+              </Button>
+              {Number(position?.deposited ?? 0) > 0 && (
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  disabled={busy || !amount}
+                  onClick={() => run("unstake")}
+                >
+                  Retirar valor da pool
+                </Button>
+              )}
+              <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+                Ao confirmar, você concorda com os termos de staking da plataforma. A posição será
+                atualizada após a confirmação.
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </main>
