@@ -1,12 +1,17 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3, TrendingDown, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ArrowLeft, BarChart3 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { toast } from "sonner";
 import { MarketIcon } from "@/components/MarketIcon";
-import { PriceChart } from "@/components/PriceChart";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { getBinanceTickers } from "@/lib/market-data";
-import { MARKETS, fmt, fmtPrice } from "@/lib/markets";
+import { marketStake, marketUnstake } from "@/lib/blux.functions";
+import { MARKETS, fmt } from "@/lib/markets";
+import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/stake/$symbol")({
   head: ({ params }) => ({
@@ -23,11 +28,22 @@ type Pool = {
   fees_to_stakers: number;
 };
 
+type PoolDay = {
+  day: string;
+  total_assets: number;
+  total_reserved: number;
+};
+
 function StakeDetails() {
   const { symbol } = Route.useParams();
   const market = MARKETS.find((item) => item.symbol === symbol) ?? MARKETS[0];
-  const [interval, setInterval] = useState("15m");
-  const [price, setPrice] = useState(0);
+  const { session } = useAuth();
+  const { data: profile } = useProfile();
+  const qc = useQueryClient();
+  const [amount, setAmount] = useState("");
+  const [busy, setBusy] = useState(false);
+  const stake = useServerFn(marketStake);
+  const unstake = useServerFn(marketUnstake);
 
   const { data: pool, isLoading: poolLoading } = useQuery({
     queryKey: ["market-pool", symbol, "stake-page"],
@@ -42,94 +58,139 @@ function StakeDetails() {
       return data as Pool;
     },
   });
-  const { data: tickers = {} } = useQuery({
-    queryKey: ["market-tickers", symbol, "stake-page"],
-    refetchInterval: 10000,
-    queryFn: () => getBinanceTickers([symbol]),
+  const { data: history = [] } = useQuery({
+    queryKey: ["market-pool-history", symbol],
+    refetchInterval: 30000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_pool_daily")
+        .select("day,total_assets,total_reserved")
+        .eq("symbol", symbol)
+        .order("day", { ascending: true })
+        .limit(30);
+      if (error) throw error;
+      return (data ?? []) as PoolDay[];
+    },
+  });
+  const { data: position } = useQuery({
+    queryKey: ["market-stake", session?.user.id, symbol],
+    enabled: Boolean(session),
+    refetchInterval: 5000,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("market_stakes")
+        .select("deposited,shares,started_at,last_reward_at")
+        .eq("user_id", session!.user.id)
+        .eq("symbol", symbol)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
   });
 
-  const ticker = tickers[symbol];
   const totalAssets = Number(pool?.total_assets ?? 0);
-  const available = Math.max(0, totalAssets - Number(pool?.total_reserved ?? 0));
-  const change = Number(ticker?.priceChangePercent ?? 0);
+  const reserved = Number(pool?.total_reserved ?? 0);
+  const available = Math.max(0, totalAssets - reserved);
+  const balance = Number(profile?.balance ?? 0);
+  const numericAmount = Number(amount);
+  const amountError =
+    amount && (!Number.isFinite(numericAmount) || numericAmount <= 0)
+      ? "Informe um valor maior que zero."
+      : numericAmount > balance
+        ? "O valor excede seu saldo disponível."
+        : numericAmount > available
+          ? "O valor excede a liquidez disponível da pool."
+          : "";
+
+  async function run(action: "stake" | "unstake") {
+    const value = Number(amount);
+    if (!Number.isFinite(value) || value <= 0 || amountError) {
+      toast.error(amountError || "Informe um valor válido.");
+      return;
+    }
+    setBusy(true);
+    try {
+      if (action === "stake") await stake({ data: { symbol, amount: value } });
+      else await unstake({ data: { symbol, amount: value } });
+      toast.success(action === "stake" ? "Alocação confirmada." : "Retirada solicitada.");
+      setAmount("");
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ["market-stake", session?.user.id, symbol] }),
+        qc.invalidateQueries({ queryKey: ["market-pool", symbol] }),
+        qc.invalidateQueries({ queryKey: ["market-pools"] }),
+        qc.invalidateQueries({ queryKey: ["profile"] }),
+      ]);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Não foi possível concluir a operação.");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-      <a
-        href="/stake"
+      <Link
+        to="/stake"
         className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" /> Voltar para as moedas
-      </a>
+      </Link>
 
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <MarketIcon base={market.base} size="md" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl font-bold">Pool {market.base}</h1>
-              <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
-                Ativa
-              </span>
-            </div>
-            <p className="text-sm text-muted-foreground">{market.name} / $BX</p>
+      <header className="flex items-center gap-3">
+        <MarketIcon base={market.base} size="md" />
+        <div>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">Pool {market.base}</h1>
+            <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
+              Ativa
+            </span>
           </div>
-        </div>
-        <div className={`font-mono text-xl ${change >= 0 ? "text-bull" : "text-bear"}`}>
-          {price || ticker?.lastPrice ? fmtPrice(price || Number(ticker?.lastPrice)) : "…"}
+          <p className="text-sm text-muted-foreground">Liquidez da pool em $BX</p>
         </div>
       </header>
 
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <PoolStat label="Pool total" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
+        <PoolStat label="Volume da pool" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
         <PoolStat
           label="Disponível"
           value={poolLoading ? "…" : `${fmt(available)} $BX`}
           tone="bull"
         />
+        <PoolStat label="Reservado" value={`${fmt(reserved)} $BX`} />
         <PoolStat
-          label="Volume 24h"
-          value={ticker ? `$${fmt(Number(ticker.quoteVolume) / 1e6, 1)}M` : "—"}
+          label="Taxas para stakers"
+          value={`${fmt(pool?.fees_to_stakers)} $BX`}
           tone="primary"
-        />
-        <PoolStat
-          label="Variação 24h"
-          value={`${change >= 0 ? "+" : ""}${change.toFixed(2)}%`}
-          tone={change >= 0 ? "bull" : "bear"}
         />
       </section>
 
       <section className="overflow-hidden rounded-xl border bg-transparent">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-          <div className="flex items-center gap-2 text-sm font-semibold">
-            <BarChart3 className="h-4 w-4 text-primary" />
-            Gráfico de {market.base}
-          </div>
-          <div className="flex gap-1">
-            {["1m", "5m", "15m", "1h", "4h", "1d"].map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setInterval(value)}
-                className={`rounded px-2 py-1 text-xs font-mono ${interval === value ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-primary/10"}`}
-              >
-                {value}
-              </button>
-            ))}
-          </div>
+        <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
+          <BarChart3 className="h-4 w-4 text-primary" />
+          Volume histórico da pool ($BX)
         </div>
-        <div className="h-[390px] bg-black p-2 sm:h-[460px]">
-          <PriceChart symbol={symbol} interval={interval} lines={[]} onPrice={setPrice} />
+        <div className="h-[300px] bg-black px-4 py-5 sm:h-[360px]">
+          <PoolVolumeChart data={history} current={totalAssets} />
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1fr_320px]">
-        <div className="grid gap-3 sm:grid-cols-3">
+      <section className="grid gap-4 lg:grid-cols-[1fr_340px]">
+        <div className="grid content-start gap-3 sm:grid-cols-3">
           <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
-          <Info title="Reservado em posições" value={`${fmt(pool?.total_reserved)} $BX`} />
-          <Info title="Taxas para stakers" value={`${fmt(pool?.fees_to_stakers)} $BX`} />
+          <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
+          <Info title="Sua posição" value={`${fmt(position?.deposited)} $BX`} />
         </div>
-        <QuickTrade symbol={symbol} base={market.base} />
+        <AllocationPanel
+          session={Boolean(session)}
+          balance={balance}
+          amount={amount}
+          setAmount={setAmount}
+          amountError={amountError}
+          position={Number(position?.deposited ?? 0)}
+          busy={busy}
+          onStake={() => run("stake")}
+          onUnstake={() => run("unstake")}
+        />
       </section>
     </main>
   );
@@ -142,18 +203,14 @@ function PoolStat({
 }: {
   label: string;
   value: string;
-  tone?: "default" | "primary" | "bull" | "bear";
+  tone?: "default" | "primary" | "bull";
 }) {
-  const toneClass = {
-    default: "text-foreground",
-    primary: "text-primary",
-    bull: "text-bull",
-    bear: "text-bear",
-  }[tone];
+  const color =
+    tone === "primary" ? "text-primary" : tone === "bull" ? "text-bull" : "text-foreground";
   return (
     <div className="rounded-lg border px-3 py-2.5">
       <div className="text-[11px] text-muted-foreground">{label}</div>
-      <div className={`mt-1 font-mono text-sm font-bold ${toneClass}`}>{value}</div>
+      <div className={`mt-1 font-mono text-sm font-bold ${color}`}>{value}</div>
     </div>
   );
 }
@@ -167,34 +224,148 @@ function Info({ title, value }: { title: string; value: string }) {
   );
 }
 
-function QuickTrade({ symbol, base }: { symbol: string; base: string }) {
-  const href = `/trade?symbol=${encodeURIComponent(symbol)}`;
+function AllocationPanel({
+  session,
+  balance,
+  amount,
+  setAmount,
+  amountError,
+  position,
+  busy,
+  onStake,
+  onUnstake,
+}: {
+  session: boolean;
+  balance: number;
+  amount: string;
+  setAmount: (value: string) => void;
+  amountError: string;
+  position: number;
+  busy: boolean;
+  onStake: () => void;
+  onUnstake: () => void;
+}) {
   return (
-    <div className="rounded-xl border border-primary/40 p-4">
-      <div className="flex items-center gap-2">
-        <MarketIcon base={base} size="sm" />
-        <div>
-          <h2 className="font-semibold">Operar {base}</h2>
-          <p className="text-xs text-muted-foreground">Abra uma posição no gráfico</p>
+    <section className="rounded-xl border border-primary/40 p-4">
+      <h2 className="font-semibold">Alocar na pool</h2>
+      {!session ? (
+        <div className="mt-4 space-y-3">
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Entre na sua conta para consultar seu saldo e alocar valor nesta pool.
+          </p>
+          <Button asChild className="w-full">
+            <Link to="/auth">Entrar para fazer stake</Link>
+          </Button>
         </div>
+      ) : (
+        <div className="mt-4 space-y-3">
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Saldo disponível</span>
+            <span className="font-mono">{fmt(balance)} $BX</span>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="stake-amount">Valor da alocação</Label>
+            <div className="relative">
+              <Input
+                id="stake-amount"
+                type="number"
+                min="0"
+                step="0.01"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                placeholder="0,00"
+                className="pr-14 font-mono text-lg"
+                aria-invalid={Boolean(amountError)}
+              />
+              <span className="absolute right-3 top-2.5 text-sm text-muted-foreground">$BX</span>
+            </div>
+            {amountError && <p className="text-xs text-bear">{amountError}</p>}
+            <button
+              type="button"
+              className="text-xs text-primary hover:underline"
+              onClick={() => setAmount(Math.max(0, balance).toFixed(2))}
+            >
+              Usar saldo máximo
+            </button>
+          </div>
+          <Button
+            className="w-full"
+            disabled={busy || Boolean(amountError) || !amount}
+            onClick={onStake}
+          >
+            {busy ? "Confirmando…" : "Alocar na pool"}
+          </Button>
+          {position > 0 && (
+            <Button
+              variant="outline"
+              className="w-full"
+              disabled={busy || !amount}
+              onClick={onUnstake}
+            >
+              Retirar da pool
+            </Button>
+          )}
+          <p className="text-center text-[11px] leading-relaxed text-muted-foreground">
+            Sua posição acompanha o volume e as taxas da pool em $BX.
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
+function PoolVolumeChart({ data, current }: { data: PoolDay[]; current: number }) {
+  const points = useMemo(() => {
+    const rows = data.length ? data : [{ day: "agora", total_assets: current, total_reserved: 0 }];
+    const values = rows.map((row) => Number(row.total_assets ?? 0));
+    const max = Math.max(...values, 1);
+    const min = Math.min(...values, 0);
+    const range = Math.max(max - min, 1);
+    return rows.map((row, index) => ({
+      x: rows.length === 1 ? 50 : (index / (rows.length - 1)) * 100,
+      y: 92 - ((Number(row.total_assets ?? 0) - min) / range) * 78,
+      value: Number(row.total_assets ?? 0),
+      day: row.day,
+    }));
+  }, [data, current]);
+  const line = points.map((point) => `${point.x},${point.y}`).join(" ");
+  const area = `0,100 ${line} 100,100`;
+  const latest = points.at(-1);
+
+  return (
+    <div className="relative h-full w-full">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="h-full w-full"
+        role="img"
+        aria-label="Volume histórico da pool em BX"
+      >
+        <defs>
+          <linearGradient id="pool-volume-fill" x1="0" x2="0" y1="0" y2="1">
+            <stop offset="0%" stopColor="rgb(37 99 235)" stopOpacity="0.35" />
+            <stop offset="100%" stopColor="rgb(37 99 235)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1="0" x2="100" y1="92" y2="92" stroke="rgb(148 163 184 / 0.18)" strokeWidth="0.4" />
+        <polygon points={area} fill="url(#pool-volume-fill)" />
+        <polyline
+          points={line}
+          fill="none"
+          stroke="rgb(59 130 246)"
+          strokeWidth="1.2"
+          vectorEffect="non-scaling-stroke"
+        />
+      </svg>
+      <div className="absolute left-0 top-0 text-xs text-muted-foreground">
+        {latest ? `${fmt(latest.value)} $BX` : "—"}
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-2">
-        <a
-          href={href}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-bull px-3 py-2 text-sm font-bold text-bull-foreground hover:brightness-110"
-        >
-          <TrendingUp className="h-4 w-4" /> Long
-        </a>
-        <a
-          href={href}
-          className="inline-flex items-center justify-center gap-2 rounded-md bg-bear px-3 py-2 text-sm font-bold text-bear-foreground hover:brightness-110"
-        >
-          <TrendingDown className="h-4 w-4" /> Short
-        </a>
+      <div className="absolute bottom-0 left-0 text-[10px] text-muted-foreground">
+        {points[0]?.day ?? ""}
       </div>
-      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">
-        O painel completo de margem e alavancagem abre na tela Trade.
-      </p>
+      <div className="absolute bottom-0 right-0 text-[10px] text-muted-foreground">
+        {latest?.day ?? ""}
+      </div>
     </div>
   );
 }
