@@ -146,7 +146,7 @@ function StakeDetails() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-x-4 border-y py-2 sm:grid-cols-4 sm:divide-x sm:divide-border/70">
+      <section className="grid grid-cols-2 gap-x-4 py-1 sm:grid-cols-4">
         <PoolStat label="Volume da pool" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
         <PoolStat
           label="Disponível"
@@ -164,7 +164,7 @@ function StakeDetails() {
       <section className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-3">
           <div className="overflow-hidden rounded-xl border bg-transparent">
-            <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
+            <div className="flex items-center gap-2 px-4 py-3 text-sm font-semibold">
               <BarChart3 className="h-4 w-4 text-primary" />
               Volume histórico da pool ($BX)
             </div>
@@ -253,7 +253,7 @@ function AllocationPanel({
   onUnstake: () => void;
 }) {
   return (
-    <section className="rounded-xl border border-primary/40 p-4 md:sticky md:top-4">
+    <section className="rounded-xl border p-4 md:sticky md:top-4">
       <h2 className="font-semibold">Gerenciar stake</h2>
       {!session ? (
         <div className="mt-4 space-y-3">
@@ -267,7 +267,7 @@ function AllocationPanel({
       ) : (
         <div className="mt-4 space-y-3">
           <div
-            className="grid grid-cols-2 rounded-lg border bg-muted/30 p-1"
+            className="grid grid-cols-2 rounded-lg border p-1"
             role="tablist"
             aria-label="Ação do stake"
           >
