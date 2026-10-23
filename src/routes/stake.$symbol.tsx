@@ -168,7 +168,7 @@ function StakeDetails() {
         />
       </section>
 
-      <section className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <section className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-4">
           <div className="overflow-hidden rounded-xl border bg-transparent">
             <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
@@ -260,7 +260,7 @@ function AllocationPanel({
   onUnstake: () => void;
 }) {
   return (
-    <section className="rounded-xl border border-primary/40 p-4 lg:sticky lg:top-4">
+    <section className="rounded-xl border border-primary/40 p-4 md:sticky md:top-4">
       <h2 className="font-semibold">Gerenciar stake</h2>
       {!session ? (
         <div className="mt-4 space-y-3">
