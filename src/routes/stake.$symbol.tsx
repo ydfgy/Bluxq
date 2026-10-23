@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, BarChart3 } from "lucide-react";
+import { BarChart3 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { MarketIcon } from "@/components/MarketIcon";
@@ -133,27 +133,20 @@ function StakeDetails() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
-      <Link
-        to="/stake"
-        className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
-      >
-        <ArrowLeft className="h-4 w-4" /> Voltar para as moedas
-      </Link>
-
       <header className="flex items-center gap-3">
         <MarketIcon base={market.base} size="md" />
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">Pool {market.base}</h1>
-            <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
-              Ativa
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">Liquidez da pool em $BX</p>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="text-2xl font-bold">Pool {market.base}</h1>
+          <span className="rounded-full bg-bull/10 px-2 py-1 text-[11px] font-semibold text-bull">
+            Ativa
+          </span>
+          <span className="hidden text-sm text-muted-foreground sm:inline">
+            Liquidez da pool em $BX
+          </span>
         </div>
       </header>
 
-      <section className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <section className="grid grid-cols-2 gap-x-4 border-y py-2 sm:grid-cols-4 sm:divide-x sm:divide-border/70">
         <PoolStat label="Volume da pool" value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`} />
         <PoolStat
           label="Disponível"
@@ -168,8 +161,8 @@ function StakeDetails() {
         />
       </section>
 
-      <section className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="min-w-0 space-y-4">
+      <section className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0 space-y-3">
           <div className="overflow-hidden rounded-xl border bg-transparent">
             <div className="flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
               <BarChart3 className="h-4 w-4 text-primary" />
@@ -179,7 +172,7 @@ function StakeDetails() {
               <PoolVolumeChart data={history} current={totalAssets} />
             </div>
           </div>
-          <div className="grid content-start gap-3 sm:grid-cols-3">
+          <div className="grid content-start gap-x-4 gap-y-2 px-1 sm:grid-cols-3">
             <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
             <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
             <Info title="Sua posição" value={`${fmt(positionValue)} $BX`} />
@@ -218,7 +211,7 @@ function PoolStat({
   const color =
     tone === "primary" ? "text-primary" : tone === "bull" ? "text-bull" : "text-foreground";
   return (
-    <div className="rounded-lg border px-3 py-2.5">
+    <div className="px-3 py-1.5 first:pl-0 sm:pl-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={`mt-1 font-mono text-sm font-bold ${color}`}>{value}</div>
     </div>
@@ -227,7 +220,7 @@ function PoolStat({
 
 function Info({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-xl border px-4 py-3">
+    <div className="px-1 py-1">
       <div className="text-xs text-muted-foreground">{title}</div>
       <div className="mt-2 font-mono font-semibold">{value}</div>
     </div>
