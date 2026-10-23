@@ -14,4 +14,12 @@ describe("App routing", () => {
 
     expect(matches.at(-1)?.routeId).not.toBe(rootRouteId);
   });
+
+  it("matches the dynamic pool detail route for a market symbol", () => {
+    const router = createRouter({ routeTree, context: { queryClient: new QueryClient() } });
+
+    const matches = router.matchRoutes("/stake/BTCUSDT");
+
+    expect(matches.at(-1)?.routeId).toBe("/stake/$symbol");
+  });
 });

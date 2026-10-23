@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { MarketIcon } from "@/components/MarketIcon";
@@ -24,12 +24,16 @@ type Pool = {
 };
 
 function StakeOverview() {
+  const { pathname } = useLocation();
+  const isOverview = pathname === "/stake" || pathname === "/stake/";
+
   const {
     data: pools = [],
     isLoading,
     isError,
   } = useQuery({
     queryKey: ["market-pools", "stake"],
+    enabled: isOverview,
     refetchInterval: 8000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -44,21 +48,13 @@ function StakeOverview() {
     },
   });
 
+  if (!isOverview) {
+    return <Outlet />;
+  }
+
   const poolBySymbol = new Map(pools.map((pool) => [pool.symbol, pool]));
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="flex items-end justify-between gap-4">
-        <div>
-          <h2 className="text-xl font-bold">Moedas disponíveis</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Selecione um ativo para ver as informações da pool.
-          </p>
-        </div>
-        <span className="hidden text-xs text-muted-foreground sm:block">
-          Dados atualizados em tempo real
-        </span>
-      </div>
-
       {isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {MARKETS.map((market) => (
