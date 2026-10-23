@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowRight, Coins, Layers3, TrendingUp } from "lucide-react";
-import type { ReactNode } from "react";
+import { ArrowRight } from "lucide-react";
 import { MarketIcon } from "@/components/MarketIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { MARKETS, fmt } from "@/lib/markets";
@@ -46,39 +45,8 @@ function StakeOverview() {
   });
 
   const poolBySymbol = new Map(pools.map((pool) => [pool.symbol, pool]));
-  const totalLiquidity = pools.reduce((sum, pool) => sum + Number(pool.total_assets ?? 0), 0);
-
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      <section className="rounded-2xl border border-gold/25 bg-hero p-6 sm:p-8">
-        <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-          <div className="max-w-2xl">
-            <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-gold">
-              <Layers3 className="h-3.5 w-3.5" /> Liquidity pools
-            </div>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-              Faça seu saldo trabalhar
-            </h1>
-            <p className="mt-3 text-muted-foreground">
-              Escolha uma moeda, compare a liquidez disponível e aloque seus $BX na pool que fizer
-              sentido para você.
-            </p>
-          </div>
-          <div className="grid grid-cols-2 gap-3 sm:min-w-[280px]">
-            <Metric
-              icon={<Coins className="h-4 w-4" />}
-              label="Pools ativas"
-              value={String(pools.length)}
-            />
-            <Metric
-              icon={<TrendingUp className="h-4 w-4" />}
-              label="Liquidez total"
-              value={`${fmt(totalLiquidity)} $BX`}
-            />
-          </div>
-        </div>
-      </section>
-
       <div className="flex items-end justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">Moedas disponíveis</h2>
@@ -154,17 +122,5 @@ function StakeOverview() {
         </>
       )}
     </main>
-  );
-}
-
-function Metric({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border/70 bg-background/40 p-3">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        {icon}
-        {label}
-      </div>
-      <div className="mt-2 font-mono text-sm font-bold">{value}</div>
-    </div>
   );
 }
