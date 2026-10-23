@@ -4,7 +4,6 @@ import { ArrowRight } from "lucide-react";
 import { MarketIcon } from "@/components/MarketIcon";
 import { supabase } from "@/integrations/supabase/client";
 import { MARKETS, fmt } from "@/lib/markets";
-import { getBinanceTickers } from "@/lib/market-data";
 
 export const Route = createFileRoute("/stake")({
   head: () => ({
@@ -48,13 +47,6 @@ function StakeOverview() {
       return (data ?? []) as Pool[];
     },
   });
-  const { data: tickers = {} } = useQuery({
-    queryKey: ["market-tickers", "stake"],
-    enabled: isOverview,
-    refetchInterval: 10000,
-    queryFn: () => getBinanceTickers(MARKETS.map((market) => market.symbol)),
-  });
-
   if (!isOverview) {
     return <Outlet />;
   }
@@ -104,11 +96,9 @@ function StakeOverview() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-[11px] text-muted-foreground">Volume 24h</div>
+                      <div className="text-[11px] text-muted-foreground">Reservado</div>
                       <div className="mt-1 font-mono text-primary">
-                        {tickers[market.symbol]
-                          ? `$${fmt(Number(tickers[market.symbol].quoteVolume) / 1e6, 1)}M`
-                          : "—"}
+                        {pool ? `${fmt(pool.total_reserved)} $BX` : "—"}
                       </div>
                     </div>
                   </div>
