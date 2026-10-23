@@ -31,10 +31,10 @@ export const Route = createFileRoute("/wallet")({
 });
 
 const STATUS: Record<string, string> = {
-  pending: "Pending",
-  approved: "Approved",
-  rejected: "Rejected",
-  paid: "Paid",
+  pending: "Pendente",
+  approved: "Aprovado",
+  rejected: "Rejeitado",
+  paid: "Pago",
 };
 
 function Wallet() {
@@ -52,6 +52,22 @@ function Wallet() {
   const [transactionHash, setTransactionHash] = useState("");
   const [destination, setDestination] = useState("");
   const uid = session?.user.id;
+  const depositValue = Number(depositAmount);
+  const withdrawValue = Number(withdrawAmount);
+  const depositError =
+    !Number.isFinite(depositValue) || depositValue < 10
+      ? "Informe um depósito de pelo menos 10."
+      : depositMethod === "crypto" && !transactionHash.trim()
+        ? "Informe o hash da transação."
+        : "";
+  const withdrawError =
+    !Number.isFinite(withdrawValue) || withdrawValue < 10
+      ? "Informe um saque de pelo menos 10."
+      : withdrawValue > Number(p?.balance ?? 0)
+        ? "O valor excede seu saldo disponível."
+        : withdrawMethod === "crypto" && !destination.trim()
+          ? "Informe o endereço de destino."
+          : "";
 
   const { data: hist } = useQuery({
     queryKey: ["wallet-hist", uid],
@@ -93,11 +109,11 @@ function Wallet() {
   return (
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div className="grid gap-6 md:grid-cols-2">
-        <section className="space-y-3 rounded-xl border bg-card p-5">
+        <section className="space-y-3 rounded-xl border bg-transparent p-5">
           <h2 className="text-lg font-bold">Depositar</h2>
           <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
           {depositMethod === "roblox" ? (
-            <div className="rounded-md bg-muted p-3 text-sm">
+            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
               <div className="text-xs text-muted-foreground">Conta para depósito</div>
               <a
                 href={ROBLOX_GROUP_URL}
@@ -134,8 +150,10 @@ function Wallet() {
               className="font-mono"
             />
           </Field>
+          {depositError && <p className="text-xs text-bear">{depositError}</p>}
           <Button
             className="w-full"
+            disabled={Boolean(depositError)}
             onClick={() =>
               run(
                 () =>
@@ -156,11 +174,11 @@ function Wallet() {
           </Button>
         </section>
 
-        <section className="space-y-3 rounded-xl border bg-card p-5">
+        <section className="space-y-3 rounded-xl border bg-transparent p-5">
           <h2 className="text-lg font-bold">Sacar</h2>
           <PaymentChoice selected={withdrawMethod} onSelect={setWithdrawMethod} />
           {withdrawMethod === "roblox" ? (
-            <p className="rounded-md bg-muted p-3 text-sm text-muted-foreground">
+            <p className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
               O pagamento será enviado pelo grupo para a conta Roblox verificada:{" "}
               <b className="text-foreground">{p?.roblox_username}</b>.
             </p>
@@ -191,8 +209,10 @@ function Wallet() {
               className="font-mono"
             />
           </Field>
+          {withdrawError && <p className="text-xs text-bear">{withdrawError}</p>}
           <Button
             variant="outline"
+            disabled={Boolean(withdrawError)}
             className="w-full"
             onClick={() =>
               run(
@@ -215,7 +235,7 @@ function Wallet() {
         </section>
       </div>
 
-      <section className="rounded-xl border bg-card">
+      <section className="rounded-xl border bg-transparent">
         <h2 className="border-b p-4 font-bold">Histórico</h2>
         {(hist ?? []).map((x) => (
           <div
@@ -266,7 +286,7 @@ function PaymentChoice({
         <button
           key={method}
           type="button"
-          className={`rounded-md border px-3 py-2 text-sm ${selected === method ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}
+          className={`rounded-md border px-3 py-2 text-sm ${selected === method ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary hover:text-primary"}`}
           onClick={() => onSelect(method)}
         >
           {method === "roblox" ? "Robux" : "Crypto"}

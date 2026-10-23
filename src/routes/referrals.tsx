@@ -39,10 +39,25 @@ function Referrals() {
 
   async function copyLink() {
     if (!referralLink) return;
-    await navigator.clipboard.writeText(referralLink);
-    setCopied(true);
-    toast.success("Link copiado");
-    window.setTimeout(() => setCopied(false), 1800);
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(referralLink);
+      } else {
+        const input = document.createElement("textarea");
+        input.value = referralLink;
+        input.style.position = "fixed";
+        input.style.opacity = "0";
+        document.body.appendChild(input);
+        input.select();
+        if (!document.execCommand("copy")) throw new Error("copy failed");
+        input.remove();
+      }
+      setCopied(true);
+      toast.success("Link copiado");
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      toast.error("Não foi possível copiar o link. Selecione e copie manualmente.");
+    }
   }
 
   async function doClaim() {
@@ -64,7 +79,7 @@ function Referrals() {
 
   return (
     <main className="mx-auto max-w-5xl px-4 py-8">
-      <section className="rounded-xl border bg-card p-6 shadow-sm sm:p-8">
+      <section className="rounded-xl border bg-transparent p-6 sm:p-8">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <div className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
@@ -85,7 +100,7 @@ function Referrals() {
         <Stat label="Total ganho" value={`B$ ${fmt(summary?.total)}`} />
       </div>
 
-      <section className="mt-4 rounded-xl border bg-card p-5">
+      <section className="mt-4 rounded-xl border bg-transparent p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold">Seu link de convite</h2>
           <span className="font-mono text-sm text-primary">{summary?.referralCode ?? "—"}</span>
@@ -94,7 +109,7 @@ function Referrals() {
           <input
             readOnly
             value={referralLink}
-            className="min-w-0 flex-1 rounded-md border bg-background px-3 py-2 text-sm text-muted-foreground"
+            className="min-w-0 flex-1 rounded-md border bg-transparent px-3 py-2 text-sm text-foreground"
             aria-label="Link de convite"
           />
           <Button onClick={copyLink} disabled={!referralLink}>
@@ -108,7 +123,7 @@ function Referrals() {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border bg-card p-5">
+    <div className="rounded-xl border bg-transparent p-5">
       <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-1 font-mono text-2xl">{value}</div>
     </div>
