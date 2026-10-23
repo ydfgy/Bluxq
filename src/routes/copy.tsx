@@ -1,5 +1,4 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Protected } from "@/components/AppShell";
 
 export const Route = createFileRoute("/copy")({
   head: () => ({
@@ -8,11 +7,7 @@ export const Route = createFileRoute("/copy")({
       { name: "description", content: "Copie estratégias de traders na Bluxq." },
     ],
   }),
-  component: () => (
-    <Protected>
-      <Copy />
-    </Protected>
-  ),
+  component: Copy,
 });
 
 function Copy() {
