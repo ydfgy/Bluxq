@@ -33,33 +33,6 @@ function constantTimeEqual(left: string, right: string) {
   return difference === 0;
 }
 
-const adminAuthAttempts = new Map<
-  string,
-  { count: number; windowStartedAt: number; blockedUntil: number }
->();
-const ADMIN_AUTH_WINDOW_MS = 10 * 60 * 1000;
-const ADMIN_AUTH_MAX_ATTEMPTS = 5;
-const ADMIN_AUTH_BLOCK_MS = 15 * 60 * 1000;
-
-function checkAdminAuthRateLimit(userId: string) {
-  const now = Date.now();
-  const current = adminAuthAttempts.get(userId);
-  if (!current) return;
-  if (current.blockedUntil > now) throw new Error("Muitas tentativas. Tente novamente mais tarde.");
-  if (now - current.windowStartedAt >= ADMIN_AUTH_WINDOW_MS) adminAuthAttempts.delete(userId);
-}
-
-function recordAdminAuthFailure(userId: string) {
-  const now = Date.now();
-  const current = adminAuthAttempts.get(userId);
-  const next =
-    !current || now - current.windowStartedAt >= ADMIN_AUTH_WINDOW_MS
-      ? { count: 1, windowStartedAt: now, blockedUntil: 0 }
-      : { ...current, count: current.count + 1 };
-  if (next.count >= ADMIN_AUTH_MAX_ATTEMPTS) next.blockedUntil = now + ADMIN_AUTH_BLOCK_MS;
-  adminAuthAttempts.set(userId, next);
-}
-
 function base64UrlEncode(value: string | Uint8Array) {
   const bytes = typeof value === "string" ? new TextEncoder().encode(value) : value;
   let binary = "";
@@ -75,7 +48,7 @@ function base64UrlDecode(value: string) {
 }
 
 async function signAdminToken(payload: string) {
-  const secret = `${process.env["ADMIN_PANEL_UUID"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
+  const secret = `${process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -665,12 +638,7 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
   .validator((d) =>
     z
       .object({
-        adminKey: z
-          .string()
-          .trim()
-          .min(16)
-          .max(128)
-          .regex(/^[A-Za-z0-9_-]+$/),
+        password: z.string().trim().min(12).max(256),
         pin: z
           .string()
           .trim()
@@ -679,24 +647,42 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    checkAdminAuthRateLimit(context.userId);
-    const expectedKey = process.env["ADMIN_PANEL_UUID"]?.trim() ?? "";
+    const sb = await admin();
+    const { data: state, error: stateError } = await sb.rpc("fn_admin_auth_state", {
+      _user: context.userId,
+    });
+    rpcError(stateError);
+    const lockedUntil = state?.[0]?.locked_until ? new Date(state[0].locked_until) : null;
+    if (lockedUntil && lockedUntil.getTime() > Date.now()) {
+      throw new Error("Conta temporariamente bloqueada por segurança. Tente novamente em 7 dias.");
+    }
+
+    const expectedPassword = process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? "";
     const expectedPin = process.env["ADMIN_PANEL_PIN"]?.trim() ?? "";
-    if (!expectedKey || !expectedPin) {
+    if (!expectedPassword || !expectedPin) {
       console.error("[Bluxq] Admin panel is not configured", {
-        hasUuid: Boolean(expectedKey),
+        hasPassword: Boolean(expectedPassword),
         hasPin: Boolean(expectedPin),
       });
       throw new Error("Painel administrativo não configurado no servidor");
     }
     if (
-      !constantTimeEqual(data.adminKey, expectedKey) ||
+      !constantTimeEqual(data.password, expectedPassword) ||
       !constantTimeEqual(data.pin, expectedPin)
     ) {
-      recordAdminAuthFailure(context.userId);
-      throw new Error("PIN ou caminho inválido");
+      const { data: failure, error: failureError } = await sb.rpc("fn_record_admin_auth_failure", {
+        _user: context.userId,
+      });
+      rpcError(failureError);
+      if (failure?.[0]?.locked_until) {
+        throw new Error("Limite de 3 tentativas excedido. Conta bloqueada por 7 dias.");
+      }
+      throw new Error("Credenciais administrativas inválidas");
     }
-    adminAuthAttempts.delete(context.userId);
+    const { error: resetError } = await sb.rpc("fn_reset_admin_auth_failures", {
+      _user: context.userId,
+    });
+    rpcError(resetError);
     const payload = JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000, sub: context.userId });
     return { token: `${base64UrlEncode(payload)}.${await signAdminToken(payload)}` };
   });

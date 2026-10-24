@@ -4,6 +4,7 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useLocation,
   HeadContent,
   Scripts,
   type ErrorComponentProps,
@@ -108,6 +109,8 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const location = useLocation();
+  const isAdminArea = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
   useEffect(() => {
     const isWalletInjectionError = (event: ErrorEvent | PromiseRejectionEvent) => {
       const message = String(
@@ -141,7 +144,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <CaptureProtection />
-        <Navbar />
+        {!isAdminArea && <Navbar />}
         <Outlet />
         <Toaster theme="dark" position="bottom-left" duration={3000} closeButton />
       </AuthProvider>
