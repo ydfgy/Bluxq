@@ -22,7 +22,9 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
 }
 
-export const Route = createFileRoute("/admin/$adminSecret")({
+const ADMIN_PATH_SECRET = "ops-fe0286eca1e960bb557cdef0976fa9a2";
+
+export const Route = createFileRoute("/ops-fe0286eca1e960bb557cdef0976fa9a2")({
   head: () => ({
     meta: [
       { title: "Administração segura — Bluxq" },
@@ -34,7 +36,6 @@ export const Route = createFileRoute("/admin/$adminSecret")({
 });
 
 function Admin() {
-  const { adminSecret } = Route.useParams();
   const qc = useQueryClient();
   const authenticate = useServerFn(authenticateAdminPanel);
   const overview = useServerFn(adminOverview);
@@ -52,7 +53,9 @@ function Admin() {
   async function unlock() {
     setAuthenticating(true);
     try {
-      const result = await authenticate({ data: { adminPath: adminSecret, password, pin } });
+      const result = await authenticate({
+        data: { adminPath: ADMIN_PATH_SECRET, password, pin },
+      });
       sessionStorage.setItem("bluxq-admin-access", result.token);
       setAccessToken(result.token);
       toast.success("Painel desbloqueado");

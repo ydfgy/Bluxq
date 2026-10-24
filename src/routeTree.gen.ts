@@ -12,13 +12,13 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CopyRouteImport } from './routes/copy'
+import { Route as OpsFe0286eca1e960bb557cdef0976fa9a2RouteImport } from './routes/ops-fe0286eca1e960bb557cdef0976fa9a2'
 import { Route as ReferralsRouteImport } from './routes/referrals'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TradeRouteImport } from './routes/trade'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WalletRouteImport } from './routes/wallet'
-import { Route as AdminAdminSecretRouteImport } from './routes/admin.$adminSecret'
 import { Route as StakeSymbolRouteImport } from './routes/stake.$symbol'
 
 const IndexRoute = IndexRouteImport.update({
@@ -36,6 +36,12 @@ const CopyRoute = CopyRouteImport.update({
   path: '/copy',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OpsFe0286eca1e960bb557cdef0976fa9a2Route =
+  OpsFe0286eca1e960bb557cdef0976fa9a2RouteImport.update({
+    id: '/ops-fe0286eca1e960bb557cdef0976fa9a2',
+    path: '/ops-fe0286eca1e960bb557cdef0976fa9a2',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ReferralsRoute = ReferralsRouteImport.update({
   id: '/referrals',
   path: '/referrals',
@@ -66,11 +72,6 @@ const WalletRoute = WalletRouteImport.update({
   path: '/wallet',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AdminAdminSecretRoute = AdminAdminSecretRouteImport.update({
-  id: '/admin/$adminSecret',
-  path: '/admin/$adminSecret',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const StakeSymbolRoute = StakeSymbolRouteImport.update({
   id: '/$symbol',
   path: '/$symbol',
@@ -81,26 +82,26 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/copy': typeof CopyRoute
+  '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
-  '/admin/$adminSecret': typeof AdminAdminSecretRoute
   '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/copy': typeof CopyRoute
+  '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
-  '/admin/$adminSecret': typeof AdminAdminSecretRoute
   '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRoutesById {
@@ -108,13 +109,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/copy': typeof CopyRoute
+  '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
-  '/admin/$adminSecret': typeof AdminAdminSecretRoute
   '/stake/$symbol': typeof StakeSymbolRoute
 }
 export interface FileRouteTypes {
@@ -123,39 +124,39 @@ export interface FileRouteTypes {
     | '/'
     | '/auth'
     | '/copy'
+    | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
     | '/stake'
     | '/terms'
     | '/trade'
     | '/verify'
     | '/wallet'
-    | '/admin/$adminSecret'
     | '/stake/$symbol'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/copy'
+    | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
     | '/stake'
     | '/terms'
     | '/trade'
     | '/verify'
     | '/wallet'
-    | '/admin/$adminSecret'
     | '/stake/$symbol'
   id:
     | '__root__'
     | '/'
     | '/auth'
     | '/copy'
+    | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
     | '/stake'
     | '/terms'
     | '/trade'
     | '/verify'
     | '/wallet'
-    | '/admin/$adminSecret'
     | '/stake/$symbol'
   fileRoutesById: FileRoutesById
 }
@@ -163,13 +164,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRoute
   CopyRoute: typeof CopyRoute
+  OpsFe0286eca1e960bb557cdef0976fa9a2Route: typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   ReferralsRoute: typeof ReferralsRoute
   StakeRoute: typeof StakeRouteWithChildren
   TermsRoute: typeof TermsRoute
   TradeRoute: typeof TradeRoute
   VerifyRoute: typeof VerifyRoute
   WalletRoute: typeof WalletRoute
-  AdminAdminSecretRoute: typeof AdminAdminSecretRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -193,6 +194,13 @@ declare module '@tanstack/react-router' {
       path: '/copy'
       fullPath: '/copy'
       preLoaderRoute: typeof CopyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ops-fe0286eca1e960bb557cdef0976fa9a2': {
+      id: '/ops-fe0286eca1e960bb557cdef0976fa9a2'
+      path: '/ops-fe0286eca1e960bb557cdef0976fa9a2'
+      fullPath: '/ops-fe0286eca1e960bb557cdef0976fa9a2'
+      preLoaderRoute: typeof OpsFe0286eca1e960bb557cdef0976fa9a2RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/referrals': {
@@ -237,13 +245,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WalletRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/admin/$adminSecret': {
-      id: '/admin/$adminSecret'
-      path: '/admin/$adminSecret'
-      fullPath: '/admin/$adminSecret'
-      preLoaderRoute: typeof AdminAdminSecretRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/stake/$symbol': {
       id: '/stake/$symbol'
       path: '/$symbol'
@@ -268,13 +269,14 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRoute,
   CopyRoute: CopyRoute,
+  OpsFe0286eca1e960bb557cdef0976fa9a2Route:
+    OpsFe0286eca1e960bb557cdef0976fa9a2Route,
   ReferralsRoute: ReferralsRoute,
   StakeRoute: StakeRouteWithChildren,
   TermsRoute: TermsRoute,
   TradeRoute: TradeRoute,
   VerifyRoute: VerifyRoute,
   WalletRoute: WalletRoute,
-  AdminAdminSecretRoute: AdminAdminSecretRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
