@@ -94,17 +94,6 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       throw new Error("Unauthorized: No user ID found in token");
     }
 
-    const { data: locked, error: lockError } = await supabase.rpc("fn_is_user_locked", {
-      _user: data.claims.sub,
-    });
-    if (lockError) {
-      console.error("[Supabase] Unable to verify account access state", lockError);
-      throw new Error("Unable to verify account access state");
-    }
-    if (locked) {
-      throw new Error("Conta temporariamente bloqueada por segurança. Tente novamente em 7 dias.");
-    }
-
     return next({
       context: {
         supabase,

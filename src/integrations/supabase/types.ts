@@ -360,6 +360,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      fn_admin_panel_attempt_state: {
+        Args: { _subject_hash: string };
+        Returns: { failed_attempts: number; locked_until: string | null }[];
+      };
+      fn_record_admin_panel_failure: {
+        Args: { _subject_hash: string };
+        Returns: { failed_attempts: number; locked_until: string | null }[];
+      };
+      fn_reset_admin_panel_failures: {
+        Args: { _subject_hash: string };
+        Returns: undefined;
+      };
       fn_admin_auth_state: {
         Args: { _user: string };
         Returns: { failed_attempts: number; locked_until: string | null }[];

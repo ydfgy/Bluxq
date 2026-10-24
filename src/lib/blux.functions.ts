@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
@@ -48,7 +49,7 @@ function base64UrlDecode(value: string) {
 }
 
 async function signAdminToken(payload: string) {
-  const secret = `${process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
+  const secret = `${process.env["ADMIN_PANEL_PATH_SECRET"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -61,13 +62,13 @@ async function signAdminToken(payload: string) {
   );
 }
 
-async function verifyAdminToken(token: string, userId: string) {
+async function verifyAdminToken(token: string) {
   try {
     const [encodedPayload, encodedSignature] = token.split(".");
     if (!encodedPayload || !encodedSignature) return false;
     const payload = new TextDecoder().decode(base64UrlDecode(encodedPayload));
     const parsed = JSON.parse(payload) as { exp?: number; sub?: string };
-    if (!parsed.exp || parsed.exp < Date.now() || parsed.sub !== userId) return false;
+    if (!parsed.exp || parsed.exp < Date.now() || parsed.sub !== "standalone-admin") return false;
     const expected = await signAdminToken(payload);
     return constantTimeEqual(expected, encodedSignature);
   } catch {
@@ -75,9 +76,18 @@ async function verifyAdminToken(token: string, userId: string) {
   }
 }
 
-async function assertAdminPanelAccess(token: string, userId: string) {
-  if (!(await verifyAdminToken(token, userId)))
-    throw new Error("Acesso ao painel expirado ou inválido");
+async function assertAdminPanelAccess(token: string) {
+  if (!(await verifyAdminToken(token))) throw new Error("Acesso ao painel expirado ou inválido");
+}
+
+async function adminSubjectHash() {
+  const request = getRequest();
+  const forwarded = request?.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+  const ip = forwarded || request?.headers.get("x-real-ip") || "unknown-ip";
+  const agent = request?.headers.get("user-agent") || "unknown-agent";
+  const input = new TextEncoder().encode(`${ip}|${agent}`);
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", input));
+  return base64UrlEncode(digest);
 }
 
 const verificationWords = [
@@ -634,10 +644,10 @@ export const verifyRoblox = createServerFn({ method: "POST" })
 
 /* ---------- Admin ---------- */
 export const authenticateAdminPanel = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((d) =>
     z
       .object({
+        adminPath: z.string().min(16).max(256),
         password: z.string().trim().min(12).max(256),
         pin: z
           .string()
@@ -646,15 +656,20 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
+  .handler(async ({ data }) => {
     const sb = await admin();
-    const { data: state, error: stateError } = await sb.rpc("fn_admin_auth_state", {
-      _user: context.userId,
+    const configuredPath = process.env["ADMIN_PANEL_PATH_SECRET"]?.trim() ?? "";
+    if (!configuredPath || !constantTimeEqual(data.adminPath, configuredPath)) {
+      throw new Error("Acesso não disponível");
+    }
+    const subjectHash = await adminSubjectHash();
+    const { data: state, error: stateError } = await sb.rpc("fn_admin_panel_attempt_state", {
+      _subject_hash: subjectHash,
     });
     rpcError(stateError);
     const lockedUntil = state?.[0]?.locked_until ? new Date(state[0].locked_until) : null;
     if (lockedUntil && lockedUntil.getTime() > Date.now()) {
-      throw new Error("Conta temporariamente bloqueada por segurança. Tente novamente em 7 dias.");
+      throw new Error("Acesso temporariamente bloqueado por segurança. Tente novamente em 7 dias.");
     }
 
     const expectedPassword = process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? "";
@@ -670,8 +685,8 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       !constantTimeEqual(data.password, expectedPassword) ||
       !constantTimeEqual(data.pin, expectedPin)
     ) {
-      const { data: failure, error: failureError } = await sb.rpc("fn_record_admin_auth_failure", {
-        _user: context.userId,
+      const { data: failure, error: failureError } = await sb.rpc("fn_record_admin_panel_failure", {
+        _subject_hash: subjectHash,
       });
       rpcError(failureError);
       if (failure?.[0]?.locked_until) {
@@ -679,11 +694,14 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       }
       throw new Error("Credenciais administrativas inválidas");
     }
-    const { error: resetError } = await sb.rpc("fn_reset_admin_auth_failures", {
-      _user: context.userId,
+    const { error: resetError } = await sb.rpc("fn_reset_admin_panel_failures", {
+      _subject_hash: subjectHash,
     });
     rpcError(resetError);
-    const payload = JSON.stringify({ exp: Date.now() + 8 * 60 * 60 * 1000, sub: context.userId });
+    const payload = JSON.stringify({
+      exp: Date.now() + 8 * 60 * 60 * 1000,
+      sub: "standalone-admin",
+    });
     return { token: `${base64UrlEncode(payload)}.${await signAdminToken(payload)}` };
   });
 
@@ -698,7 +716,7 @@ export const claimAdmin = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
+    await assertAdminPanelAccess(data.adminAccessToken);
     const expected = process.env["ADMIN_BOOTSTRAP_SECRET"] ?? "";
     if (!expected || !constantTimeEqual(data.bootstrapSecret, expected)) {
       throw new Error("Invalid bootstrap key");
@@ -709,11 +727,9 @@ export const claimAdmin = createServerFn({ method: "POST" })
   });
 
 export const adminOverview = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ adminAccessToken: z.string().min(1).max(500) }).parse(d))
-  .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     const sb = await admin();
     const [d, w, pool] = await Promise.all([
       sb
@@ -750,7 +766,6 @@ export const adminOverview = createServerFn({ method: "POST" })
   });
 
 export const reviewDeposit = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((d) =>
     z
       .object({
@@ -760,9 +775,8 @@ export const reviewDeposit = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     const { error } = await (
       await admin()
     ).rpc("fn_review_deposit", { _id: data.id, _approve: data.approve });
@@ -771,7 +785,6 @@ export const reviewDeposit = createServerFn({ method: "POST" })
   });
 
 export const reviewWithdraw = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
   .validator((d) =>
     z
       .object({
@@ -781,9 +794,8 @@ export const reviewWithdraw = createServerFn({ method: "POST" })
       })
       .parse(d),
   )
-  .handler(async ({ data, context }) => {
-    await assertAdminPanelAccess(data.adminAccessToken, context.userId);
-    await assertAdmin(context.supabase, context.userId);
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
     const { error } = await (
       await admin()
     ).rpc("fn_review_withdraw", { _id: data.id, _paid: data.paid });

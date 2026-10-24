@@ -1,14 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { Protected } from "@/components/AppShell";
-import { useIsAdmin } from "@/hooks/use-auth";
 import {
   adminOverview,
   authenticateAdminPanel,
-  claimAdmin,
   reviewDeposit,
   reviewWithdraw,
 } from "@/lib/blux.functions";
@@ -25,7 +22,7 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
 }
 
-export const Route = createFileRoute("/admin")({
+export const Route = createFileRoute("/admin/$adminSecret")({
   head: () => ({
     meta: [
       { title: "Administração segura — Bluxq" },
@@ -33,22 +30,16 @@ export const Route = createFileRoute("/admin")({
       { name: "robots", content: "noindex, nofollow, noarchive" },
     ],
   }),
-  component: () => (
-    <Protected requireVerified={false}>
-      <Admin />
-    </Protected>
-  ),
+  component: Admin,
 });
 
 function Admin() {
-  const { data: isAdmin, isLoading } = useIsAdmin();
+  const { adminSecret } = Route.useParams();
   const qc = useQueryClient();
-  const claim = useServerFn(claimAdmin);
   const authenticate = useServerFn(authenticateAdminPanel);
   const overview = useServerFn(adminOverview);
   const rd = useServerFn(reviewDeposit);
   const rw = useServerFn(reviewWithdraw);
-  const [bootstrapSecret, setBootstrapSecret] = useState("");
   const [password, setPassword] = useState("");
   const [pin, setPin] = useState("");
   const [authStage, setAuthStage] = useState<"password" | "pin">("password");
@@ -61,7 +52,7 @@ function Admin() {
   async function unlock() {
     setAuthenticating(true);
     try {
-      const result = await authenticate({ data: { password, pin } });
+      const result = await authenticate({ data: { adminPath: adminSecret, password, pin } });
       sessionStorage.setItem("bluxq-admin-access", result.token);
       setAccessToken(result.token);
       toast.success("Painel desbloqueado");
@@ -77,7 +68,7 @@ function Admin() {
 
   const { data, error: adminError } = useQuery({
     queryKey: ["admin", accessToken],
-    enabled: !!isAdmin && !!accessToken,
+    enabled: !!accessToken,
     refetchInterval: 5000,
     queryFn: () => overview({ data: { adminAccessToken: accessToken! } }),
   });
@@ -100,7 +91,6 @@ function Admin() {
     }
   }
 
-  if (isLoading) return null;
   if (!accessToken) {
     return (
       <main className="mx-auto max-w-md space-y-4 px-4 py-12">
@@ -161,44 +151,13 @@ function Admin() {
               {authenticating ? "Verificando…" : "Entrar"}
             </Button>
             <p className="text-xs text-muted-foreground">
-              Máximo de 3 tentativas. Depois disso, a conta é bloqueada por 7 dias.
+              Máximo de 3 tentativas. Depois disso, este acesso fica bloqueado por 7 dias.
             </p>
           </form>
         )}
       </main>
     );
   }
-  if (!isAdmin) {
-    return (
-      <main className="mx-auto max-w-md space-y-4 px-4 py-12">
-        <h1 className="text-xl font-bold">Inicializar administração</h1>
-        <p className="text-sm text-muted-foreground">
-          A administração só pode ser inicializada uma vez pelo proprietário, usando a chave
-          configurada no ambiente do servidor.
-        </p>
-        <Input
-          type="password"
-          autoComplete="off"
-          placeholder="Chave de bootstrap"
-          value={bootstrapSecret}
-          onChange={(event) => setBootstrapSecret(event.target.value)}
-        />
-        <Button
-          className="w-full"
-          disabled={bootstrapSecret.length < 32}
-          onClick={() =>
-            run(
-              () => claim({ data: { bootstrapSecret, adminAccessToken: accessToken } }),
-              "Agora você é admin",
-            )
-          }
-        >
-          Inicializar administração
-        </Button>
-      </main>
-    );
-  }
-
   const user = (x: AdminRequest) =>
     x.profile
       ? `${x.profile.roblox_username} (#${x.profile.roblox_user_id ?? "?"})`
