@@ -687,7 +687,7 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       if (failure?.[0]?.locked_until) {
         throw new Error("Limite de 3 tentativas excedido. Conta bloqueada por 7 dias.");
       }
-      throw new Error("Credenciais administrativas inválidas");
+      throw new Error("PIN ou senha incorretos. Tente novamente.");
     }
     const { error: resetError } = await sb.rpc("fn_reset_admin_panel_failures", {
       _subject_hash: subjectHash,

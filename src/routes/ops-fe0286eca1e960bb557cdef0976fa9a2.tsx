@@ -101,13 +101,8 @@ function Admin() {
   if (!accessToken) {
     return (
       <main className="mx-auto max-w-md space-y-4 px-4 py-12">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-400">
-          Bluxq / Secure Admin
-        </p>
-        <h1 className="text-xl font-bold">Acesso administrativo</h1>
-        <p className="text-sm text-muted-foreground">
-          Esta área é separada da plataforma e exige a confirmação do PIN e da senha administrativa.
-        </p>
+        <h1 className="text-xl font-bold">Painel admin</h1>
+        <p className="text-sm text-muted-foreground">Confirme suas credenciais para entrar.</p>
         {authStage === "pin" ? (
           <form
             className="space-y-3"
@@ -138,7 +133,7 @@ function Admin() {
             }}
           >
             <div className="flex justify-between text-sm">
-              <span>Confirme o PIN de segurança</span>
+              <span>Confirmar PIN</span>
               <button
                 type="button"
                 className="text-cyan-400"
@@ -178,7 +173,7 @@ function Admin() {
             }}
           >
             <div className="flex justify-between text-sm">
-              <span>Senha administrativa</span>
+              <span>Senha</span>
               <button
                 type="button"
                 className="text-cyan-400"
@@ -200,7 +195,7 @@ function Admin() {
               onChange={(event) => setPassword(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              A senha precisa ter no mínimo 8 caracteres ({password.length}/8).
+              Mínimo de 8 caracteres ({password.length}/8).
             </p>
             <Button className="w-full" disabled={password.length < 8}>
               Continuar
@@ -215,7 +210,7 @@ function Admin() {
             }}
           >
             <div className="flex justify-between text-sm">
-              <span>Confirme a senha administrativa</span>
+              <span>Confirmar senha</span>
               <button
                 type="button"
                 className="text-cyan-400"
@@ -249,9 +244,6 @@ function Admin() {
             >
               {authenticating ? "Aprovando acesso…" : "Confirmar senha e entrar"}
             </Button>
-            <p className="text-xs text-muted-foreground">
-              Máximo de 3 tentativas. Depois disso, este acesso fica bloqueado por 7 dias.
-            </p>
           </form>
         )}
       </main>
