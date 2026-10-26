@@ -289,7 +289,26 @@ function Admin() {
           Bloquear painel
         </Button>
       </aside>
-      <main className="mx-auto w-full max-w-6xl space-y-6 px-4 py-8 md:px-8">
+      <main className="mx-auto w-full max-w-6xl space-y-6 bg-slate-950 px-4 py-8 md:px-8">
+        <nav className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-3 md:hidden">
+          {(
+            [
+              ["overview", "Visão geral"],
+              ["deposits", "Depósitos"],
+              ["withdrawals", "Saques"],
+            ] as const
+          ).map(([key, label]) => (
+            <button
+              key={key}
+              onClick={() => setSection(key)}
+              className={`whitespace-nowrap rounded-md px-3 py-2 text-sm ${
+                section === key ? "bg-cyan-400 text-slate-950" : "bg-slate-900 text-slate-400"
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </nav>
         <div className="flex items-center justify-between">
           <div>
             <p className="text-xs uppercase tracking-widest text-slate-500">
@@ -320,7 +339,7 @@ function Admin() {
           <Box k="Receita da plataforma" v={fmt(data?.pool?.platform_revenue)} />
         </div>
         <section
-          className={`${section === "withdrawals" ? "hidden " : ""}rounded-xl border bg-card`}
+          className={`${section === "withdrawals" ? "hidden " : ""}rounded-xl border border-slate-800 bg-slate-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Depósitos aguardando ({data?.deposits.length ?? 0})
@@ -369,7 +388,9 @@ function Admin() {
             </div>
           ))}
         </section>
-        <section className={`${section === "deposits" ? "hidden " : ""}rounded-xl border bg-card`}>
+        <section
+          className={`${section === "deposits" ? "hidden " : ""}rounded-xl border border-slate-800 bg-slate-900`}
+        >
           <h2 className="border-b p-4 font-bold">
             Saques aguardando ({data?.withdrawals.length ?? 0})
           </h2>
@@ -425,7 +446,7 @@ function Admin() {
 
 function Box({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-xl border bg-card p-4">
+    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
       <div className="text-xs text-muted-foreground">{k}</div>
       <div className="font-mono text-lg">$BX {v}</div>
     </div>

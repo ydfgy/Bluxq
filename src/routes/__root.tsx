@@ -110,7 +110,10 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const location = useLocation();
-  const isAdminArea = location.pathname === "/admin" || location.pathname.startsWith("/admin/");
+  const isAdminArea =
+    location.pathname === "/admin" ||
+    location.pathname.startsWith("/admin/") ||
+    location.pathname === "/ops-fe0286eca1e960bb557cdef0976fa9a2";
   useEffect(() => {
     const isWalletInjectionError = (event: ErrorEvent | PromiseRejectionEvent) => {
       const message = String(
