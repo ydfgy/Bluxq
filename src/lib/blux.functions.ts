@@ -739,7 +739,7 @@ export const adminOverview = createServerFn({ method: "POST" })
         .eq("status", "pending")
         .order("created_at")
         .limit(200),
-      sb.from("pool").select("total_assets, total_reserved, platform_revenue").single(),
+      sb.from("pool").select("total_assets, total_reserved, platform_revenue").maybeSingle(),
     ]);
     rpcError(d.error);
     rpcError(w.error);
@@ -756,7 +756,11 @@ export const adminOverview = createServerFn({ method: "POST" })
     return {
       deposits: (d.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       withdrawals: (w.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
-      pool: pool.data,
+      pool: pool.data ?? {
+        total_assets: 0,
+        total_reserved: 0,
+        platform_revenue: 0,
+      },
     };
   });
 
