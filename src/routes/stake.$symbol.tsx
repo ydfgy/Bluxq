@@ -90,6 +90,7 @@ function StakeDetails() {
 
   const totalAssets = Number(pool?.total_assets ?? 0);
   const reserved = Number(pool?.total_reserved ?? 0);
+  const available = Math.max(0, totalAssets - reserved);
   const balance = Number(profile?.balance ?? 0);
   const positionValue = Number(position?.deposited ?? 0);
   const numericAmount = Number(amount);
