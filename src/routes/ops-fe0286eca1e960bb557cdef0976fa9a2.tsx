@@ -136,7 +136,7 @@ function Admin() {
               <span>Confirmar PIN</span>
               <button
                 type="button"
-                className="text-cyan-400"
+                className="text-zinc-300"
                 onClick={() => {
                   setPin("");
                   setPinConfirmation("");
@@ -176,7 +176,7 @@ function Admin() {
               <span>Senha</span>
               <button
                 type="button"
-                className="text-cyan-400"
+                className="text-zinc-300"
                 onClick={() => {
                   setPin("");
                   setPinConfirmation("");
@@ -213,7 +213,7 @@ function Admin() {
               <span>Confirmar senha</span>
               <button
                 type="button"
-                className="text-cyan-400"
+                className="text-zinc-300"
                 onClick={() => {
                   setPassword("");
                   setPasswordConfirmation("");
@@ -254,33 +254,45 @@ function Admin() {
       ? `${x.profile.roblox_username} (#${x.profile.roblox_user_id ?? "?"})`
       : x.user_id.slice(0, 8);
   return (
-    <div className="flex min-h-screen bg-slate-950 text-slate-100">
-      <aside className="hidden w-64 shrink-0 border-r border-slate-800 bg-slate-900/80 p-5 md:block">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-cyan-400">Bluxq</p>
+    <div className="flex min-h-screen bg-black text-zinc-100">
+      <aside className="hidden w-64 shrink-0 border-r border-zinc-800 bg-zinc-950 p-5 md:block">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-zinc-300">Bluxq</p>
         <h1 className="mt-2 text-lg font-bold">Admin Console</h1>
         <nav className="mt-10 space-y-2" aria-label="Menu administrativo">
           <button
             onClick={() => setSection("overview")}
-            className="block w-full rounded-lg bg-cyan-400/10 px-3 py-2 text-left text-sm text-cyan-300"
+            className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+              section === "overview"
+                ? "bg-zinc-100 text-black"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            }`}
           >
             Visão geral
           </button>
           <button
             onClick={() => setSection("deposits")}
-            className="flex w-full justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className={`flex w-full justify-between rounded-lg px-3 py-2 text-left text-sm ${
+              section === "deposits"
+                ? "bg-zinc-100 text-black"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            }`}
           >
             Depósitos <span>{data?.deposits.length ?? 0}</span>
           </button>
           <button
             onClick={() => setSection("withdrawals")}
-            className="flex w-full justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-400 hover:bg-slate-800 hover:text-slate-100"
+            className={`flex w-full justify-between rounded-lg px-3 py-2 text-left text-sm ${
+              section === "withdrawals"
+                ? "bg-zinc-100 text-black"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            }`}
           >
             Saques <span>{data?.withdrawals.length ?? 0}</span>
           </button>
         </nav>
         <Button
           variant="outline"
-          className="mt-12 w-full border-slate-700"
+          className="mt-12 w-full border-zinc-700"
           onClick={() => {
             sessionStorage.removeItem("bluxq-admin-access");
             setAccessToken(null);
@@ -289,8 +301,8 @@ function Admin() {
           Bloquear painel
         </Button>
       </aside>
-      <main className="mx-auto w-full max-w-6xl space-y-6 bg-slate-950 px-4 py-8 md:px-8">
-        <nav className="flex gap-2 overflow-x-auto border-b border-slate-800 pb-3 md:hidden">
+      <main className="mx-auto w-full max-w-6xl space-y-6 bg-black px-4 py-8 md:px-8">
+        <nav className="flex gap-2 overflow-x-auto border-b border-zinc-800 pb-3 md:hidden">
           {(
             [
               ["overview", "Visão geral"],
@@ -302,7 +314,7 @@ function Admin() {
               key={key}
               onClick={() => setSection(key)}
               className={`whitespace-nowrap rounded-md px-3 py-2 text-sm ${
-                section === key ? "bg-cyan-400 text-slate-950" : "bg-slate-900 text-slate-400"
+                section === key ? "bg-zinc-100 text-black" : "bg-zinc-900 text-zinc-400"
               }`}
             >
               {label}
@@ -311,7 +323,7 @@ function Admin() {
         </nav>
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs uppercase tracking-widest text-slate-500">
+            <p className="text-xs uppercase tracking-widest text-zinc-500">
               Área restrita / {section}
             </p>
             <h1 className="text-2xl font-bold">
@@ -324,7 +336,7 @@ function Admin() {
           </div>
           <Button
             variant="outline"
-            className="border-slate-700"
+            className="border-zinc-700"
             onClick={() => {
               sessionStorage.removeItem("bluxq-admin-access");
               setAccessToken(null);
@@ -339,7 +351,7 @@ function Admin() {
           <Box k="Receita da plataforma" v={fmt(data?.pool?.platform_revenue)} />
         </div>
         <section
-          className={`${section === "withdrawals" ? "hidden " : ""}rounded-xl border border-slate-800 bg-slate-900`}
+          className={`${section === "withdrawals" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Depósitos aguardando ({data?.deposits.length ?? 0})
@@ -353,7 +365,7 @@ function Admin() {
               className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0"
             >
               <span className="flex-1">{user(x)}</span>
-              <span className="font-mono text-gold">{fmt(x.amount, 0)} $BX</span>
+              <span className="font-mono text-zinc-100">{fmt(x.amount, 0)} $BX</span>
               <span className="text-xs text-muted-foreground">
                 {x.payment_method === "crypto"
                   ? `Crypto: ${x.asset ?? "?"} / ${x.network ?? "?"} · TX: ${x.transaction_hash ?? "?"}`
@@ -389,7 +401,7 @@ function Admin() {
           ))}
         </section>
         <section
-          className={`${section === "deposits" ? "hidden " : ""}rounded-xl border border-slate-800 bg-slate-900`}
+          className={`${section === "deposits" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Saques aguardando ({data?.withdrawals.length ?? 0})
@@ -404,7 +416,7 @@ function Admin() {
               className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0"
             >
               <span className="flex-1">{user(x)}</span>
-              <span className="font-mono text-gold">{fmt(x.amount, 0)} $BX</span>
+              <span className="font-mono text-zinc-100">{fmt(x.amount, 0)} $BX</span>
               <span className="text-xs text-muted-foreground">
                 {x.payout_method === "crypto"
                   ? `Crypto: ${x.asset ?? "?"} / ${x.network ?? "?"} · ${x.destination ?? "?"}`
@@ -446,7 +458,7 @@ function Admin() {
 
 function Box({ k, v }: { k: string; v: string }) {
   return (
-    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+    <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-4">
       <div className="text-xs text-muted-foreground">{k}</div>
       <div className="font-mono text-lg">$BX {v}</div>
     </div>
