@@ -42,8 +42,12 @@ function Admin() {
   const rd = useServerFn(reviewDeposit);
   const rw = useServerFn(reviewWithdraw);
   const [password, setPassword] = useState("");
+  const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [pin, setPin] = useState("");
-  const [authStage, setAuthStage] = useState<"password" | "pin">("password");
+  const [pinConfirmation, setPinConfirmation] = useState("");
+  const [authStage, setAuthStage] = useState<
+    "pin" | "pin-confirmation" | "password" | "password-confirmation"
+  >("pin");
   const [section, setSection] = useState<"overview" | "deposits" | "withdrawals">("overview");
   const [accessToken, setAccessToken] = useState<string | null>(() =>
     typeof window === "undefined" ? null : sessionStorage.getItem("bluxq-admin-access"),
@@ -62,8 +66,10 @@ function Admin() {
     } catch (error: unknown) {
       toast.error(errorMessage(error));
       setPassword("");
+      setPasswordConfirmation("");
       setPin("");
-      setAuthStage("password");
+      setPinConfirmation("");
+      setAuthStage("pin");
     } finally {
       setAuthenticating(false);
     }
@@ -81,7 +87,7 @@ function Admin() {
     if (!adminError.message.includes("expirado ou inválido")) return;
     sessionStorage.removeItem("bluxq-admin-access");
     setAccessToken(null);
-    toast.error("A sessão administrativa expirou. Informe o PIN novamente.");
+    toast.error("A sessão administrativa expirou. Confirme o PIN e a senha novamente.");
   }, [adminError]);
 
   async function run(fn: () => Promise<unknown>, msg: string) {
@@ -102,19 +108,94 @@ function Admin() {
         </p>
         <h1 className="text-xl font-bold">Acesso administrativo</h1>
         <p className="text-sm text-muted-foreground">
-          Esta área é separada da plataforma e exige senha administrativa e PIN.
+          Esta área é separada da plataforma e exige a confirmação do PIN e da senha administrativa.
         </p>
-        {authStage === "password" ? (
+        {authStage === "pin" ? (
           <form
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (password.length >= 12) setAuthStage("pin");
+              if (pin.length === 6) setAuthStage("pin-confirmation");
             }}
           >
             <Input
               type="password"
-              autoComplete="current-password"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="PIN de 6 dígitos"
+              value={pin}
+              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+            />
+            <Button className="w-full" disabled={pin.length !== 6}>
+              Continuar
+            </Button>
+          </form>
+        ) : authStage === "pin-confirmation" ? (
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (pinConfirmation === pin) setAuthStage("password");
+            }}
+          >
+            <div className="flex justify-between text-sm">
+              <span>Confirme o PIN de segurança</span>
+              <button
+                type="button"
+                className="text-cyan-400"
+                onClick={() => {
+                  setPin("");
+                  setPinConfirmation("");
+                  setAuthStage("pin");
+                }}
+              >
+                Alterar PIN
+              </button>
+            </div>
+            <Input
+              type="password"
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              maxLength={6}
+              placeholder="Digite o PIN novamente"
+              value={pinConfirmation}
+              onChange={(event) =>
+                setPinConfirmation(event.target.value.replace(/\D/g, "").slice(0, 6))
+              }
+            />
+            <Button
+              className="w-full"
+              disabled={pinConfirmation.length !== 6 || pinConfirmation !== pin}
+            >
+              Confirmar PIN
+            </Button>
+          </form>
+        ) : authStage === "password" ? (
+          <form
+            className="space-y-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (password.length >= 12) setAuthStage("password-confirmation");
+            }}
+          >
+            <div className="flex justify-between text-sm">
+              <span>Senha administrativa</span>
+              <button
+                type="button"
+                className="text-cyan-400"
+                onClick={() => {
+                  setPin("");
+                  setPinConfirmation("");
+                  setAuthStage("pin");
+                }}
+              >
+                Alterar PIN
+              </button>
+            </div>
+            <Input
+              type="password"
+              autoComplete="new-password"
               placeholder="Senha administrativa"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
@@ -128,30 +209,39 @@ function Admin() {
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (pin.length === 6) void unlock();
+              if (passwordConfirmation === password) void unlock();
             }}
           >
             <div className="flex justify-between text-sm">
-              <span>PIN de segurança</span>
+              <span>Confirme a senha administrativa</span>
               <button
                 type="button"
                 className="text-cyan-400"
-                onClick={() => setAuthStage("password")}
+                onClick={() => {
+                  setPassword("");
+                  setPasswordConfirmation("");
+                  setAuthStage("password");
+                }}
               >
                 Alterar senha
               </button>
             </div>
             <Input
               type="password"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              maxLength={6}
-              placeholder="PIN de 6 dígitos"
-              value={pin}
-              onChange={(event) => setPin(event.target.value.replace(/\D/g, "").slice(0, 6))}
+              autoComplete="new-password"
+              placeholder="Digite a senha novamente"
+              value={passwordConfirmation}
+              onChange={(event) => setPasswordConfirmation(event.target.value)}
             />
-            <Button className="w-full" disabled={pin.length !== 6 || authenticating}>
-              {authenticating ? "Verificando…" : "Entrar"}
+            <Button
+              className="w-full"
+              disabled={
+                passwordConfirmation.length < 12 ||
+                passwordConfirmation !== password ||
+                authenticating
+              }
+            >
+              {authenticating ? "Aprovando acesso…" : "Confirmar senha e entrar"}
             </Button>
             <p className="text-xs text-muted-foreground">
               Máximo de 3 tentativas. Depois disso, este acesso fica bloqueado por 7 dias.
