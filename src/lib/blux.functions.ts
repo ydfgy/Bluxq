@@ -801,3 +801,121 @@ export const reviewWithdraw = createServerFn({ method: "POST" })
     rpcError(error);
     return { ok: true };
   });
+
+const copyMoney = z.number().finite().min(10).max(10_000_000).multipleOf(0.01);
+export const getCopyLeaderboard = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { data, error } = await (await admin()).rpc("fn_copy_leaderboard");
+    rpcError(error);
+    return Array.isArray(data) ? data : [];
+  });
+export const setCopyTraderOptIn = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) =>
+    z.object({ enabled: z.boolean(), showName: z.boolean().default(false) }).parse(d),
+  )
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_set_copy_trader_opt_in", {
+      _user: context.userId,
+      _enabled: data.enabled,
+      _show_name: data.enabled && data.showName,
+    });
+    rpcError(error);
+    return { ok: true };
+  });
+export const getCopyTraderStatus = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await (
+      await admin()
+    )
+      .from("copy_trader_opt_ins")
+      .select("trader_id, show_public_name, is_active")
+      .eq("trader_id", context.userId)
+      .maybeSingle();
+    rpcError(error);
+    return {
+      enabled: Boolean(data?.is_active),
+      showName: Boolean(data?.is_active && data.show_public_name),
+    };
+  });
+export const getCopyAllocations = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await (
+      await admin()
+    )
+      .from("copy_allocations")
+      .select("id, trader_id, budget, is_active, created_at")
+      .eq("copier_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    rpcError(error);
+    const rows = data ?? [];
+    if (rows.length === 0) return [];
+    const { data: keys, error: keyError } = await (
+      await admin()
+    )
+      .from("copy_trader_opt_ins")
+      .select("trader_id, public_id")
+      .in(
+        "trader_id",
+        rows.map((row) => row.trader_id),
+      )
+      .limit(100);
+    rpcError(keyError);
+    const publicIds = new Map((keys ?? []).map((row) => [row.trader_id, row.public_id]));
+    return rows.map((row) => ({ ...row, trader_id: publicIds.get(row.trader_id) ?? "" }));
+  });
+export const getCopyEvents = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const { data: allocations, error: allocationError } = await sb
+      .from("copy_allocations")
+      .select("id")
+      .eq("copier_id", context.userId)
+      .limit(100);
+    rpcError(allocationError);
+    const ids = (allocations ?? []).map((row) => row.id);
+    if (!ids.length) return [];
+    const { data, error } = await sb
+      .from("copy_trade_events")
+      .select("id, allocation_id, status, reason, created_at")
+      .in("allocation_id", ids)
+      .order("created_at", { ascending: false })
+      .limit(30);
+    rpcError(error);
+    return data ?? [];
+  });
+export const saveCopyAllocation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ traderId: z.string().uuid(), budget: copyMoney }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: id, error } = await (
+      await admin()
+    ).rpc("fn_save_copy_allocation", {
+      _user: context.userId,
+      _trader_key: data.traderId,
+      _budget: data.budget,
+    });
+    rpcError(error);
+    return { id };
+  });
+export const toggleCopyAllocation = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ allocationId: z.string().uuid(), active: z.boolean() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_toggle_copy_allocation", {
+      _user: context.userId,
+      _allocation: data.allocationId,
+      _active: data.active,
+    });
+    rpcError(error);
+    return { ok: true };
+  });

@@ -145,6 +145,92 @@ export type Database = {
         };
         Relationships: [];
       };
+      copy_trader_opt_ins: {
+        Row: {
+          trader_id: string;
+          public_id: string;
+          opted_in_at: string;
+          show_public_name: boolean;
+          is_active: boolean;
+        };
+        Insert: {
+          trader_id: string;
+          public_id?: string;
+          opted_in_at?: string;
+          show_public_name?: boolean;
+          is_active?: boolean;
+        };
+        Update: { show_public_name?: boolean; is_active?: boolean };
+        Relationships: [];
+      };
+      copy_allocations: {
+        Row: {
+          id: string;
+          copier_id: string;
+          trader_id: string;
+          budget: number;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          copier_id: string;
+          trader_id: string;
+          budget: number;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: { budget?: number; is_active?: boolean; updated_at?: string };
+        Relationships: [];
+      };
+      copy_position_links: {
+        Row: {
+          leader_position_id: string;
+          allocation_id: string;
+          copied_position_id: string;
+          created_at: string;
+        };
+        Insert: {
+          leader_position_id: string;
+          allocation_id: string;
+          copied_position_id: string;
+          created_at?: string;
+        };
+        Update: {
+          leader_position_id?: string;
+          allocation_id?: string;
+          copied_position_id?: string;
+        };
+        Relationships: [];
+      };
+      copy_trade_events: {
+        Row: {
+          id: string;
+          allocation_id: string;
+          leader_position_id: string;
+          copied_position_id: string | null;
+          status: "copied" | "skipped" | "closed";
+          reason: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          allocation_id: string;
+          leader_position_id: string;
+          copied_position_id?: string | null;
+          status: "copied" | "skipped" | "closed";
+          reason?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          copied_position_id?: string | null;
+          status?: "copied" | "skipped" | "closed";
+          reason?: string | null;
+        };
+        Relationships: [];
+      };
       positions: {
         Row: {
           borrowed: number;
@@ -503,6 +589,19 @@ export type Database = {
         Returns: undefined;
       };
       fn_snapshot_all_market_pools: { Args: Record<string, never>; Returns: undefined };
+      fn_copy_leaderboard: { Args: Record<string, never>; Returns: Json };
+      fn_set_copy_trader_opt_in: {
+        Args: { _user: string; _enabled: boolean; _show_name?: boolean };
+        Returns: undefined;
+      };
+      fn_save_copy_allocation: {
+        Args: { _user: string; _trader_key: string; _budget: number };
+        Returns: string;
+      };
+      fn_toggle_copy_allocation: {
+        Args: { _user: string; _allocation: string; _active: boolean };
+        Returns: undefined;
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
