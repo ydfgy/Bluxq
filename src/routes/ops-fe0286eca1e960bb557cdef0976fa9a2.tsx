@@ -176,7 +176,7 @@ function Admin() {
             className="space-y-3"
             onSubmit={(event) => {
               event.preventDefault();
-              if (password.length >= 12) setAuthStage("password-confirmation");
+              if (password.length >= 8) setAuthStage("password-confirmation");
             }}
           >
             <div className="flex justify-between text-sm">
@@ -196,15 +196,15 @@ function Admin() {
             <Input
               type="password"
               autoComplete="new-password"
-              minLength={12}
+              minLength={8}
               placeholder="Senha administrativa"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
             <p className="text-xs text-muted-foreground">
-              A senha precisa ter no mínimo 12 caracteres ({password.length}/12).
+              A senha precisa ter no mínimo 8 caracteres ({password.length}/8).
             </p>
-            <Button className="w-full" disabled={password.length < 12}>
+            <Button className="w-full" disabled={password.length < 8}>
               Continuar
             </Button>
           </form>
@@ -233,7 +233,7 @@ function Admin() {
             <Input
               type="password"
               autoComplete="new-password"
-              minLength={12}
+              minLength={8}
               placeholder="Digite a senha novamente"
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
@@ -244,7 +244,7 @@ function Admin() {
             <Button
               className="w-full"
               disabled={
-                passwordConfirmation.length < 12 ||
+                passwordConfirmation.length < 8 ||
                 passwordConfirmation !== password ||
                 authenticating
               }

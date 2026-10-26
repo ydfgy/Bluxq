@@ -648,7 +648,7 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
     z
       .object({
         adminPath: z.string().min(16).max(256),
-        password: z.string().trim().min(12).max(256),
+        password: z.string().trim().min(8).max(256),
         pin: z
           .string()
           .trim()
