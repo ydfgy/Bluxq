@@ -26,6 +26,10 @@ npm run dev
 
 A aplicação usa variáveis de ambiente do Supabase para autenticação, leitura de dados e funções financeiras. Consulte os arquivos de integração em `src/integrations/supabase/` antes de configurar um ambiente de produção.
 
+## Configuração do painel admin
+
+As credenciais do painel administrativo são lidas exclusivamente no servidor pelas variáveis `ADMIN_PANEL_PATH_SECRET`, `ADMIN_PANEL_PASSWORD` e `ADMIN_PANEL_PIN`. Configure os valores reais nas variáveis de ambiente do serviço de hospedagem ou em um arquivo `.env` privado durante o desenvolvimento local; não coloque a senha ou o PIN no código, no `.env.example` ou no GitHub. A senha administrativa deve ter pelo menos 8 caracteres.
+
 ## Validação
 
 ```sh
