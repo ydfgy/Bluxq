@@ -110,8 +110,6 @@ function Copy() {
     [allocations],
   );
   const balance = Number(profile?.balance ?? 0);
-  const active = allocations.filter((item) => item.is_active);
-  const activeBudget = active.reduce((sum, item) => sum + Number(item.budget), 0);
 
   async function run(action: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -150,36 +148,20 @@ function Copy() {
     <main className="mx-auto max-w-6xl space-y-7 px-4 py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Bluxq · estratégias
-          </p>
-          <h1 className="mt-2 text-3xl font-bold">Copy trading</h1>
-          <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Veja resultados realizados de traders que optaram por participar e defina um limite para
-            acompanhar novas posições.
-          </p>
+          <h1 className="text-3xl font-bold">Copy trading</h1>
         </div>
         <div className="rounded-xl border px-4 py-3 text-right">
-          <div className="text-xs text-muted-foreground">Saldo disponível</div>
+          <div className="text-xs text-muted-foreground">Saldo</div>
           <div className="font-mono text-xl font-bold">$BX {fmt(balance)}</div>
         </div>
       </header>
 
-      <section className="grid gap-3 sm:grid-cols-3">
-        <Metric label="Cópias ativas" value={String(active.length)} />
-        <Metric label="Limite total ativo" value={`$BX ${fmt(activeBudget)}`} />
-        <Metric label="Saldo atual" value={`$BX ${fmt(balance)}`} />
-      </section>
-      <section className="rounded-xl border p-5">
-        <h2 className="font-bold">Atividade recente das cópias</h2>
+      <details className="rounded-xl border px-4 py-3">
+        <summary className="cursor-pointer text-sm font-medium">Atividade</summary>
         {eventsQuery.isError ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            Não foi possível carregar a atividade. Verifique se a migração está aplicada.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Não foi possível carregar.</p>
         ) : !eventsQuery.data?.length ? (
-          <p className="mt-2 text-sm text-muted-foreground">
-            As novas posições copiadas ou ignoradas aparecerão aqui.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Nenhuma atividade.</p>
         ) : (
           <div className="mt-3 divide-y">
             {eventsQuery.data.map((event) => {
@@ -214,36 +196,23 @@ function Copy() {
             })}
           </div>
         )}
-      </section>
-      <section className="rounded-xl border border-primary/20 bg-primary/5 p-4 text-sm leading-relaxed">
-        <strong>Risco e alocação:</strong> a alocação define o limite de margem aberta para aquele
-        trader; não é deduzida do saldo no momento da configuração. Novas operações espelham lado,
-        ativo e alavancagem do trader e podem perder margem. Pausar interrompe novas cópias;
-        posições já abertas continuam até serem fechadas pelo trader ou manualmente.
-      </section>
-
+      </details>
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">Top 5 — lucro realizado</h2>
-            <p className="text-sm text-muted-foreground">
-              P&L acumulado em posições encerradas. Atualizado automaticamente.
-            </p>
+            <h2 className="text-xl font-bold">Top 5</h2>
           </div>
           <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
-            Dados reais · opt-in
+            $BX · lucro
           </span>
         </div>
         {leaderboardQuery.isPending ? (
           <div className="rounded-xl border p-8 text-center text-sm text-muted-foreground">
-            Carregando desempenho…
+            Carregando…
           </div>
         ) : leaderboardQuery.isError ? (
           <div className="rounded-xl border border-destructive/40 p-5 text-sm">
-            <p className="font-semibold">Não foi possível carregar o ranking.</p>
-            <p className="mt-1 text-muted-foreground">
-              Confira se a migração copy trading foi aplicada no Supabase e tente novamente.
-            </p>
+            <p className="font-semibold">Não foi possível carregar.</p>
             <Button
               className="mt-3"
               variant="outline"
@@ -254,11 +223,7 @@ function Copy() {
           </div>
         ) : traders.length === 0 ? (
           <div className="rounded-xl border border-dashed p-8 text-center">
-            <h3 className="font-semibold">Ainda não há traders no ranking</h3>
-            <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              O ranking só inclui traders verificados que optaram por compartilhar desempenho e já
-              têm operações encerradas. Nenhum resultado de demonstração é mostrado.
-            </p>
+            <h3 className="font-semibold">Nenhum trader no ranking ainda</h3>
           </div>
         ) : (
           <div className="space-y-3">
@@ -274,11 +239,11 @@ function Copy() {
                     <div className="min-w-0">
                       <div className="truncate font-semibold">{trader.displayName}</div>
                       <div className="text-xs text-muted-foreground">
-                        {trader.trades} encerradas · {trader.winRate}% vencedoras
+                        {trader.trades} trades · {trader.winRate}% acerto
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">P&L realizado</div>
+                      <div className="text-xs text-muted-foreground">Lucro</div>
                       <div
                         className={`font-mono font-bold ${trader.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
                       >
@@ -286,7 +251,7 @@ function Copy() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-xs text-muted-foreground">Melhor moeda</div>
+                      <div className="text-xs text-muted-foreground">Moeda</div>
                       <div className="font-semibold">{trader.bestSymbol || "—"}</div>
                     </div>
                     <button
@@ -297,8 +262,8 @@ function Copy() {
                       className="rounded-lg border p-2 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                     >
                       <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span>Curva acumulada</span>
-                        <span>{isExpanded ? "Fechar" : "Ver gráfico"}</span>
+                        <span>Desempenho</span>
+                        <span>{isExpanded ? "Fechar" : "Gráfico"}</span>
                       </div>
                       <MiniChart
                         values={trader.curve.map((point) => point.value)}
@@ -306,17 +271,13 @@ function Copy() {
                       />
                     </button>
                     <Button onClick={() => openCopy(trader)} disabled={busy}>
-                      {allocation?.is_active
-                        ? "Editar limite"
-                        : allocation
-                          ? "Retomar cópia"
-                          : "Copiar trader"}
+                      {allocation?.is_active ? "Editar limite" : allocation ? "Retomar" : "Copiar"}
                     </Button>
                   </div>
                   {isExpanded && (
                     <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-2">
                       <div>
-                        <div className="mb-2 text-sm font-semibold">Desempenho por moeda</div>
+                        <div className="mb-2 text-sm font-semibold">Por moeda</div>
                         <div className="space-y-2">
                           {trader.symbols.slice(0, 8).map((coin) => (
                             <div
@@ -339,22 +300,18 @@ function Copy() {
                         </div>
                       </div>
                       <div>
-                        <div className="mb-2 text-sm font-semibold">Histórico de P&L acumulado</div>
+                        <div className="mb-2 text-sm font-semibold">Histórico</div>
                         <MiniChart
                           values={trader.curve.map((point) => point.value)}
                           positive={trader.pnl >= 0}
                           large
                         />
-                        <p className="mt-1 text-xs text-muted-foreground">
-                          Até 30 posições encerradas mais recentes; valores em $BX.
-                        </p>
                       </div>
                     </div>
                   )}
                   {allocation && (
                     <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm">
                       <span>
-                        Limite:{" "}
                         <strong className="font-mono">$BX {fmt(Number(allocation.budget))}</strong>{" "}
                         · {allocation.is_active ? "ativa" : "pausada"}
                       </span>
@@ -371,13 +328,11 @@ function Copy() {
                                   active: !allocation.is_active,
                                 },
                               }),
-                            allocation.is_active
-                              ? "Cópia pausada; posições abertas continuam."
-                              : "Cópia retomada.",
+                            allocation.is_active ? "Pausada." : "Retomada.",
                           )
                         }
                       >
-                        {allocation.is_active ? "Pausar novas cópias" : "Retomar cópias"}
+                        {allocation.is_active ? "Pausar" : "Retomar"}
                       </Button>
                     </div>
                   )}
@@ -391,11 +346,7 @@ function Copy() {
       <section className="rounded-xl border p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="font-bold">Compartilhe seu desempenho</h2>
-            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
-              Participação opcional. Você aparece como trader anônimo por padrão; seu nome Roblox só
-              será mostrado se você escolher compartilhar.
-            </p>
+            <h2 className="font-bold">Entrar no ranking</h2>
           </div>
           <Button
             variant="outline"
@@ -409,17 +360,15 @@ function Copy() {
                       showName: optInQuery.data?.showName ?? false,
                     },
                   }),
-                optInQuery.data?.enabled
-                  ? "Você saiu do ranking; novas cópias foram pausadas."
-                  : "Você entrou no ranking anonimamente.",
+                optInQuery.data?.enabled ? "Você saiu do ranking." : "Você entrou no ranking.",
               )
             }
           >
             {!profile?.verified
-              ? "Verifique a conta para participar"
+              ? "Verificar conta"
               : optInQuery.data?.enabled
-                ? "Sair do ranking"
-                : "Participar anonimamente"}
+                ? "Sair"
+                : "Participar"}
           </Button>
         </div>
         {optInQuery.data?.enabled && (
@@ -432,13 +381,11 @@ function Copy() {
               onChange={(event) =>
                 void run(
                   () => setOptIn({ data: { enabled: true, showName: event.target.checked } }),
-                  event.target.checked
-                    ? "Seu nome foi incluído no ranking."
-                    : "Seu nome foi ocultado.",
+                  event.target.checked ? "Nome exibido." : "Nome oculto.",
                 )
               }
             />
-            <Label htmlFor="copy-show-name">Exibir meu nome Roblox no ranking (opcional)</Label>
+            <Label htmlFor="copy-show-name">Mostrar meu nome</Label>
           </div>
         )}
       </section>
@@ -461,9 +408,6 @@ function Copy() {
               <h2 id="copy-dialog-title" className="text-xl font-bold">
                 Copiar {copyTarget.displayName}
               </h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Defina o limite máximo de margem aberta para este trader.
-              </p>
             </div>
             <div className="space-y-2">
               <Label htmlFor="copy-budget">Limite da alocação ($BX)</Label>
@@ -477,14 +421,12 @@ function Copy() {
                 onChange={(event) => setBudgetText(event.target.value)}
               />
               <p className="text-xs text-muted-foreground">
-                Saldo atual: $BX {fmt(balance)} · mínimo $BX 10 · máximo $BX 10.000.000.
+                Saldo $BX {fmt(balance)} · mínimo $BX 10
               </p>
               {budgetError && <p className="text-sm text-destructive">{budgetError}</p>}
             </div>
-            <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm leading-relaxed">
-              Ao ativar, novas posições podem ser abertas automaticamente com base nas operações
-              futuras deste trader. O limite restringe a margem copiada, mas não evita perdas; a
-              alavancagem acompanha a estratégia. Posições já abertas não são encerradas ao pausar.
+            <div className="text-xs text-muted-foreground">
+              Apenas novas operações · copiar envolve risco.
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setCopyTarget(null)} disabled={busy}>
@@ -501,11 +443,11 @@ function Copy() {
                           budget: Math.round(parsedBudget * 100) / 100,
                         },
                       }),
-                    "Copy trade ativado. Somente novas posições elegíveis serão copiadas.",
+                    "Cópia ativada.",
                   )
                 }
               >
-                {busy ? "Salvando…" : "Confirmar e ativar cópia"}
+                {busy ? "Salvando…" : "Confirmar"}
               </Button>
             </div>
           </section>
@@ -562,13 +504,5 @@ function MiniChart({
         vectorEffect="non-scaling-stroke"
       />
     </svg>
-  );
-}
-function Metric({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border p-4">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-xl font-bold">{value}</div>
-    </div>
   );
 }
