@@ -90,7 +90,6 @@ function StakeDetails() {
 
   const totalAssets = Number(pool?.total_assets ?? 0);
   const reserved = Number(pool?.total_reserved ?? 0);
-  const available = Math.max(0, totalAssets - reserved);
   const balance = Number(profile?.balance ?? 0);
   const positionValue = Number(position?.deposited ?? 0);
   const numericAmount = Number(amount);
@@ -99,11 +98,9 @@ function StakeDetails() {
       ? "Informe um valor maior que zero."
       : action === "stake" && numericAmount > balance
         ? "O valor excede seu saldo disponível."
-        : action === "stake" && numericAmount > available
-          ? "O valor excede a liquidez disponível da pool."
-          : action === "unstake" && numericAmount > positionValue
-            ? "O valor excede sua posição nesta pool."
-            : "";
+        : action === "unstake" && numericAmount > positionValue
+          ? "O valor excede sua posição nesta pool."
+          : "";
 
   async function run(action: "stake" | "unstake") {
     const value = Number(amount);

@@ -61,8 +61,8 @@ function Wallet() {
         ? "Informe o hash da transação."
         : "";
   const withdrawError =
-    !Number.isFinite(withdrawValue) || withdrawValue < 10
-      ? "Informe um saque de pelo menos 10."
+    !Number.isFinite(withdrawValue) || withdrawValue < 60
+      ? "Informe um saque de pelo menos 60."
       : withdrawValue > Number(p?.balance ?? 0)
         ? "O valor excede seu saldo disponível."
         : withdrawMethod === "crypto" && !destination.trim()
@@ -202,7 +202,7 @@ function Wallet() {
           <Field label="Valor em B$">
             <Input
               type="number"
-              min={10}
+              min={60}
               placeholder="Quantidade de $BX"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}

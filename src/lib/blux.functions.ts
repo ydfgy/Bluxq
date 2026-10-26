@@ -494,7 +494,7 @@ export const requestWithdraw = createServerFn({ method: "POST" })
   .validator((d) =>
     z
       .object({
-        amount: amount.shape.amount,
+        amount: z.number().finite().min(60).max(100_000_000),
         payoutMethod: z.enum(["roblox", "crypto"]),
         asset: z.string().trim().max(20).optional(),
         network: z.string().trim().max(30).optional(),
