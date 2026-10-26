@@ -48,8 +48,15 @@ function base64UrlDecode(value: string) {
   );
 }
 
+async function adminTokenSecret() {
+  const { data, error } = await (await admin()).rpc("fn_admin_panel_token_secret");
+  rpcError(error);
+  if (!data) throw new Error("Painel administrativo não configurado no servidor");
+  return data;
+}
+
 async function signAdminToken(payload: string) {
-  const secret = `${process.env["ADMIN_PANEL_PATH_SECRET"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? ""}:${process.env["ADMIN_PANEL_PIN"]?.trim() ?? ""}`;
+  const secret = await adminTokenSecret();
   const key = await crypto.subtle.importKey(
     "raw",
     new TextEncoder().encode(secret),
@@ -647,7 +654,6 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
   .validator((d) =>
     z
       .object({
-        adminPath: z.string().min(16).max(256),
         password: z.string().trim().min(8).max(256),
         pin: z
           .string()
@@ -658,10 +664,6 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
   )
   .handler(async ({ data }) => {
     const sb = await admin();
-    const configuredPath = process.env["ADMIN_PANEL_PATH_SECRET"]?.trim() ?? "";
-    if (!configuredPath || !constantTimeEqual(data.adminPath, configuredPath)) {
-      throw new Error("Acesso não disponível");
-    }
     const subjectHash = await adminSubjectHash();
     const { data: state, error: stateError } = await sb.rpc("fn_admin_panel_attempt_state", {
       _subject_hash: subjectHash,
@@ -672,19 +674,12 @@ export const authenticateAdminPanel = createServerFn({ method: "POST" })
       throw new Error("Acesso temporariamente bloqueado por segurança. Tente novamente em 7 dias.");
     }
 
-    const expectedPassword = process.env["ADMIN_PANEL_PASSWORD"]?.trim() ?? "";
-    const expectedPin = process.env["ADMIN_PANEL_PIN"]?.trim() ?? "";
-    if (!expectedPassword || !expectedPin) {
-      console.error("[Bluxq] Admin panel is not configured", {
-        hasPassword: Boolean(expectedPassword),
-        hasPin: Boolean(expectedPin),
-      });
-      throw new Error("Painel administrativo não configurado no servidor");
-    }
-    if (
-      !constantTimeEqual(data.password, expectedPassword) ||
-      !constantTimeEqual(data.pin, expectedPin)
-    ) {
+    const { data: credentialsValid, error: credentialsError } = await sb.rpc(
+      "fn_verify_admin_credentials",
+      { _password: data.password, _pin: data.pin },
+    );
+    rpcError(credentialsError);
+    if (!credentialsValid) {
       const { data: failure, error: failureError } = await sb.rpc("fn_record_admin_panel_failure", {
         _subject_hash: subjectHash,
       });

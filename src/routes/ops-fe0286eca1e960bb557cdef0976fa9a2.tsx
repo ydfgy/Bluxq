@@ -22,8 +22,6 @@ function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
 }
 
-const ADMIN_PATH_SECRET = "ops-fe0286eca1e960bb557cdef0976fa9a2";
-
 export const Route = createFileRoute("/ops-fe0286eca1e960bb557cdef0976fa9a2")({
   head: () => ({
     meta: [
@@ -58,7 +56,7 @@ function Admin() {
     setAuthenticating(true);
     try {
       const result = await authenticate({
-        data: { adminPath: ADMIN_PATH_SECRET, password, pin },
+        data: { password, pin },
       });
       sessionStorage.setItem("bluxq-admin-access", result.token);
       setAccessToken(result.token);

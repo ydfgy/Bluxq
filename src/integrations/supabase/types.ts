@@ -8,6 +8,33 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_panel_credentials: {
+        Row: {
+          created_at: string;
+          id: boolean;
+          password_hash: string;
+          pin_hash: string;
+          token_secret: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: boolean;
+          password_hash: string;
+          pin_hash: string;
+          token_secret?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: boolean;
+          password_hash?: string;
+          pin_hash?: string;
+          token_secret?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       affiliate_earnings: {
         Row: {
           id: string;
@@ -360,6 +387,10 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      fn_admin_panel_token_secret: {
+        Args: Record<string, never>;
+        Returns: string;
+      };
       fn_admin_panel_attempt_state: {
         Args: { _subject_hash: string };
         Returns: { failed_attempts: number; locked_until: string | null }[];
@@ -371,6 +402,10 @@ export type Database = {
       fn_reset_admin_panel_failures: {
         Args: { _subject_hash: string };
         Returns: undefined;
+      };
+      fn_verify_admin_credentials: {
+        Args: { _password: string; _pin: string };
+        Returns: boolean;
       };
       fn_admin_auth_state: {
         Args: { _user: string };
