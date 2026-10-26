@@ -196,10 +196,14 @@ function Admin() {
             <Input
               type="password"
               autoComplete="new-password"
+              minLength={12}
               placeholder="Senha administrativa"
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+            <p className="text-xs text-muted-foreground">
+              A senha precisa ter no mínimo 12 caracteres ({password.length}/12).
+            </p>
             <Button className="w-full" disabled={password.length < 12}>
               Continuar
             </Button>
@@ -229,10 +233,14 @@ function Admin() {
             <Input
               type="password"
               autoComplete="new-password"
+              minLength={12}
               placeholder="Digite a senha novamente"
               value={passwordConfirmation}
               onChange={(event) => setPasswordConfirmation(event.target.value)}
             />
+            {passwordConfirmation.length > 0 && passwordConfirmation !== password && (
+              <p className="text-xs text-red-400">As senhas não coincidem.</p>
+            )}
             <Button
               className="w-full"
               disabled={
