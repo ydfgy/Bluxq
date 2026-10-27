@@ -47,7 +47,7 @@ function Wallet() {
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState<"roblox" | "crypto">("roblox");
   const [withdrawMethod, setWithdrawMethod] = useState<"roblox" | "crypto">("roblox");
-  const [asset, setAsset] = useState("USDT");
+  const [asset, setAsset] = useState("BTC");
   const [network, setNetwork] = useState("TRC20");
   const [transactionHash, setTransactionHash] = useState("");
   const [destination, setDestination] = useState("");
@@ -273,6 +273,37 @@ function Wallet() {
   );
 }
 
+const CRYPTO_ASSETS = ["BTC", "ETH", "SOL"] as const;
+
+function WalletAssetIcon({ asset, size = "md" }: { asset: string; size?: "sm" | "md" }) {
+  const normalized = asset.toLowerCase();
+  const isRobux = normalized === "robux";
+  const sizeClass = size === "sm" ? "h-5 w-5" : "h-8 w-8";
+
+  return (
+    <span
+      className={`grid ${sizeClass} shrink-0 place-items-center overflow-hidden rounded-full bg-black/20`}
+      aria-hidden="true"
+    >
+      <img
+        src={isRobux ? "/robux-icon.png" : `/crypto-icons/${normalized}.svg`}
+        alt=""
+        className={isRobux ? "h-[125%] w-[125%] object-contain" : "h-full w-full object-contain"}
+      />
+    </span>
+  );
+}
+
+function CryptoPreviewIcons() {
+  return (
+    <span className="flex items-center -space-x-1" aria-label="BTC, ETH e SOL">
+      {CRYPTO_ASSETS.map((crypto) => (
+        <WalletAssetIcon key={crypto} asset={crypto} size="sm" />
+      ))}
+    </span>
+  );
+}
+
 function PaymentChoice({
   selected,
   onSelect,
@@ -281,20 +312,35 @@ function PaymentChoice({
   onSelect: (value: "roblox" | "crypto") => void;
 }) {
   return (
-    <div className="flex gap-2">
-      {(["roblox", "crypto"] as const).map((method) => (
-        <button
-          key={method}
-          type="button"
-          className={`rounded-md border px-3 py-2 text-sm ${selected === method ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary hover:text-primary"}`}
-          onClick={() => onSelect(method)}
-        >
-          {method === "roblox" ? "Robux" : "Crypto"}
-        </button>
-      ))}
+    <div className="grid grid-cols-2 gap-2" role="group" aria-label="Forma de pagamento">
+      <button
+        type="button"
+        aria-pressed={selected === "roblox"}
+        className={`flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${selected === "roblox" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary hover:text-primary"}`}
+        onClick={() => onSelect("roblox")}
+      >
+        <WalletAssetIcon asset="robux" />
+        <span>
+          <span className="block text-sm font-semibold">Robux</span>
+          <span className="block text-xs text-muted-foreground">Via Roblox</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        aria-pressed={selected === "crypto"}
+        className={`flex min-h-16 items-center gap-3 rounded-lg border px-3 py-2 text-left transition-colors ${selected === "crypto" ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary hover:text-primary"}`}
+        onClick={() => onSelect("crypto")}
+      >
+        <CryptoPreviewIcons />
+        <span>
+          <span className="block text-sm font-semibold">Crypto</span>
+          <span className="block text-xs text-muted-foreground">BTC · ETH · SOL</span>
+        </span>
+      </button>
     </div>
   );
 }
+
 function CryptoFields({
   asset,
   network,
@@ -307,13 +353,23 @@ function CryptoFields({
   onNetwork: (value: string) => void;
 }) {
   return (
-    <div className="grid grid-cols-2 gap-2">
-      <Field label="Moeda">
-        <Input
-          value={asset}
-          onChange={(e) => onAsset(e.target.value.toUpperCase())}
-          placeholder="USDT"
-        />
+    <div className="space-y-3">
+      <Field label="Escolha a moeda">
+        <div className="grid grid-cols-3 gap-2" role="radiogroup" aria-label="Moeda crypto">
+          {CRYPTO_ASSETS.map((crypto) => (
+            <button
+              key={crypto}
+              type="button"
+              role="radio"
+              aria-checked={asset === crypto}
+              className={`flex items-center justify-center gap-2 rounded-md border px-2 py-2 text-sm font-semibold transition-colors ${asset === crypto ? "border-primary bg-primary/10 text-primary" : "text-muted-foreground hover:border-primary hover:text-primary"}`}
+              onClick={() => onAsset(crypto)}
+            >
+              <WalletAssetIcon asset={crypto} size="sm" />
+              {crypto}
+            </button>
+          ))}
+        </div>
       </Field>
       <Field label="Rede">
         <Input
