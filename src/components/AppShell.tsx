@@ -72,6 +72,7 @@ export function Navbar() {
                 aria-label={`Saldo $BX ${fmt(profile.balance)}`}
               >
                 <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
+                <span>{fmt(profile.balance)}</span>
               </Link>
               <div className="hidden text-sm sm:block">
                 {profile.is_anonymous ? "Anônimo" : profile.roblox_username}
