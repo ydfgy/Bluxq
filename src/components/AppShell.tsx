@@ -17,7 +17,7 @@ export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; classNam
 
 export function Logo() {
   return (
-    <Link to="/" aria-label="Bluxq — início" className="flex h-10 w-32 shrink-0 items-center">
+    <Link to="/" aria-label="Bluxq — início" className="ml-2 flex h-10 w-32 shrink-0 items-center">
       <img src={BRAND_LOGO_SRC} alt="Bluxq" className="h-full w-full object-contain object-left" />
     </Link>
   );
@@ -71,8 +71,7 @@ export function Navbar() {
                 className="flex items-center gap-1.5 font-mono text-sm text-gold"
                 aria-label={`Saldo $BX ${fmt(profile.balance)}`}
               >
-                <img src="/bluxq-icon.png" alt="" className="h-4 w-4 object-contain" />
-                <span>$BX {fmt(profile.balance)}</span>
+                <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
               </Link>
               <div className="hidden text-sm sm:block">
                 {profile.is_anonymous ? "Anônimo" : profile.roblox_username}
