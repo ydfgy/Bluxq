@@ -17,7 +17,7 @@ export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; classNam
 
 export function Logo() {
   return (
-    <Link to="/" aria-label="Bluxq — início" className="ml-2 flex h-10 w-32 shrink-0 items-center">
+    <Link to="/" aria-label="Bluxq — início" className="-ml-2 flex h-10 w-32 shrink-0 items-center">
       <img src={BRAND_LOGO_SRC} alt="Bluxq" className="h-full w-full object-contain object-left" />
     </Link>
   );
