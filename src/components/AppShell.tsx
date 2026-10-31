@@ -39,7 +39,7 @@ export function Navbar() {
   }
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-background/85 backdrop-blur">
+    <header className="sticky top-0 z-40 bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-[1600px] items-center gap-6 px-4">
         <Logo />
         <nav className="hidden md:flex items-center gap-5">

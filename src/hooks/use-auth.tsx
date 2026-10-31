@@ -18,11 +18,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       authEventReceived = true;
       if (!mounted) return;
-      if (nextSession?.expires_at && nextSession.expires_at * 1000 <= Date.now()) {
-        setSession(null);
-      } else {
-        setSession(nextSession);
-      }
+      // Supabase owns token refresh and session invalidation; access-token expiry
+      // alone must not sign the user out while a refresh token is still valid.
+      setSession(nextSession);
       setReady(true);
       qc.invalidateQueries();
     });
@@ -32,11 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // The auth event is newer than this initial snapshot. Never let a slow
         // getSession() response overwrite a session established by a login.
         if (!mounted || authEventReceived) return;
-        if (data.session?.expires_at && data.session.expires_at * 1000 <= Date.now()) {
-          setSession(null);
-        } else {
-          setSession(data.session);
-        }
+        setSession(data.session);
         setReady(true);
       })
       .catch((error: unknown) => {
@@ -50,19 +44,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       data.subscription.unsubscribe();
     };
   }, [qc]);
-
-  useEffect(() => {
-    if (!session?.expires_at) return;
-    const remaining = session.expires_at * 1000 - Date.now();
-    if (remaining <= 0) {
-      void supabase.auth.signOut({ scope: "local" });
-      return;
-    }
-    const timeout = window.setTimeout(() => {
-      void supabase.auth.signOut({ scope: "local" });
-    }, remaining);
-    return () => window.clearTimeout(timeout);
-  }, [session]);
   return <AuthCtx.Provider value={{ session, ready }}>{children}</AuthCtx.Provider>;
 }
 

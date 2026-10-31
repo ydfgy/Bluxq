@@ -76,10 +76,9 @@ function createSupabaseClient() {
     },
     auth: {
       persistSession: true,
-      // Keep the session only in this browser tab. Closing the tab removes it.
-      storage: typeof window !== "undefined" ? window.sessionStorage : undefined,
-      // Access tokens expire after one hour; do not silently extend a session forever.
-      autoRefreshToken: false,
+      // Use Supabase's persistent browser storage (localStorage, with an in-memory fallback).
+      // Refresh access tokens before expiry instead of forcing the user to log in again.
+      autoRefreshToken: true,
       detectSessionInUrl: true,
     },
   });
