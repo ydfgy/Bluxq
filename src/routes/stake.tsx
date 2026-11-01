@@ -2,6 +2,7 @@ import { createFileRoute, Link, Outlet, useLocation } from "@tanstack/react-rout
 import { useQuery } from "@tanstack/react-query";
 import { ArrowRight } from "lucide-react";
 import { MarketIcon } from "@/components/MarketIcon";
+import { useAuth } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { MARKETS, fmt } from "@/lib/markets";
 
@@ -26,6 +27,8 @@ type Pool = {
 function StakeOverview() {
   const { pathname } = useLocation();
   const isOverview = pathname === "/stake" || pathname === "/stake/";
+  const { session, ready } = useAuth();
+  const canViewPoolData = ready && Boolean(session);
 
   const {
     data: pools = [],
@@ -33,7 +36,7 @@ function StakeOverview() {
     isError,
   } = useQuery({
     queryKey: ["market-pools", "stake"],
-    enabled: isOverview,
+    enabled: isOverview && canViewPoolData,
     refetchInterval: 8000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -54,7 +57,15 @@ function StakeOverview() {
   const poolBySymbol = new Map(pools.map((pool) => [pool.symbol, pool]));
   return (
     <main className="mx-auto max-w-6xl space-y-8 px-4 py-8 sm:px-6 lg:px-8">
-      {isLoading ? (
+      {!canViewPoolData && (
+        <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
+          <p>Entre ou crie uma conta para consultar os valores das pools.</p>
+          <Link to="/auth" className="mt-3 inline-flex font-semibold text-primary hover:underline">
+            Entrar ou criar conta <ArrowRight className="ml-2 h-4 w-4" />
+          </Link>
+        </div>
+      )}
+      {canViewPoolData && isLoading ? (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {MARKETS.map((market) => (
             <div key={market.symbol} className="h-44 animate-pulse rounded-xl border bg-card" />
@@ -62,7 +73,7 @@ function StakeOverview() {
         </div>
       ) : (
         <>
-          {isError && (
+          {canViewPoolData && isError && (
             <div className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm text-primary">
               Os valores das pools estão temporariamente indisponíveis, mas você ainda pode abrir
               qualquer moeda para ver seus detalhes.
@@ -89,18 +100,22 @@ function StakeOverview() {
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1 group-hover:text-primary" />
                   </div>
                   <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <div className="text-[11px] text-muted-foreground">Pool total</div>
-                      <div className="mt-1 font-mono">
-                        {pool ? `${fmt(pool.total_assets)} $BX` : "—"}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-[11px] text-muted-foreground">Reservado</div>
-                      <div className="mt-1 font-mono text-primary">
-                        {pool ? `${fmt(pool.total_reserved)} $BX` : "—"}
-                      </div>
-                    </div>
+                    {canViewPoolData ? (
+                      <>
+                        <div>
+                          <div className="text-[11px] text-muted-foreground">Pool total</div>
+                          <div className="mt-1 font-mono">
+                            {pool ? `${fmt(pool.total_assets)} $BX` : "—"}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[11px] text-muted-foreground">Reservado</div>
+                          <div className="mt-1 font-mono text-primary">
+                            {pool ? `${fmt(pool.total_reserved)} $BX` : "—"}
+                          </div>
+                        </div>
+                      </>
+                    ) : null}
                   </div>
                 </Link>
               );

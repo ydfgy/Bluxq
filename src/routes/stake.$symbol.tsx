@@ -36,7 +36,8 @@ type PoolDay = {
 function StakeDetails() {
   const { symbol } = Route.useParams();
   const market = MARKETS.find((item) => item.symbol === symbol) ?? MARKETS[0];
-  const { session } = useAuth();
+  const { session, ready } = useAuth();
+  const canViewPoolData = ready && Boolean(session);
   const { data: profile } = useProfile();
   const qc = useQueryClient();
   const [amount, setAmount] = useState("");
@@ -47,6 +48,7 @@ function StakeDetails() {
 
   const { data: pool, isLoading: poolLoading } = useQuery({
     queryKey: ["market-pool", symbol, "stake-page"],
+    enabled: canViewPoolData,
     refetchInterval: 5000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -60,6 +62,7 @@ function StakeDetails() {
   });
   const { data: history = [] } = useQuery({
     queryKey: ["market-pool-history", symbol],
+    enabled: canViewPoolData,
     refetchInterval: 30000,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -132,47 +135,61 @@ function StakeDetails() {
     <main className="mx-auto max-w-6xl space-y-4 px-4 py-6 sm:px-6 lg:px-8">
       <section className="grid items-start gap-3 md:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0 space-y-3">
-          <div className="overflow-hidden rounded-xl border bg-transparent">
-            <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3">
-              <div className="flex min-w-0 items-center gap-3">
-                <MarketIcon base={market.base} size="md" />
-                <div className="min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h1 className="text-lg font-bold">Pool {market.base}</h1>
-                    <span className="rounded-full bg-bull/10 px-2 py-1 text-[10px] font-semibold text-bull">
-                      Ativa
-                    </span>
+          {canViewPoolData ? (
+            <div className="overflow-hidden rounded-xl border bg-transparent">
+              <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <MarketIcon base={market.base} size="md" />
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h1 className="text-lg font-bold">Pool {market.base}</h1>
+                      <span className="rounded-full bg-bull/10 px-2 py-1 text-[10px] font-semibold text-bull">
+                        Ativa
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Liquidez da pool em $BX</p>
                   </div>
-                  <p className="text-xs text-muted-foreground">Liquidez da pool em $BX</p>
+                </div>
+                <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
+                  <PoolStat
+                    label="Volume da pool"
+                    value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`}
+                  />
+                  <PoolStat
+                    label="Disponível"
+                    value={poolLoading ? "…" : `${fmt(available)} $BX`}
+                    tone="bull"
+                  />
+                  <PoolStat label="Reservado" value={`${fmt(reserved)} $BX`} />
+                  <PoolStat
+                    label="Taxas para stakers"
+                    value={`${fmt(pool?.fees_to_stakers)} $BX`}
+                    tone="primary"
+                  />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
-                <PoolStat
-                  label="Volume da pool"
-                  value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`}
-                />
-                <PoolStat
-                  label="Disponível"
-                  value={poolLoading ? "…" : `${fmt(available)} $BX`}
-                  tone="bull"
-                />
-                <PoolStat label="Reservado" value={`${fmt(reserved)} $BX`} />
-                <PoolStat
-                  label="Taxas para stakers"
-                  value={`${fmt(pool?.fees_to_stakers)} $BX`}
-                  tone="primary"
-                />
+              <div className="h-[300px] bg-black px-4 py-5 sm:h-[360px]">
+                <PoolVolumeChart data={history} current={totalAssets} />
               </div>
             </div>
-            <div className="h-[300px] bg-black px-4 py-5 sm:h-[360px]">
-              <PoolVolumeChart data={history} current={totalAssets} />
+          ) : (
+            <div className="rounded-xl border bg-card p-5 text-sm text-muted-foreground">
+              Entre ou crie uma conta para consultar os valores e o histórico desta pool.
+              <Link
+                to="/auth"
+                className="mt-3 inline-flex font-semibold text-primary hover:underline"
+              >
+                Entrar ou criar conta
+              </Link>
             </div>
-          </div>
-          <div className="grid content-start gap-x-4 gap-y-2 px-1 sm:grid-cols-3">
-            <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
-            <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
-            <Info title="Sua posição" value={`${fmt(positionValue)} $BX`} />
-          </div>
+          )}
+          {canViewPoolData && (
+            <div className="grid content-start gap-x-4 gap-y-2 px-1 sm:grid-cols-3">
+              <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
+              <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
+              <Info title="Sua posição" value={`${fmt(positionValue)} $BX`} />
+            </div>
+          )}
         </div>
         <AllocationPanel
           session={Boolean(session)}
