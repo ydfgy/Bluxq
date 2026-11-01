@@ -359,30 +359,40 @@ function Trade() {
     canvas.height = 700;
     const context = canvas.getContext("2d");
     if (!context) return;
-    context.fillStyle = "#16a34a";
+    const positive = pnl >= 0;
+    context.fillStyle = "#09090b";
     context.fillRect(0, 0, canvas.width, canvas.height);
-    context.fillStyle = "#16a34a";
-    context.font = "700 34px sans-serif";
-    context.fillText("Bluxq", 70, 90);
+    context.fillStyle = "#18181b";
+    context.fillRect(0, 0, canvas.width, 14);
+    context.fillStyle = positive ? "#22c55e" : "#ef4444";
+    context.fillRect(0, 14, canvas.width, 8);
+    context.strokeStyle = "#27272a";
+    context.lineWidth = 2;
+    context.strokeRect(34, 34, canvas.width - 68, canvas.height - 68);
     context.fillStyle = "#f4f4f5";
+    context.font = "700 34px sans-serif";
+    context.fillText("BLUXQ", 70, 104);
+    context.fillStyle = "#a1a1aa";
+    context.font = "24px sans-serif";
+    context.fillText("RESULTADO DA OPERAÇÃO", 70, 150);
+    context.fillStyle = "#fafafa";
     context.font = "700 54px sans-serif";
-    context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 190);
-    context.fillStyle = position.side === "long" ? "#16a34a" : "#dc2626";
-    context.font = "700 34px monospace";
-    context.fillText(`${position.side.toUpperCase()} ${position.leverage}x`, 70, 245);
-    context.fillStyle = pnl >= 0 ? "#16a34a" : "#dc2626";
-    context.font = "700 72px monospace";
+    context.fillText(`${position.symbol.replace("USDT", "")} / USDT`, 70, 235);
+    context.fillStyle = position.side === "long" ? "#22c55e" : "#f87171";
+    context.font = "700 30px monospace";
+    context.fillText(`${position.side.toUpperCase()}  ·  ${position.leverage}x`, 70, 292);
+    context.fillStyle = positive ? "#4ade80" : "#f87171";
+    context.font = "700 76px monospace";
     context.fillText(`${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`, 70, 385);
-    context.font = "32px monospace";
+    context.font = "700 34px monospace";
     context.fillText(`${roe >= 0 ? "+" : ""}${roe.toFixed(2)}%`, 75, 440);
-    context.fillStyle = "#d4d4d8";
+    context.fillStyle = "#a1a1aa";
     context.font = "24px monospace";
-    context.fillText(`Entrada: ${fmtPrice(Number(position.entry_price))}`, 70, 535);
-    context.fillText(
-      `Atual: ${fmtPrice(px)}   Quantidade: ${Number(position.qty).toPrecision(7)}`,
-      70,
-      580,
-    );
+    context.fillText(`ENTRADA  ${fmtPrice(Number(position.entry_price))}`, 70, 540);
+    context.fillText(`ATUAL     ${fmtPrice(px)}`, 70, 580);
+    context.fillText(`QTD       ${Number(position.qty).toPrecision(7)}`, 520, 580);
+    context.fillStyle = "#71717a";
+    context.font = "20px sans-serif";
     context.fillText(new Date().toLocaleString("pt-BR"), 70, 635);
     canvas.toBlob((blob) => {
       if (!blob) return;
@@ -938,60 +948,97 @@ function Trade() {
           className="fixed inset-0 z-50 grid place-items-center bg-black/80 p-4"
           onClick={() => setSelectedPosition(null)}
         >
-          <div
-            className="w-full max-w-md rounded-2xl border bg-card p-6 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <div className="text-xs uppercase text-muted-foreground">Operação Bluxq</div>
-                <h2 className="mt-1 text-2xl font-bold">
-                  {selectedPosition.symbol.replace("USDT", "")} / USDT
-                </h2>
-              </div>
-              <button
-                onClick={() => setSelectedPosition(null)}
-                className="text-xl text-muted-foreground hover:text-foreground"
-                aria-label="Fechar"
-              >
-                ×
-              </button>
-            </div>
-            <div
-              className={`mt-4 text-xl font-mono font-bold ${selectedPosition.side === "long" ? "text-bull" : "text-bear"}`}
-            >
-              {selectedPosition.side.toUpperCase()} {selectedPosition.leverage}x
-            </div>
-            <div className="mt-4 space-y-2 rounded-lg border p-3 font-mono text-sm">
-              <Row k="Margem" v={`${fmt(Number(selectedPosition.margin))} $BX`} />
-              <Row k="Quantidade" v={Number(selectedPosition.qty).toPrecision(7)} />
-              <Row k="Entrada" v={fmtPrice(Number(selectedPosition.entry_price))} />
-              <Row k="Price atual" v={fmtPrice(livePx(selectedPosition.symbol))} />
-              <Row k="Liquidation" v={fmtPrice(Number(selectedPosition.liq_price))} />
-              <Row k="Aberta em" v={new Date(selectedPosition.opened_at).toLocaleString("pt-BR")} />
-            </div>
-            <div
-              className={`mt-4 text-center text-3xl font-mono font-bold ${calcPnl(selectedPosition.side, Number(selectedPosition.qty), Number(selectedPosition.entry_price), livePx(selectedPosition.symbol), Number(selectedPosition.margin)) >= 0 ? "text-bull" : "text-bear"}`}
-            >
-              {(() => {
-                const pnl = calcPnl(
-                  selectedPosition.side,
-                  Number(selectedPosition.qty),
-                  Number(selectedPosition.entry_price),
-                  livePx(selectedPosition.symbol),
-                  Number(selectedPosition.margin),
-                );
-                return `${pnl >= 0 ? "+" : ""}${fmt(pnl)} $BX`;
-              })()}
-            </div>
-            <div className="mt-5 flex gap-2">
-              <Button className="flex-1" onClick={() => downloadPositionImage(selectedPosition)}>
-                Baixar imagem
-              </Button>
-              <Button variant="outline" onClick={() => setSelectedPosition(null)}>
-                Fechar
-              </Button>
-            </div>
+          <div className="w-full max-w-2xl" onClick={(event) => event.stopPropagation()}>
+            {(() => {
+              const px = livePx(selectedPosition.symbol);
+              const pnl = calcPnl(
+                selectedPosition.side,
+                Number(selectedPosition.qty),
+                Number(selectedPosition.entry_price),
+                px,
+                Number(selectedPosition.margin),
+              );
+              const roe = (pnl / Number(selectedPosition.margin)) * 100;
+              const positive = pnl >= 0;
+              return (
+                <div className="overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl">
+                  <div className={`h-1.5 ${positive ? "bg-emerald-500" : "bg-red-500"}`} />
+                  <div className="p-6 sm:p-9">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <div className="text-xl font-black tracking-[0.2em] text-zinc-100">
+                          BLUXQ
+                        </div>
+                        <div className="mt-2 text-xs font-semibold tracking-[0.18em] text-zinc-500">
+                          RESULTADO DA OPERAÇÃO
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => setSelectedPosition(null)}
+                        className="text-2xl leading-none text-zinc-500 hover:text-white"
+                        aria-label="Fechar"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="mt-8 text-3xl font-bold text-white sm:text-4xl">
+                      {selectedPosition.symbol.replace("USDT", "")}{" "}
+                      <span className="text-zinc-500">/ USDT</span>
+                    </div>
+                    <div
+                      className={`mt-3 font-mono text-sm font-bold tracking-wider ${selectedPosition.side === "long" ? "text-emerald-400" : "text-red-400"}`}
+                    >
+                      {selectedPosition.side.toUpperCase()} <span className="text-zinc-600">·</span>{" "}
+                      {selectedPosition.leverage}x
+                    </div>
+                    <div
+                      className={`mt-7 break-words font-mono text-4xl font-black sm:text-6xl ${positive ? "text-emerald-400" : "text-red-400"}`}
+                    >
+                      {pnl >= 0 ? "+" : ""}
+                      {fmt(pnl)} <span className="text-2xl">$BX</span>
+                    </div>
+                    <div
+                      className={`mt-2 font-mono text-xl font-bold ${positive ? "text-emerald-500" : "text-red-500"}`}
+                    >
+                      {roe >= 0 ? "+" : ""}
+                      {roe.toFixed(2)}%
+                    </div>
+                    <div className="mt-8 grid grid-cols-2 gap-4 border-t border-zinc-800 pt-5 font-mono text-xs sm:text-sm">
+                      <div>
+                        <div className="text-zinc-500">ENTRADA</div>
+                        <div className="mt-1 text-zinc-200">
+                          {fmtPrice(Number(selectedPosition.entry_price))}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-zinc-500">ATUAL</div>
+                        <div className="mt-1 text-zinc-200">{fmtPrice(px)}</div>
+                      </div>
+                      <div>
+                        <div className="text-zinc-500">QUANTIDADE</div>
+                        <div className="mt-1 text-zinc-200">
+                          {Number(selectedPosition.qty).toPrecision(7)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-zinc-500">MARGEM</div>
+                        <div className="mt-1 text-zinc-200">
+                          {fmt(Number(selectedPosition.margin))} $BX
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                      <Button variant="outline" onClick={() => setSelectedPosition(null)}>
+                        Fechar
+                      </Button>
+                      <Button onClick={() => downloadPositionImage(selectedPosition)}>
+                        Baixar imagem
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}
