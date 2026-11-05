@@ -32,8 +32,8 @@ import {
   calcPnl,
   calcOpeningFee,
   calcLiquidationPrice,
+  calcLiquidationMove,
   PROFIT_CAP,
-  LIQ_LOSS,
   MIN_LEVERAGE,
   MAX_LEVERAGE,
 } from "@/lib/markets";
@@ -956,7 +956,10 @@ function Trade() {
                 v={currentPrice ? fmtPrice(liqShort) : "—"}
                 cls="text-bear"
               />
-              <Row k="Movimento p/ liquidar" v={`${((LIQ_LOSS / lev) * 100).toFixed(2)}%`} />
+              <Row
+                k="Movimento p/ liquidar"
+                v={`${(calcLiquidationMove(lev) * 100).toFixed(2)}%`}
+              />
               <Row k="Maximum profit" v={<CurrencyAmount value={fmt(m * PROFIT_CAP)} />} />
               <Row k="Taxa de abertura" v={<CurrencyAmount value={fmt(openingFee)} />} />
             </div>

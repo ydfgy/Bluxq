@@ -19,7 +19,8 @@ export const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/0/seu-grupo"
 export const FEE_RATE = 0.1; // taxa de abertura: 10% da margem; o fechamento usa 10% do lucro realizado
 export const STAKER_SHARE = 0.7; // 70% da taxa de fechamento sobre lucro realizado; abertura usa 40%
 export const PROFIT_CAP = 5; // lucro máximo = 5x a margem (reservado na pool)
-export const LIQ_LOSS = 0.675; // 25% mais agressiva: liquida ao perder 67,5% da margem
+/** Maintenance margin after the requested 25% risk increase: 0.50% × 1.25. */
+export const MAINTENANCE_MARGIN_RATE = 0.00625;
 export const MIN_LEVERAGE = 1;
 export const MAX_LEVERAGE = 50;
 
@@ -35,7 +36,13 @@ export function calcOpeningFee(margin: number) {
   return Math.round(marginCents * FEE_RATE) / 100;
 }
 
-/** Liquidation threshold for Bluxq's isolated simulation, derived from entry price. */
+/** Adverse price movement that exhausts initial margin down to maintenance margin. */
+export function calcLiquidationMove(leverage: number) {
+  if (!Number.isFinite(leverage) || leverage < MIN_LEVERAGE || leverage > MAX_LEVERAGE) return 0;
+  return Math.max(1 / leverage - MAINTENANCE_MARGIN_RATE, 0);
+}
+
+/** Liquidation threshold derived from initial margin and maintenance margin. */
 export function calcLiquidationPrice(side: string, entry: number, leverage: number) {
   if (
     (side !== "long" && side !== "short") ||
@@ -48,7 +55,7 @@ export function calcLiquidationPrice(side: string, entry: number, leverage: numb
     return 0;
   }
 
-  const adverseMove = LIQ_LOSS / leverage;
+  const adverseMove = calcLiquidationMove(leverage);
   return side === "long" ? entry * (1 - adverseMove) : entry * (1 + adverseMove);
 }
 
