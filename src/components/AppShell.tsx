@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
-import { Check, Copy, X } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
@@ -83,7 +83,7 @@ export function PlatformNoticeBar() {
   if (!visible) return null;
 
   return (
-    <div className="relative border-t border-gold/20 bg-background/95 px-4 py-2.5 backdrop-blur">
+    <div className="relative bg-background/95 px-4 py-2.5 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center gap-3 pr-8 text-xs text-muted-foreground">
         <p className="min-w-0 flex-1 text-center sm:text-left">
           {messageIndex === 0 ? (
@@ -101,7 +101,11 @@ export function PlatformNoticeBar() {
                 {copied ? (
                   <Check className="h-3.5 w-3.5 shrink-0" />
                 ) : (
-                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                  <img
+                    src="/crypto-icons/sol.svg"
+                    alt="Solana"
+                    className="h-4 w-4 shrink-0 object-contain"
+                  />
                 )}
                 <span className="truncate">{SUPPORT_WALLET}</span>
                 <span className="sr-only">
