@@ -7,6 +7,17 @@ type Ctx = { session: Session | null; ready: boolean };
 const AuthCtx = createContext<Ctx>({ session: null, ready: false });
 const PROFILE_COLUMNS =
   "id,roblox_username,roblox_user_id,roblox_display_name,avatar_url,is_anonymous,verified,balance,created_at,is_banned,banned_until,ban_reason";
+const LEGACY_PROFILE_COLUMNS =
+  "id,roblox_username,roblox_user_id,roblox_display_name,avatar_url,is_anonymous,verified,balance,created_at";
+
+function isProfileSchemaError(error: { message?: string } | null) {
+  return Boolean(
+    error?.message &&
+    /schema cache|column .* does not exist|could not find the .* column|does not exist/i.test(
+      error.message,
+    ),
+  );
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
@@ -57,13 +68,26 @@ export function useProfile() {
     retry: false,
     refetchInterval: 5000,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const primary = await supabase
         .from("profiles")
         .select(PROFILE_COLUMNS)
         .eq("id", session!.user.id)
         .single();
-      if (error) throw error;
-      return data;
+      if (!primary.error) return primary.data;
+      if (!isProfileSchemaError(primary.error)) throw primary.error;
+
+      const legacy = await supabase
+        .from("profiles")
+        .select(LEGACY_PROFILE_COLUMNS)
+        .eq("id", session!.user.id)
+        .single();
+      if (legacy.error) throw legacy.error;
+      return {
+        ...legacy.data,
+        is_banned: false,
+        banned_until: null,
+        ban_reason: null,
+      };
     },
   });
 }
