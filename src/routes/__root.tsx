@@ -40,19 +40,32 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
+  const isChunkLoadError =
+    error instanceof Error &&
+    /failed to fetch dynamically imported module|loading chunk .* failed|importing a module script failed/i.test(
+      error.message,
+    );
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold text-foreground">Essa página não carregou</h1>
-        <p className="mt-2 text-sm text-muted-foreground">Algo deu errado. Tente novamente.</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          {isChunkLoadError
+            ? "A versão da página foi atualizada. Atualize para carregar os arquivos mais recentes."
+            : "Algo deu errado. Tente novamente."}
+        </p>
         <button
           onClick={() => {
-            router.invalidate();
-            reset();
+            if (isChunkLoadError) {
+              window.location.reload();
+            } else {
+              router.invalidate();
+              reset();
+            }
           }}
           className="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
         >
-          Tentar de novo
+          {isChunkLoadError ? "Atualizar página" : "Tentar de novo"}
         </button>
       </div>
     </div>
