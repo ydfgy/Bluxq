@@ -83,7 +83,7 @@ export function PlatformNoticeBar() {
   if (!visible) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/20 bg-background/95 px-4 py-2.5 shadow-[0_-8px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+    <div className="relative border-t border-gold/20 bg-background/95 px-4 py-2.5 backdrop-blur">
       <div className="mx-auto flex max-w-[1600px] items-center gap-3 pr-8 text-xs text-muted-foreground">
         <p className="min-w-0 flex-1 text-center sm:text-left">
           {messageIndex === 0 ? (
