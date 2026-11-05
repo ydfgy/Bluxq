@@ -77,7 +77,7 @@ export function Navbar() {
                 </Link>
               )}
               <div
-                className="hidden whitespace-nowrap font-mono text-[10px] text-muted-foreground lg:block"
+                className="max-w-[280px] break-all font-mono text-[9px] leading-tight text-muted-foreground"
                 title={session.user.id}
               >
                 {session.user.id}
