@@ -30,7 +30,8 @@ import {
   fmt,
   fmtPrice,
   calcPnl,
-  FEE_RATE,
+  calcOpeningFee,
+  calcLiquidationPrice,
   PROFIT_CAP,
   LIQ_LOSS,
   MIN_LEVERAGE,
@@ -144,9 +145,11 @@ function Trade() {
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = useState(true);
-  const { data: tickers } = useTickers();
+  const { data: tickers, dataUpdatedAt: tickersUpdatedAt } = useTickers();
+  const [chartPriceUpdatedAt, setChartPriceUpdatedAt] = useState(0);
+  const [now, setNow] = useState(() => Date.now());
   const orderBook = useOrderBook(symbol);
-  const { data: pool } = useQuery({
+  const { data: pool, error: poolError } = useQuery({
     queryKey: ["market-pool", symbol],
     refetchInterval: 5000,
     queryFn: async () => {
@@ -164,20 +167,21 @@ function Trade() {
   const sync = useServerFn(syncPositions);
   const platformOpen = useServerFn(getPlatformOpenPositions);
 
-  const { data: positions = [] } = useQuery({
+  const { data: positions = [], error: positionsError } = useQuery({
     queryKey: ["positions", session?.user.id],
     refetchInterval: 4000,
     enabled: Boolean(session),
-    queryFn: async () =>
-      (
-        await supabase
-          .from("positions")
-          .select(
-            "id, symbol, side, margin, leverage, qty, entry_price, liq_price, opened_at, closed_at, exit_price, pnl, fee, payout, status",
-          )
-          .order("opened_at", { ascending: false })
-          .limit(100)
-      ).data ?? [],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("positions")
+        .select(
+          "id, symbol, side, margin, leverage, qty, entry_price, liq_price, opened_at, closed_at, exit_price, pnl, fee, payout, status",
+        )
+        .order("opened_at", { ascending: false })
+        .limit(100);
+      if (error) throw error;
+      return data ?? [];
+    },
   });
   const { data: platformPositions = [] } = useQuery({
     queryKey: ["platform-open-positions"],
@@ -202,7 +206,11 @@ function Trade() {
       return values;
     }, []);
   const t = tickers?.[symbol];
-  const currentPrice = price || Number(t?.lastPrice ?? 0);
+  const tickerPrice = Number(t?.lastPrice ?? 0);
+  const chartPriceFresh = price > 0 && now - chartPriceUpdatedAt <= 20_000;
+  const tickerPriceFresh =
+    tickerPrice > 0 && tickersUpdatedAt > 0 && now - tickersUpdatedAt <= 30_000;
+  const currentPrice = chartPriceFresh ? price : tickerPriceFresh ? tickerPrice : 0;
   const orderBookDepthMax = Math.max(
     ...(orderBook?.asks ?? []).map((row) => row.total),
     ...(orderBook?.bids ?? []).map((row) => row.total),
@@ -217,9 +225,14 @@ function Trade() {
     .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
     .slice(0, 10);
 
-  // preços ao vivo de todas as moedas com posição aberta
-  const livePx = (s: string) =>
-    s === symbol && currentPrice ? currentPrice : Number(tickers?.[s]?.lastPrice ?? 0);
+  // Só usa preços recentes; não converte uma cotação ausente em lucro/perda.
+  const livePx = (s: string) => {
+    if (s === symbol) return currentPrice;
+    const tickerPrice = Number(tickers?.[s]?.lastPrice ?? 0);
+    return tickerPrice > 0 && tickersUpdatedAt > 0 && now - tickersUpdatedAt <= 30_000
+      ? tickerPrice
+      : 0;
+  };
 
   useEffect(() => {
     if (!session) return;
@@ -229,11 +242,15 @@ function Trade() {
     return () => clearInterval(t);
   }, [sync, session]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
   const balance = Number(profile?.balance ?? 0);
   const rawMargin = Number(margin);
   const m = Number.isFinite(rawMargin) ? Math.round(rawMargin * 100) / 100 : 0;
-  const marginInCents = Math.round(m * 100);
-  const openingFee = Math.round(marginInCents / 10) / 100;
+  const openingFee = calcOpeningFee(m);
   const totalRequired = Math.round((m + openingFee) * 100) / 100;
   const maxAffordableMargin = marginWithinBudget(balance);
   const canAfford = Boolean(profile) && totalRequired <= balance + 0.000001;
@@ -241,11 +258,11 @@ function Trade() {
   const poolFree = Math.max(0, Number(pool?.total_assets ?? 0) - Number(pool?.total_reserved ?? 0));
   // The position reserves margin * (alavancagem + 4): dívida + lucro máximo garantido.
   const poolMaxLev =
-    m > 0 && pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : MAX_LEVERAGE;
+    m > 0 ? (pool ? Math.min(MAX_LEVERAGE, Math.floor(poolFree / m - 4)) : 0) : MAX_LEVERAGE;
   const sliderMax = Math.max(MIN_LEVERAGE, poolMaxLev);
   const size = m * lev;
-  const liqLong = currentPrice * (1 - LIQ_LOSS / lev);
-  const liqShort = currentPrice * (1 + LIQ_LOSS / lev);
+  const liqLong = calcLiquidationPrice("long", currentPrice, lev);
+  const liqShort = calcLiquidationPrice("short", currentPrice, lev);
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -320,13 +337,14 @@ function Trade() {
       a + calcPnl(p.side, Number(p.qty), Number(p.entry_price), livePx(p.symbol), Number(p.margin)),
     0,
   );
+  const hasMissingPnlPrice = openPos.some((position) => livePx(position.symbol) <= 0);
   const openMargin = openPos.reduce((a, p) => a + Number(p.margin), 0);
   const unrealPct = openMargin ? (unreal / openMargin) * 100 : 0;
   function currentResultText() {
     return [
       "Bluxq — resultado atual",
       `Pares abertos: ${openPos.length}`,
-      `Profit/loss: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} $BX (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
+      `Profit/loss${hasMissingPnlPrice ? " parcial (cotação indisponível)" : ""}: ${unreal >= 0 ? "+" : ""}${fmt(unreal)} $BX (${unrealPct >= 0 ? "+" : ""}${unrealPct.toFixed(2)}%)`,
       `Atualizado em: ${new Date().toLocaleString("pt-BR")}`,
     ].join("\n");
   }
@@ -346,6 +364,10 @@ function Trade() {
   }
   function downloadPositionImage(position: PositionDetails) {
     const px = livePx(position.symbol);
+    if (px <= 0) {
+      toast.error("Cotação indisponível; tente novamente quando o preço for atualizado.");
+      return;
+    }
     const pnl = calcPnl(
       position.side,
       Number(position.qty),
@@ -587,6 +609,7 @@ function Trade() {
                         onClick={() => {
                           setSymbol(mk.symbol);
                           setPrice(0);
+                          setChartPriceUpdatedAt(0);
                           setMarketMenuOpen(false);
                           setMarketSearch("");
                         }}
@@ -633,12 +656,25 @@ function Trade() {
             </div>
           </div>
           <div className="h-[460px] bg-black p-1">
-            <PriceChart symbol={symbol} interval={interval} lines={lines} onPrice={setPrice} />
+            <PriceChart
+              symbol={symbol}
+              interval={interval}
+              lines={lines}
+              onPrice={(nextPrice) => {
+                setPrice(nextPrice);
+                setChartPriceUpdatedAt(Date.now());
+              }}
+            />
           </div>
         </div>
 
         {/* posições */}
         <div className="rounded-xl bg-black">
+          {positionsError && (
+            <p className="px-3 pt-3 text-sm text-bear">
+              Não foi possível carregar suas posições. Tente atualizar a página.
+            </p>
+          )}
           <div className="flex items-center gap-4 px-3">
             {(["open", "history", "top"] as const).map((k) => (
               <button
@@ -656,7 +692,8 @@ function Trade() {
             {tab === "open" && openPos.length > 0 && (
               <div className="ml-auto flex items-center gap-2">
                 <span className={`font-mono text-sm ${unreal >= 0 ? "text-bull" : "text-bear"}`}>
-                  PnL {unreal >= 0 ? "+" : ""}
+                  PnL{hasMissingPnlPrice ? " parcial " : " "}
+                  {unreal >= 0 ? "+" : ""}
                   {fmt(unreal)} $BX ({unrealPct >= 0 ? "+" : ""}
                   {unrealPct.toFixed(2)}%)
                 </span>
@@ -713,6 +750,7 @@ function Trade() {
                           )
                         : Number(p.pnl ?? 0);
                     const roe = (pnl / Number(p.margin)) * 100;
+                    const pnlAvailable = tab !== "open" || px > 0;
                     return (
                       <tr
                         key={p.id}
@@ -730,9 +768,23 @@ function Trade() {
                         <td>{fmtPrice(Number(p.entry_price))}</td>
                         <td>{px ? fmtPrice(px) : "—"}</td>
                         <td className="text-gold">{fmtPrice(Number(p.liq_price))}</td>
-                        <td className={pnl >= 0 ? "text-bull" : "text-bear"}>
-                          {pnl >= 0 ? "+" : ""}
-                          {fmt(pnl)} <span className="text-xs">({roe.toFixed(1)}%)</span>
+                        <td
+                          className={
+                            !pnlAvailable
+                              ? "text-muted-foreground"
+                              : pnl >= 0
+                                ? "text-bull"
+                                : "text-bear"
+                          }
+                        >
+                          {pnlAvailable ? (
+                            <>
+                              {pnl >= 0 ? "+" : ""}
+                              {fmt(pnl)} <span className="text-xs">({roe.toFixed(1)}%)</span>
+                            </>
+                          ) : (
+                            "Indisponível"
+                          )}
                         </td>
                         <td className="pr-2 text-right">
                           {tab === "open" ? (
@@ -810,6 +862,11 @@ function Trade() {
             </div>
           </div>
           <div className="space-y-2">
+            {poolError && (
+              <p className="text-xs text-bear">
+                Não foi possível confirmar a liquidez da pool. As ordens estão bloqueadas.
+              </p>
+            )}
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground">Alavancagem</span>
               <span className="rounded-md px-2 py-1 font-mono font-bold text-primary">{lev}x</span>
@@ -960,6 +1017,7 @@ function Trade() {
               );
               const roe = (pnl / Number(selectedPosition.margin)) * 100;
               const positive = pnl >= 0;
+              const pnlAvailable = px > 0;
               return (
                 <div className="overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl">
                   <div className={`h-1.5 ${positive ? "bg-emerald-500" : "bg-red-500"}`} />
@@ -992,16 +1050,21 @@ function Trade() {
                       {selectedPosition.leverage}x
                     </div>
                     <div
-                      className={`mt-7 break-words font-mono text-4xl font-black sm:text-6xl ${positive ? "text-emerald-400" : "text-red-400"}`}
+                      className={`mt-7 break-words font-mono text-4xl font-black sm:text-6xl ${!pnlAvailable ? "text-zinc-500" : positive ? "text-emerald-400" : "text-red-400"}`}
                     >
-                      {pnl >= 0 ? "+" : ""}
-                      {fmt(pnl)} <span className="text-2xl">$BX</span>
+                      {pnlAvailable ? (
+                        <>
+                          {pnl >= 0 ? "+" : ""}
+                          {fmt(pnl)} <span className="text-2xl">$BX</span>
+                        </>
+                      ) : (
+                        "Cotação indisponível"
+                      )}
                     </div>
                     <div
-                      className={`mt-2 font-mono text-xl font-bold ${positive ? "text-emerald-500" : "text-red-500"}`}
+                      className={`mt-2 font-mono text-xl font-bold ${!pnlAvailable ? "text-zinc-500" : positive ? "text-emerald-500" : "text-red-500"}`}
                     >
-                      {roe >= 0 ? "+" : ""}
-                      {roe.toFixed(2)}%
+                      {pnlAvailable ? `${roe >= 0 ? "+" : ""}${roe.toFixed(2)}%` : "—"}
                     </div>
                     <div className="mt-8 grid grid-cols-2 gap-4 border-t border-zinc-800 pt-5 font-mono text-xs sm:text-sm">
                       <div>
@@ -1012,7 +1075,7 @@ function Trade() {
                       </div>
                       <div>
                         <div className="text-zinc-500">ATUAL</div>
-                        <div className="mt-1 text-zinc-200">{fmtPrice(px)}</div>
+                        <div className="mt-1 text-zinc-200">{px > 0 ? fmtPrice(px) : "—"}</div>
                       </div>
                       <div>
                         <div className="text-zinc-500">QUANTIDADE</div>

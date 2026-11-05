@@ -181,26 +181,48 @@ async function assertAdmin(supabase: SupabaseClient<Database>, userId: string) {
 /** Liquida todas as posições abertas cujo preço atual cruzou a liquidação. */
 async function runLiquidations() {
   const sb = await admin();
-  const { data: open, error } = await sb
-    .from("positions")
-    .select("id, symbol, side, liq_price")
-    .eq("status", "open")
-    .limit(500);
-  rpcError(error);
-  if (!open?.length) return;
-  const prices = await getBinancePrices([...new Set(open.map((p) => p.symbol))]);
-  for (const p of open) {
-    const px = prices[p.symbol];
-    if (!px) continue;
-    const hit = p.side === "long" ? px <= Number(p.liq_price) : px >= Number(p.liq_price);
-    if (hit) {
-      await sb.rpc("fn_close_position", {
-        _user: null as never,
-        _id: p.id,
-        _price: px,
-        _force_liq: true,
-      });
+  const pageSize = 500;
+  let afterId: string | null = null;
+
+  while (true) {
+    let query = sb
+      .from("positions")
+      .select("id, symbol, side, liq_price")
+      .eq("status", "open")
+      .order("id", { ascending: true })
+      .limit(pageSize);
+    if (afterId) query = query.gt("id", afterId);
+
+    const { data: open, error } = await query;
+    rpcError(error);
+    if (!open?.length) return;
+    const lastPosition = open.at(-1);
+    if (!lastPosition) return;
+    afterId = lastPosition.id;
+
+    const prices = await getBinancePrices([...new Set(open.map((p) => p.symbol))]);
+    for (const p of open) {
+      const px = prices[p.symbol];
+      if (!px) continue;
+      const hit = p.side === "long" ? px <= Number(p.liq_price) : px >= Number(p.liq_price);
+      if (hit) {
+        const { error: closeError } = await sb.rpc("fn_close_position", {
+          _user: null as never,
+          _id: p.id,
+          _price: px,
+          _force_liq: true,
+        });
+        if (closeError) {
+          console.error("[Bluxq] Automatic liquidation failed", {
+            id: p.id,
+            code: closeError.code,
+            message: closeError.message,
+          });
+        }
+      }
     }
+
+    if (open.length < pageSize) return;
   }
 }
 
