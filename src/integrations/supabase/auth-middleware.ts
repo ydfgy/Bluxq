@@ -94,6 +94,22 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       throw new Error("Unauthorized: No user ID found in token");
     }
 
+    const { data: moderation, error: moderationError } = await supabase
+      .from("profiles")
+      .select("is_banned,banned_until,ban_reason")
+      .eq("id", data.claims.sub)
+      .maybeSingle();
+    if (moderationError) {
+      throw new Error("Unable to verify account status");
+    }
+    if (
+      moderation?.is_banned &&
+      (!moderation.banned_until || new Date(moderation.banned_until).getTime() > Date.now())
+    ) {
+      const reason = moderation.ban_reason ? ` Motivo: ${moderation.ban_reason}` : "";
+      throw new Error(`Sua conta está banida e não pode usar a plataforma.${reason}`);
+    }
+
     return next({
       context: {
         supabase,

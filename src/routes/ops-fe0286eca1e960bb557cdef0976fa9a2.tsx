@@ -8,6 +8,8 @@ import {
   authenticateAdminPanel,
   reviewDeposit,
   reviewWithdraw,
+  searchAdminUsers,
+  setAdminUserBan,
 } from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
@@ -17,6 +19,24 @@ type AdminRequest = {
   profile: { roblox_username: string; roblox_user_id: number | null } | undefined;
   user_id: string;
 };
+
+type AdminUser = {
+  id: string;
+  roblox_username: string;
+  roblox_display_name: string | null;
+  roblox_user_id: number | null;
+  verified: boolean;
+  created_at: string;
+  is_banned: boolean;
+  banned_until: string | null;
+  ban_reason: string | null;
+};
+
+function isActiveBan(user: Pick<AdminUser, "is_banned" | "banned_until">) {
+  return Boolean(
+    user.is_banned && (!user.banned_until || new Date(user.banned_until).getTime() > Date.now()),
+  );
+}
 
 function errorMessage(error: unknown) {
   return error instanceof Error ? error.message : "Não foi possível concluir a operação.";
@@ -39,6 +59,8 @@ function Admin() {
   const overview = useServerFn(adminOverview);
   const rd = useServerFn(reviewDeposit);
   const rw = useServerFn(reviewWithdraw);
+  const searchUsers = useServerFn(searchAdminUsers);
+  const changeUserBan = useServerFn(setAdminUserBan);
   const [password, setPassword] = useState("");
   const [passwordConfirmation, setPasswordConfirmation] = useState("");
   const [pin, setPin] = useState("");
@@ -46,7 +68,12 @@ function Admin() {
   const [authStage, setAuthStage] = useState<
     "pin" | "pin-confirmation" | "password" | "password-confirmation"
   >("pin");
-  const [section, setSection] = useState<"overview" | "deposits" | "withdrawals">("overview");
+  const [section, setSection] = useState<"overview" | "deposits" | "withdrawals" | "users">(
+    "overview",
+  );
+  const [userSearch, setUserSearch] = useState("");
+  const [banDurationHours, setBanDurationHours] = useState("24");
+  const [banReason, setBanReason] = useState("");
   const [accessToken, setAccessToken] = useState<string | null>(() =>
     typeof window === "undefined" ? null : sessionStorage.getItem("bluxq-admin-access"),
   );
@@ -78,6 +105,16 @@ function Admin() {
     enabled: !!accessToken,
     refetchInterval: 5000,
     queryFn: () => overview({ data: { adminAccessToken: accessToken! } }),
+  });
+
+  const usersQuery = useQuery({
+    queryKey: ["admin-users", accessToken, userSearch],
+    enabled: Boolean(accessToken && section === "users" && userSearch.trim().length >= 2),
+    queryFn: () =>
+      searchUsers({
+        data: { query: userSearch.trim(), adminAccessToken: accessToken! },
+      }) as Promise<AdminUser[]>,
+    retry: false,
   });
 
   useEffect(() => {
@@ -289,6 +326,16 @@ function Admin() {
           >
             Saques <span>{data?.withdrawals.length ?? 0}</span>
           </button>
+          <button
+            onClick={() => setSection("users")}
+            className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+              section === "users"
+                ? "bg-zinc-100 text-black"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            }`}
+          >
+            Usuários
+          </button>
         </nav>
         <Button
           variant="outline"
@@ -308,6 +355,7 @@ function Admin() {
               ["overview", "Visão geral"],
               ["deposits", "Depósitos"],
               ["withdrawals", "Saques"],
+              ["users", "Usuários"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -331,7 +379,9 @@ function Admin() {
                 ? "Visão geral"
                 : section === "deposits"
                   ? "Depósitos pendentes"
-                  : "Saques pendentes"}
+                  : section === "withdrawals"
+                    ? "Saques pendentes"
+                    : "Usuários e banimentos"}
             </h1>
           </div>
           <Button
@@ -351,7 +401,7 @@ function Admin() {
           <Box k="Receita da plataforma" v={fmt(data?.pool?.platform_revenue)} />
         </div>
         <section
-          className={`${section === "withdrawals" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
+          className={`${section === "withdrawals" || section === "users" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Depósitos aguardando ({data?.deposits.length ?? 0})
@@ -401,7 +451,7 @@ function Admin() {
           ))}
         </section>
         <section
-          className={`${section === "deposits" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
+          className={`${section === "deposits" || section === "users" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Saques aguardando ({data?.withdrawals.length ?? 0})
@@ -450,6 +500,182 @@ function Admin() {
               </Button>
             </div>
           ))}
+        </section>
+        <section
+          className={`${section !== "users" ? "hidden " : ""}space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4`}
+        >
+          <div>
+            <h2 className="font-bold">Banir usuário</h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Pesquise pelo UUID da conta ou pelo username cadastrado na plataforma.
+            </p>
+          </div>
+          <Input
+            value={userSearch}
+            onChange={(event) => setUserSearch(event.target.value)}
+            placeholder="UUID ou username"
+            className="border-zinc-700 bg-zinc-950"
+          />
+          {userSearch.trim().length < 2 ? (
+            <p className="text-sm text-zinc-500">Digite pelo menos 2 caracteres para pesquisar.</p>
+          ) : usersQuery.isPending ? (
+            <p className="text-sm text-zinc-400">Buscando usuários…</p>
+          ) : usersQuery.isError ? (
+            <p className="text-sm text-red-300">Não foi possível buscar este usuário.</p>
+          ) : usersQuery.data?.length ? (
+            <div className="space-y-3">
+              {usersQuery.data.map((user) => {
+                const active = isActiveBan(user);
+                const expired = user.is_banned && !active;
+                const temporary = Boolean(user.banned_until);
+                const duration = Number(banDurationHours);
+                return (
+                  <div key={user.id} className="space-y-3 rounded-lg border border-zinc-800 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="font-semibold">{user.roblox_username}</div>
+                        {user.roblox_display_name && (
+                          <div className="text-xs text-zinc-400">{user.roblox_display_name}</div>
+                        )}
+                        <div className="mt-1 break-all font-mono text-xs text-zinc-500">
+                          {user.id}
+                        </div>
+                        <div className="mt-1 text-xs text-zinc-500">
+                          Roblox ID: {user.roblox_user_id ?? "—"} · Criado em{" "}
+                          {new Date(user.created_at).toLocaleDateString("pt-BR")}
+                        </div>
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                          active
+                            ? "bg-red-950 text-red-300"
+                            : expired
+                              ? "bg-amber-950 text-amber-300"
+                              : "bg-emerald-950 text-emerald-300"
+                        }`}
+                      >
+                        {active ? "Banido" : expired ? "Banimento expirado" : "Ativo"}
+                      </span>
+                    </div>
+                    {active && (
+                      <div className="text-xs text-zinc-400">
+                        {temporary && user.banned_until
+                          ? `Até ${new Date(user.banned_until).toLocaleString("pt-BR")}`
+                          : "Banimento permanente"}
+                        {user.ban_reason ? ` · ${user.ban_reason}` : ""}
+                      </div>
+                    )}
+                    <div className="flex flex-wrap items-end gap-2">
+                      {active ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-zinc-700"
+                          onClick={() =>
+                            run(
+                              () =>
+                                changeUserBan({
+                                  data: {
+                                    userId: user.id,
+                                    action: "unban",
+                                    adminAccessToken: accessToken,
+                                  },
+                                }),
+                              "Usuário desbanido.",
+                            )
+                          }
+                        >
+                          Desbanir
+                        </Button>
+                      ) : (
+                        <>
+                          <div className="w-28">
+                            <label
+                              className="mb-1 block text-xs text-zinc-500"
+                              htmlFor={`ban-hours-${user.id}`}
+                            >
+                              Horas
+                            </label>
+                            <Input
+                              id={`ban-hours-${user.id}`}
+                              type="number"
+                              min="1"
+                              max="8760"
+                              value={banDurationHours}
+                              onChange={(event) => setBanDurationHours(event.target.value)}
+                              className="border-zinc-700 bg-zinc-950"
+                            />
+                          </div>
+                          <div className="min-w-52 flex-1">
+                            <label
+                              className="mb-1 block text-xs text-zinc-500"
+                              htmlFor={`ban-reason-${user.id}`}
+                            >
+                              Motivo (opcional)
+                            </label>
+                            <Input
+                              id={`ban-reason-${user.id}`}
+                              value={banReason}
+                              onChange={(event) => setBanReason(event.target.value)}
+                              placeholder="Motivo do banimento"
+                              className="border-zinc-700 bg-zinc-950"
+                            />
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-red-900 text-red-300 hover:bg-red-950"
+                            onClick={() =>
+                              run(
+                                () =>
+                                  changeUserBan({
+                                    data: {
+                                      userId: user.id,
+                                      action: "ban",
+                                      durationHours: null,
+                                      reason: banReason,
+                                      adminAccessToken: accessToken,
+                                    },
+                                  }),
+                                "Usuário banido permanentemente.",
+                              )
+                            }
+                          >
+                            Banir permanente
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={
+                              !Number.isInteger(duration) || duration < 1 || duration > 8760
+                            }
+                            onClick={() =>
+                              run(
+                                () =>
+                                  changeUserBan({
+                                    data: {
+                                      userId: user.id,
+                                      action: "ban",
+                                      durationHours: duration,
+                                      reason: banReason,
+                                      adminAccessToken: accessToken,
+                                    },
+                                  }),
+                                "Banimento temporário aplicado.",
+                              )
+                            }
+                          >
+                            Banir temporário
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-zinc-400">Nenhum usuário encontrado.</p>
+          )}
         </section>
       </main>
     </div>

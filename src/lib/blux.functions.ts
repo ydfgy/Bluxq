@@ -824,6 +824,68 @@ export const reviewWithdraw = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+const adminAccessToken = z.string().min(1).max(500);
+
+export const searchAdminUsers = createServerFn({ method: "POST" })
+  .validator((d) =>
+    z
+      .object({
+        query: z.string().trim().min(2).max(100),
+        adminAccessToken,
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
+    const sb = await admin();
+    const term = data.query.trim();
+    let request = sb
+      .from("profiles")
+      .select(
+        "id,roblox_username,roblox_display_name,roblox_user_id,verified,created_at,is_banned,banned_until,ban_reason",
+      )
+      .order("created_at", { ascending: false })
+      .limit(25);
+    if (z.string().uuid().safeParse(term).success) {
+      request = request.eq("id", term);
+    } else {
+      request = request.ilike("roblox_username", `%${term}%`);
+    }
+    const { data: users, error } = await request;
+    rpcError(error);
+    return users ?? [];
+  });
+
+export const setAdminUserBan = createServerFn({ method: "POST" })
+  .validator((d) =>
+    z
+      .object({
+        userId: z.string().uuid(),
+        action: z.enum(["ban", "unban"]),
+        durationHours: z.number().int().min(1).max(8760).nullable().optional(),
+        reason: z.string().trim().max(300).optional(),
+        adminAccessToken,
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
+    const bannedUntil =
+      data.action === "ban" && data.durationHours
+        ? new Date(Date.now() + data.durationHours * 60 * 60 * 1000).toISOString()
+        : null;
+    const { error } = await (
+      await admin()
+    ).rpc("fn_set_user_ban", {
+      _user: data.userId,
+      _is_banned: data.action === "ban",
+      _banned_until: bannedUntil,
+      _reason: data.action === "ban" ? (data.reason ?? null) : null,
+    });
+    rpcError(error);
+    return { ok: true, bannedUntil };
+  });
+
 const copyMoney = z.number().finite().min(10).max(10_000_000).multipleOf(0.01);
 export const getCopyLeaderboard = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])

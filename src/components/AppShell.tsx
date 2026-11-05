@@ -9,6 +9,15 @@ import { fmt } from "@/lib/markets";
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
 
+function hasActiveBan(
+  profile: { is_banned?: boolean; banned_until?: string | null } | null | undefined,
+) {
+  return Boolean(
+    profile?.is_banned &&
+    (!profile.banned_until || new Date(profile.banned_until).getTime() > Date.now()),
+  );
+}
+
 export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; className?: string }) {
   return (
     <img src={BRAND_ICON_SRC} alt={alt} className={className ?? "h-full w-full object-contain"} />
@@ -74,8 +83,11 @@ export function Navbar() {
                 <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
                 <span>{fmt(profile.balance)}</span>
               </Link>
-              <div className="hidden text-sm sm:block">
-                {profile.is_anonymous ? "Anônimo" : profile.roblox_username}
+              <div
+                className="hidden max-w-40 truncate font-mono text-xs text-muted-foreground sm:block"
+                title={session.user.id}
+              >
+                {session.user.id}
               </div>
               <Button size="sm" variant="ghost" onClick={signOut}>
                 Sign out
@@ -133,12 +145,28 @@ export function Protected({
   const nav = useNavigate();
   useEffect(() => {
     if (ready && !session) nav({ to: "/auth", search: { mode: "signup" }, replace: true });
+    else if (hasActiveBan(profile)) return;
     else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
   }, [ready, session, profile, requireVerified, nav]);
   if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {
     return (
       <div className="grid min-h-[60vh] place-items-center text-muted-foreground">
         {isError ? "Unable to load your account. Retrying…" : "Loading…"}
+      </div>
+    );
+  }
+  if (hasActiveBan(profile)) {
+    return (
+      <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center px-6 text-center">
+        <div>
+          <h1 className="text-xl font-bold">Conta banida</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Esta conta não pode usar a plataforma enquanto o banimento estiver ativo.
+          </p>
+          {profile.ban_reason && (
+            <p className="mt-3 text-sm text-muted-foreground">Motivo: {profile.ban_reason}</p>
+          )}
+        </div>
       </div>
     );
   }

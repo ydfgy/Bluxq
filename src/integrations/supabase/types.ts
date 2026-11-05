@@ -300,11 +300,14 @@ export type Database = {
       profiles: {
         Row: {
           avatar_url: string | null;
+          ban_reason: string | null;
+          banned_until: string | null;
           balance: number;
           created_at: string;
           email: string | null;
           id: string;
           is_anonymous: boolean;
+          is_banned: boolean;
           roblox_created_at: string | null;
           roblox_display_name: string | null;
           roblox_user_id: number | null;
@@ -316,11 +319,14 @@ export type Database = {
         };
         Insert: {
           avatar_url?: string | null;
+          ban_reason?: string | null;
+          banned_until?: string | null;
           balance?: number;
           created_at?: string;
           email?: string | null;
           id: string;
           is_anonymous?: boolean;
+          is_banned?: boolean;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username: string;
@@ -331,11 +337,14 @@ export type Database = {
         };
         Update: {
           avatar_url?: string | null;
+          ban_reason?: string | null;
+          banned_until?: string | null;
           balance?: number;
           created_at?: string;
           email?: string | null;
           id?: string;
           is_anonymous?: boolean;
+          is_banned?: boolean;
           roblox_created_at?: string | null;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
@@ -590,6 +599,15 @@ export type Database = {
       };
       fn_snapshot_all_market_pools: { Args: Record<string, never>; Returns: undefined };
       fn_copy_leaderboard: { Args: Record<string, never>; Returns: Json };
+      fn_set_user_ban: {
+        Args: {
+          _banned_until: string | null;
+          _is_banned: boolean;
+          _reason?: string | null;
+          _user: string;
+        };
+        Returns: undefined;
+      };
       fn_set_copy_trader_opt_in: {
         Args: { _user: string; _enabled: boolean; _show_name?: boolean };
         Returns: undefined;

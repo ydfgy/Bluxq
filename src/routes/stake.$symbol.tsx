@@ -14,7 +14,7 @@ import { useServerFn } from "@tanstack/react-start";
 
 export const Route = createFileRoute("/stake/$symbol")({
   head: ({ params }) => ({
-    meta: [{ title: `Pool ${params.symbol.replace("USDT", "")} — Bluxq` }],
+    meta: [{ title: `Stake ${params.symbol.replace("USDT", "")} — Bluxq` }],
   }),
   component: StakeDetails,
 });
@@ -137,20 +137,14 @@ function StakeDetails() {
         <div className="min-w-0 space-y-3">
           {canViewPoolData ? (
             <div className="overflow-hidden rounded-xl border bg-transparent">
-              <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-3 px-4 py-3">
+              <div className="flex flex-col gap-4 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
                   <MarketIcon base={market.base} size="md" />
                   <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h1 className="text-lg font-bold">Pool {market.base}</h1>
-                      <span className="rounded-full bg-bull/10 px-2 py-1 text-[10px] font-semibold text-bull">
-                        Ativa
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground">Liquidez da pool em $BX</p>
+                    <h1 className="text-lg font-bold">Stake {market.base}</h1>
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-x-5 gap-y-2 sm:grid-cols-4">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 sm:gap-x-5">
                   <PoolStat
                     label="Volume da pool"
                     value={poolLoading ? "…" : `${fmt(totalAssets)} $BX`}
@@ -181,13 +175,6 @@ function StakeDetails() {
               >
                 Entrar ou criar conta
               </Link>
-            </div>
-          )}
-          {canViewPoolData && (
-            <div className="grid content-start gap-x-4 gap-y-2 px-1 sm:grid-cols-3">
-              <Info title="Liquidez da pool" value={`${fmt(totalAssets)} $BX`} />
-              <Info title="Disponível para alocar" value={`${fmt(available)} $BX`} />
-              <Info title="Sua posição" value={`${fmt(positionValue)} $BX`} />
             </div>
           )}
         </div>
@@ -227,15 +214,6 @@ function PoolStat({
     <div className="px-3 py-1.5 first:pl-0 sm:pl-4">
       <div className="text-[11px] text-muted-foreground">{label}</div>
       <div className={`mt-1 font-mono text-sm font-bold ${color}`}>{value}</div>
-    </div>
-  );
-}
-
-function Info({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="px-1 py-1">
-      <div className="text-xs text-muted-foreground">{title}</div>
-      <div className="mt-2 font-mono font-semibold">{value}</div>
     </div>
   );
 }

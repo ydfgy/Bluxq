@@ -12,9 +12,7 @@ import {
   getCopyAllocations,
   getCopyEvents,
   getCopyLeaderboard,
-  getCopyTraderStatus,
   saveCopyAllocation,
-  setCopyTraderOptIn,
   toggleCopyAllocation,
 } from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
@@ -72,9 +70,7 @@ function Copy() {
   const loadLeaderboard = useServerFn(getCopyLeaderboard);
   const loadAllocations = useServerFn(getCopyAllocations);
   const loadEvents = useServerFn(getCopyEvents);
-  const loadOptIn = useServerFn(getCopyTraderStatus);
   const saveAllocation = useServerFn(saveCopyAllocation);
-  const setOptIn = useServerFn(setCopyTraderOptIn);
   const setAllocationActive = useServerFn(toggleCopyAllocation);
   const leaderboardQuery = useQuery({
     queryKey: ["copy-leaderboard"],
@@ -88,12 +84,6 @@ function Copy() {
     enabled: Boolean(uid),
     queryFn: async () => (await loadAllocations()) as Allocation[],
     refetchInterval: 15_000,
-    retry: false,
-  });
-  const optInQuery = useQuery({
-    queryKey: ["copy-trader-status", uid],
-    enabled: Boolean(uid),
-    queryFn: () => loadOptIn(),
     retry: false,
   });
   const eventsQuery = useQuery({
@@ -120,7 +110,6 @@ function Copy() {
         queryClient.invalidateQueries({ queryKey: ["copy-allocations", uid] }),
         queryClient.invalidateQueries({ queryKey: ["profile", uid] }),
         queryClient.invalidateQueries({ queryKey: ["copy-leaderboard"] }),
-        queryClient.invalidateQueries({ queryKey: ["copy-trader-status", uid] }),
         queryClient.invalidateQueries({ queryKey: ["copy-events", uid] }),
       ]);
       setCopyTarget(null);
@@ -201,6 +190,10 @@ function Copy() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl font-bold">Top 5</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Usuários verificados com histórico aparecem automaticamente pelo username da
+              plataforma.
+            </p>
           </div>
           <span className="rounded-full border px-3 py-1 text-xs text-muted-foreground">
             $BX · lucro
@@ -339,53 +332,6 @@ function Copy() {
                 </article>
               );
             })}
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-xl border p-5">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 className="font-bold">Entrar no ranking</h2>
-          </div>
-          <Button
-            variant="outline"
-            disabled={busy || !profile?.verified || optInQuery.isPending}
-            onClick={() =>
-              void run(
-                () =>
-                  setOptIn({
-                    data: {
-                      enabled: !optInQuery.data?.enabled,
-                      showName: optInQuery.data?.showName ?? false,
-                    },
-                  }),
-                optInQuery.data?.enabled ? "Você saiu do ranking." : "Você entrou no ranking.",
-              )
-            }
-          >
-            {!profile?.verified
-              ? "Verificar conta"
-              : optInQuery.data?.enabled
-                ? "Sair"
-                : "Participar"}
-          </Button>
-        </div>
-        {optInQuery.data?.enabled && (
-          <div className="mt-4 flex items-center gap-2 text-sm">
-            <input
-              id="copy-show-name"
-              type="checkbox"
-              checked={optInQuery.data.showName}
-              disabled={busy}
-              onChange={(event) =>
-                void run(
-                  () => setOptIn({ data: { enabled: true, showName: event.target.checked } }),
-                  event.target.checked ? "Nome exibido." : "Nome oculto.",
-                )
-              }
-            />
-            <Label htmlFor="copy-show-name">Mostrar meu nome</Label>
           </div>
         )}
       </section>
