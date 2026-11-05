@@ -5,11 +5,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, X } from "lucide-react";
 
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
 const SUPPORT_WALLET = "C5HcRUsESoQ1RKWKz2NNdN2RkdJ7fcSQCxUCZnHk8hNw";
+const NOTICE_DISMISSED_AT = "bluxq-platform-notice-dismissed-at";
+const NOTICE_REAPPEAR_AFTER_MS = 10 * 60 * 1000;
 
 export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; className?: string }) {
   return (
@@ -26,7 +28,36 @@ export function Logo() {
 }
 
 export function PlatformNoticeBar() {
+  const [visible, setVisible] = useState(true);
   const [copied, setCopied] = useState(false);
+  const [messageIndex, setMessageIndex] = useState(0);
+
+  useEffect(() => {
+    const dismissedAt = Number(window.localStorage.getItem(NOTICE_DISMISSED_AT) ?? 0);
+    const remaining = NOTICE_REAPPEAR_AFTER_MS - (Date.now() - dismissedAt);
+    if (dismissedAt && remaining > 0) {
+      setVisible(false);
+      const timer = window.setTimeout(() => {
+        window.localStorage.removeItem(NOTICE_DISMISSED_AT);
+        setVisible(true);
+      }, remaining);
+      return () => window.clearTimeout(timer);
+    }
+    if (dismissedAt) window.localStorage.removeItem(NOTICE_DISMISSED_AT);
+  }, []);
+
+  useEffect(() => {
+    if (!visible) return;
+    const timer = window.setInterval(() => {
+      setMessageIndex((index) => (index + 1) % 2);
+    }, 7000);
+    return () => window.clearInterval(timer);
+  }, [visible]);
+
+  function dismissNotice() {
+    window.localStorage.setItem(NOTICE_DISMISSED_AT, String(Date.now()));
+    setVisible(false);
+  }
 
   async function copyWallet() {
     try {
@@ -49,27 +80,45 @@ export function PlatformNoticeBar() {
     }
   }
 
+  if (!visible) return null;
+
   return (
-    <div className="border-y border-gold/20 bg-gold/[0.06] px-4 py-2 text-xs text-muted-foreground">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center sm:justify-between sm:text-left">
-        <p>
-          A Bluxq é uma plataforma independente e não é afiliada, patrocinada, endossada ou
-          administrada pela Roblox Corporation.
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/20 bg-background/95 px-4 py-2.5 shadow-[0_-8px_30px_rgba(0,0,0,0.28)] backdrop-blur">
+      <div className="mx-auto flex max-w-[1600px] items-center gap-3 pr-8 text-xs text-muted-foreground">
+        <p className="min-w-0 flex-1 text-center sm:text-left">
+          {messageIndex === 0 ? (
+            "A Bluxq é uma plataforma independente e não é afiliada, patrocinada, endossada ou administrada pela Roblox Corporation."
+          ) : (
+            <>
+              Apoie o projeto para nos ajudar a conseguir um domínio próprio:{" "}
+              <button
+                type="button"
+                onClick={copyWallet}
+                className="inline-flex max-w-full items-center gap-1.5 rounded px-1 font-mono text-[10px] text-gold transition-colors hover:bg-gold/10 hover:text-gold-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title="Clique para copiar o endereço da carteira Solana"
+                aria-label={`Copiar endereço da carteira Solana ${SUPPORT_WALLET}`}
+              >
+                {copied ? (
+                  <Check className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <Copy className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <span className="truncate">{SUPPORT_WALLET}</span>
+                <span className="sr-only">
+                  {copied ? "Endereço copiado" : "Clique para copiar"}
+                </span>
+              </button>
+            </>
+          )}
         </p>
         <button
           type="button"
-          onClick={copyWallet}
-          className="inline-flex max-w-full items-center gap-2 rounded-md px-2 py-1 font-mono text-[10px] text-gold transition-colors hover:bg-gold/10 hover:text-gold-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-          title="Clique para copiar o endereço da carteira Solana"
-          aria-label={`Copiar endereço da carteira Solana ${SUPPORT_WALLET}`}
+          onClick={dismissNotice}
+          className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          title="Fechar aviso por 10 minutos"
+          aria-label="Fechar aviso por 10 minutos"
         >
-          {copied ? (
-            <Check className="h-3.5 w-3.5 shrink-0" />
-          ) : (
-            <Copy className="h-3.5 w-3.5 shrink-0" />
-          )}
-          <span className="truncate">Apoie o projeto · Solana: {SUPPORT_WALLET}</span>
-          <span className="sr-only">{copied ? "Endereço copiado" : "Clique para copiar"}</span>
+          <X className="h-4 w-4" />
         </button>
       </div>
     </div>
