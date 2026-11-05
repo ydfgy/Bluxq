@@ -100,7 +100,9 @@ export const requireSupabaseAuth = createMiddleware({ type: "function" }).server
       .eq("id", data.claims.sub)
       .maybeSingle();
     if (moderationError) {
-      throw new Error("Unable to verify account status");
+      // Do not turn a temporary PostgREST/schema-cache issue into a full outage.
+      // The database functions still enforce moderation for financial mutations.
+      console.error("[Supabase] Unable to read moderation status", moderationError.message);
     }
     if (
       moderation?.is_banned &&

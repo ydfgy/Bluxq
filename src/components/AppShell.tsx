@@ -9,15 +9,6 @@ import { fmt } from "@/lib/markets";
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
 
-function hasActiveBan(
-  profile: { is_banned?: boolean; banned_until?: string | null } | null | undefined,
-) {
-  return Boolean(
-    profile?.is_banned &&
-    (!profile.banned_until || new Date(profile.banned_until).getTime() > Date.now()),
-  );
-}
-
 export function BrandIcon({ alt = "Bluxq", className }: { alt?: string; className?: string }) {
   return (
     <img src={BRAND_ICON_SRC} alt={alt} className={className ?? "h-full w-full object-contain"} />
@@ -86,7 +77,7 @@ export function Navbar() {
                 </Link>
               )}
               <div
-                className="hidden max-w-40 truncate font-mono text-xs text-muted-foreground sm:block"
+                className="hidden whitespace-nowrap font-mono text-[10px] text-muted-foreground lg:block"
                 title={session.user.id}
               >
                 {session.user.id}
@@ -143,18 +134,15 @@ export function Protected({
   requireVerified?: boolean;
 }) {
   const { session, ready } = useAuth();
-  const { data: profile, isLoading, isError } = useProfile();
+  const { data: profile, isError } = useProfile();
   const nav = useNavigate();
   useEffect(() => {
     if (ready && !session) nav({ to: "/auth", search: { mode: "signup" }, replace: true });
-    else if (hasActiveBan(profile)) return;
     else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
   }, [ready, session, profile, requireVerified, nav]);
-  if (!ready || !session || isLoading) {
+  if (!ready || !session) {
     return (
-      <div className="grid min-h-[60vh] place-items-center text-muted-foreground">
-        {isError ? "Unable to load your account. Retrying…" : "Loading…"}
-      </div>
+      <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Loading…</div>
     );
   }
   // A transient profile/RLS/schema error must not make the whole tab inaccessible.
@@ -163,21 +151,6 @@ export function Protected({
   if (requireVerified && !profile.verified) {
     return (
       <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Loading…</div>
-    );
-  }
-  if (hasActiveBan(profile)) {
-    return (
-      <div className="mx-auto grid min-h-[60vh] max-w-xl place-items-center px-6 text-center">
-        <div>
-          <h1 className="text-xl font-bold">Conta banida</h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Esta conta não pode usar a plataforma enquanto o banimento estiver ativo.
-          </p>
-          {profile.ban_reason && (
-            <p className="mt-3 text-sm text-muted-foreground">Motivo: {profile.ban_reason}</p>
-          )}
-        </div>
-      </div>
     );
   }
   return <>{children}</>;
