@@ -73,16 +73,18 @@ export function Navbar() {
           </Link>
         </nav>
         <div className="ml-auto flex items-center gap-3">
-          {session && profile ? (
+          {session ? (
             <>
-              <Link
-                to="/wallet"
-                className="flex items-center gap-1.5 font-mono text-sm text-gold"
-                aria-label={`Saldo $BX ${fmt(profile.balance)}`}
-              >
-                <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
-                <span>{fmt(profile.balance)}</span>
-              </Link>
+              {profile && (
+                <Link
+                  to="/wallet"
+                  className="flex items-center gap-1.5 font-mono text-sm text-gold"
+                  aria-label={`Saldo $BX ${fmt(profile.balance)}`}
+                >
+                  <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
+                  <span>{fmt(profile.balance)}</span>
+                </Link>
+              )}
               <div
                 className="hidden max-w-40 truncate font-mono text-xs text-muted-foreground sm:block"
                 title={session.user.id}
@@ -148,11 +150,19 @@ export function Protected({
     else if (hasActiveBan(profile)) return;
     else if (requireVerified && profile && !profile.verified) nav({ to: "/verify", replace: true });
   }, [ready, session, profile, requireVerified, nav]);
-  if (!ready || !session || isLoading || !profile || (requireVerified && !profile.verified)) {
+  if (!ready || !session || isLoading) {
     return (
       <div className="grid min-h-[60vh] place-items-center text-muted-foreground">
         {isError ? "Unable to load your account. Retrying…" : "Loading…"}
       </div>
+    );
+  }
+  // A transient profile/RLS/schema error must not make the whole tab inaccessible.
+  // Server functions still validate the session and account status before mutations.
+  if (isError || !profile) return <>{children}</>;
+  if (requireVerified && !profile.verified) {
+    return (
+      <div className="grid min-h-[60vh] place-items-center text-muted-foreground">Loading…</div>
     );
   }
   if (hasActiveBan(profile)) {
