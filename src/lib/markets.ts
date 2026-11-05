@@ -19,7 +19,7 @@ export const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/0/seu-grupo"
 export const FEE_RATE = 0.1; // taxa de abertura: 10% da margem; o fechamento usa 10% do lucro realizado
 export const STAKER_SHARE = 0.7; // 70% da taxa de fechamento sobre lucro realizado; abertura usa 40%
 export const PROFIT_CAP = 5; // lucro máximo = 5x a margem (reservado na pool)
-export const LIQ_LOSS = 0.9; // liquida ao perder 90% da margem
+export const LIQ_LOSS = 0.675; // 25% mais agressiva: liquida ao perder 67,5% da margem
 export const MIN_LEVERAGE = 1;
 export const MAX_LEVERAGE = 50;
 
