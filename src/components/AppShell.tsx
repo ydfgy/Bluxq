@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
-import { Check, X } from "lucide-react";
+import { ArrowRight, Check, X } from "lucide-react";
 
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
@@ -89,30 +89,27 @@ export function PlatformNoticeBar() {
           {messageIndex === 0 ? (
             "A Bluxq é uma plataforma independente e não é afiliada, patrocinada, endossada ou administrada pela Roblox Corporation."
           ) : (
-            <>
-              Apoie o projeto para nos ajudar a conseguir um domínio próprio:{" "}
+            <span className="inline-flex items-center justify-center gap-2 sm:justify-start">
+              <span>Apoie o projeto para nos ajudar a conseguir um domínio próprio.</span>
+              <ArrowRight className="h-3.5 w-3.5 shrink-0 text-gold" aria-hidden="true" />
               <button
                 type="button"
                 onClick={copyWallet}
-                className="inline-flex max-w-full items-center gap-1.5 rounded px-1 font-mono text-[10px] text-gold transition-colors hover:bg-gold/10 hover:text-gold-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                title="Clique para copiar o endereço da carteira Solana"
-                aria-label={`Copiar endereço da carteira Solana ${SUPPORT_WALLET}`}
+                className="inline-flex shrink-0 items-center rounded-full p-1 text-gold transition-colors hover:bg-gold/10 hover:text-gold-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                title="Clique no ícone Solana para copiar o endereço da carteira"
+                aria-label={`Clique no ícone Solana para copiar o endereço ${SUPPORT_WALLET}`}
               >
-                {copied ? (
-                  <Check className="h-3.5 w-3.5 shrink-0" />
-                ) : (
-                  <img
-                    src="/crypto-icons/sol.svg"
-                    alt="Solana"
-                    className="h-4 w-4 shrink-0 object-contain"
-                  />
-                )}
-                <span className="truncate">{SUPPORT_WALLET}</span>
+                <img
+                  src="/crypto-icons/sol.svg"
+                  alt="Copiar endereço da carteira Solana"
+                  className="h-5 w-5 object-contain"
+                />
                 <span className="sr-only">
-                  {copied ? "Endereço copiado" : "Clique para copiar"}
+                  {copied ? "Endereço copiado" : "Clique para copiar o endereço"}
                 </span>
               </button>
-            </>
+              {copied && <Check className="h-3.5 w-3.5 text-bull" aria-hidden="true" />}
+            </span>
           )}
         </p>
         <button
@@ -206,7 +203,7 @@ export function Navbar() {
           )}
         </div>
       </div>
-      <nav className="flex md:hidden items-center justify-around border-t py-2">
+      <nav className="flex md:hidden items-center justify-around py-2">
         <Link to="/trade" className={link} activeProps={active}>
           Trade
         </Link>
