@@ -1,20 +1,14 @@
 import { describe, expect, it } from "vitest";
-import {
-  calcLiquidationMove,
-  calcLiquidationPrice,
-  calcOpeningFee,
-  calcPnl,
-  PROFIT_CAP,
-} from "@/lib/markets";
+import { calcLiquidationPrice, calcOpeningFee, calcPnl, PROFIT_CAP } from "@/lib/markets";
 
 describe("Bluxq isolated trading math", () => {
   it.each([
-    ["long", 1, 0.625],
-    ["long", 10, 90.625],
-    ["long", 50, 98.625],
-    ["short", 1, 199.375],
-    ["short", 10, 109.375],
-    ["short", 50, 101.375],
+    ["long", 1, 25],
+    ["long", 10, 92.5],
+    ["long", 50, 98.5],
+    ["short", 1, 175],
+    ["short", 10, 107.5],
+    ["short", 50, 101.5],
   ] as const)("calculates the %s liquidation threshold at %ix", (side, leverage, expected) => {
     expect(calcLiquidationPrice(side, 100, leverage)).toBeCloseTo(expected, 8);
   });
@@ -33,7 +27,7 @@ describe("Bluxq isolated trading math", () => {
     const longExit = calcLiquidationPrice("long", entry, leverage);
     const shortExit = calcLiquidationPrice("short", entry, leverage);
 
-    const expectedLoss = margin * calcLiquidationMove(leverage) * leverage;
+    const expectedLoss = margin * 0.75;
     expect(calcPnl("long", qty, entry, longExit, margin)).toBeCloseTo(-expectedLoss, 8);
     expect(calcPnl("short", qty, entry, shortExit, margin)).toBeCloseTo(-expectedLoss, 8);
   });
@@ -63,7 +57,7 @@ describe("Bluxq isolated trading math", () => {
     const lossAtThreshold = Math.abs(calcPnl("long", qty, entry, threshold, margin));
     const lossAfterGap = Math.abs(calcPnl("long", qty, entry, 90, margin));
 
-    expect(margin - lossAtThreshold).toBeCloseTo(6.25, 8);
+    expect(margin - lossAtThreshold).toBeCloseTo(25, 8);
     expect(Math.max(margin - lossAfterGap, 0)).toBe(0);
   });
 });

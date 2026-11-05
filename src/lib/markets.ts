@@ -19,8 +19,8 @@ export const ROBLOX_GROUP_URL = "https://www.roblox.com/communities/0/seu-grupo"
 export const FEE_RATE = 0.1; // taxa de abertura: 10% da margem; o fechamento usa 10% do lucro realizado
 export const STAKER_SHARE = 0.7; // 70% da taxa de fechamento sobre lucro realizado; abertura usa 40%
 export const PROFIT_CAP = 5; // lucro máximo = 5x a margem (reservado na pool)
-/** Maintenance margin after the requested 25% risk increase: 0.50% × 1.25. */
-export const MAINTENANCE_MARGIN_RATE = 0.00625;
+/** Use 75% of the theoretical adverse move, making liquidation 25% more aggressive. */
+export const LIQUIDATION_MOVE_FACTOR = 0.75;
 export const MIN_LEVERAGE = 1;
 export const MAX_LEVERAGE = 50;
 
@@ -39,7 +39,7 @@ export function calcOpeningFee(margin: number) {
 /** Adverse price movement that exhausts initial margin down to maintenance margin. */
 export function calcLiquidationMove(leverage: number) {
   if (!Number.isFinite(leverage) || leverage < MIN_LEVERAGE || leverage > MAX_LEVERAGE) return 0;
-  return Math.max(1 / leverage - MAINTENANCE_MARGIN_RATE, 0);
+  return LIQUIDATION_MOVE_FACTOR / leverage;
 }
 
 /** Liquidation threshold derived from initial margin and maintenance margin. */
