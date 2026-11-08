@@ -296,12 +296,12 @@ function Copy() {
               <div className="grid items-end gap-3 md:grid-cols-3">
                 {podium.map((trader, index) => {
                   const rank = index === 0 ? 2 : index === 1 ? 1 : 3;
-                  const medal = rank === 1 ? "ouro" : rank === 2 ? "prata" : "bronze";
+                  const medal = rank === 1 ? "diamante" : rank === 2 ? "ouro" : "bronze";
                   const medalStyle =
                     rank === 1
-                      ? "border-yellow-400/70 bg-yellow-400/10 md:-translate-y-3"
+                      ? "border-cyan-300/70 bg-cyan-300/10 md:-translate-y-3"
                       : rank === 2
-                        ? "border-slate-300/60 bg-slate-300/10"
+                        ? "border-yellow-400/70 bg-yellow-400/10"
                         : "border-amber-700/60 bg-amber-700/10";
                   return (
                     <article
