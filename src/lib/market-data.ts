@@ -19,6 +19,7 @@ const SPOT_BASES = [
 
 const FUTURES_BASE = "https://fapi.binance.com/fapi/v1";
 const REQUEST_TIMEOUT_MS = 2500;
+const MAX_SOURCE_DEVIATION = 0.01;
 const COINGECKO_IDS: Record<string, string> = {
   BTCUSDT: "bitcoin",
   ETHUSDT: "ethereum",
@@ -68,6 +69,44 @@ async function getPricesFromSource(symbols: string[], base: string) {
   return null;
 }
 
+/**
+ * Combines independent source responses without trusting the first response
+ * that arrives. A disagreement above 1% fails closed because the value is
+ * used for opening positions and automatic liquidation.
+ */
+export function consensusPrices(
+  symbols: string[],
+  sourceMaps: Array<Record<string, number> | null>,
+): Record<string, number> | null {
+  const usable = sourceMaps.filter((source): source is Record<string, number> => source !== null);
+  if (!usable.length) return null;
+
+  const result: Record<string, number> = {};
+  for (const symbol of symbols) {
+    const values = usable
+      .map((source) => source[symbol])
+      .filter(
+        (price): price is number => price !== undefined && Number.isFinite(price) && price > 0,
+      )
+      .sort((a, b) => a - b);
+    if (!values.length || values.length !== usable.length) return null;
+
+    const middle = Math.floor(values.length / 2);
+    const upper = values[middle];
+    const lower = values[middle - 1];
+    if (upper === undefined) return null;
+    let median = upper;
+    if (values.length % 2 === 0) {
+      if (lower === undefined) return null;
+      median = (lower + upper) / 2;
+    }
+    const maxDeviation = Math.max(...values.map((price) => Math.abs(price - median) / median));
+    if (maxDeviation > MAX_SOURCE_DEVIATION) return null;
+    result[symbol] = median;
+  }
+  return result;
+}
+
 async function getCoinGeckoPrices(symbols: string[]): Promise<Record<string, number>> {
   const pairs = symbols
     .map((symbol) => [symbol, COINGECKO_IDS[symbol]] as const)
@@ -98,7 +137,7 @@ export async function getBinancePrices(symbols: string[]): Promise<Record<string
   const batchResults = await Promise.all(
     bases.map((base) => getPricesFromSource(uniqueSymbols, base)),
   );
-  const batchPrices = batchResults.find((prices) => prices !== null);
+  const batchPrices = consensusPrices(uniqueSymbols, batchResults);
   if (batchPrices) return batchPrices;
 
   // Se a consulta em lote falhar, tenta todos os endpoints individuais ao mesmo tempo.
@@ -109,21 +148,24 @@ export async function getBinancePrices(symbols: string[]): Promise<Record<string
       const attempts = bases.map(async (base) => {
         const parsed = asPriceMap(await requestJson(`${base}/ticker/price?symbol=${encoded}`));
         if (!parsed[symbol]) throw new Error("Preço inválido");
-        return parsed[symbol];
+        return { [symbol]: parsed[symbol] };
       });
-      try {
-        prices[symbol] = await Promise.any(attempts);
-      } catch {
-        // Todas as fontes falharam para este símbolo; usa a contingência abaixo.
-      }
+      const responses = await Promise.allSettled(attempts);
+      const sourceMaps = responses.map((response) =>
+        response.status === "fulfilled" ? response.value : null,
+      );
+      const consensus = consensusPrices([symbol], sourceMaps);
+      if (consensus?.[symbol] !== undefined) prices[symbol] = consensus[symbol];
     }),
   );
 
   if (uniqueSymbols.every((symbol) => prices[symbol])) return prices;
-  const fallbackPrices = await getCoinGeckoPrices(uniqueSymbols);
-  if (uniqueSymbols.every((symbol) => fallbackPrices[symbol])) return fallbackPrices;
+  // Do not use an aggregate fallback for execution-critical prices. It may be
+  // cached, use a different market, or have a different timestamp. The UI
+  // ticker may still use CoinGecko for display, but opening/liquidation must
+  // fail closed when Binance sources cannot reach consensus.
   throw new Error(
-    "Não foi possível obter o preço agora. Binance e a fonte de contingência estão indisponíveis. Tente novamente em alguns segundos.",
+    "Não foi possível validar o preço agora. As fontes de execução estão indisponíveis ou divergentes. Tente novamente em alguns segundos.",
   );
 }
 

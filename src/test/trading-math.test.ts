@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { calcLiquidationPrice, calcOpeningFee, calcPnl, PROFIT_CAP } from "@/lib/markets";
+import { consensusPrices } from "@/lib/market-data";
 
 describe("Bluxq isolated trading math", () => {
   it.each([
@@ -59,5 +60,17 @@ describe("Bluxq isolated trading math", () => {
 
     expect(margin - lossAtThreshold).toBeCloseTo(25, 8);
     expect(Math.max(margin - lossAfterGap, 0)).toBe(0);
+  });
+
+  it("uses a median consensus instead of trusting the first price source", () => {
+    expect(
+      consensusPrices(["BTCUSDT"], [{ BTCUSDT: 100 }, { BTCUSDT: 100.2 }, { BTCUSDT: 99.9 }]),
+    ).toEqual({ BTCUSDT: 100 });
+  });
+
+  it("fails closed when price sources disagree by more than one percent", () => {
+    expect(
+      consensusPrices(["BTCUSDT"], [{ BTCUSDT: 100 }, { BTCUSDT: 100.1 }, { BTCUSDT: 103 }]),
+    ).toBeNull();
   });
 });

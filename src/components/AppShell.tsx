@@ -44,6 +44,7 @@ export function PlatformNoticeBar() {
       return () => window.clearTimeout(timer);
     }
     if (dismissedAt) window.localStorage.removeItem(NOTICE_DISMISSED_AT);
+    return undefined;
   }, []);
 
   useEffect(() => {
