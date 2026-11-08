@@ -155,16 +155,6 @@ function Copy() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-7 px-4 py-8">
-      <header className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Copy trading</h1>
-        </div>
-        <div className="rounded-xl border px-4 py-3 text-right">
-          <div className="text-xs text-muted-foreground">Saldo</div>
-          <div className="font-mono text-xl font-bold">$BX {fmt(balance)}</div>
-        </div>
-      </header>
-
       <section className="rounded-xl border bg-card/30 p-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
