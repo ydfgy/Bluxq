@@ -112,6 +112,10 @@ function Copy() {
   );
   const balance = Number(profile?.balance ?? 0);
   const traderEnabled = Boolean(traderStatusQuery.data?.enabled);
+  const podium = [traders[1], traders[0], traders[2]].filter((trader): trader is Trader =>
+    Boolean(trader),
+  );
+  const recommendedTraders = traders.slice(0, 5);
 
   useEffect(() => {
     if (traderStatusQuery.data) setShowName(traderStatusQuery.data.showName);
@@ -289,36 +293,46 @@ function Copy() {
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
                 Pódio · melhores 3
               </h3>
-              <div className="grid gap-3 md:grid-cols-3">
-                {traders.slice(0, 3).map((trader, index) => (
-                  <article
-                    key={`podium-${trader.id}`}
-                    className={`rounded-xl border p-4 ${index === 0 ? "border-primary/60 bg-primary/5" : "bg-card/30"}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-primary">
-                        #{index + 1}
-                      </span>
-                      <span
-                        className={`font-mono font-bold ${trader.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
-                      >
-                        {trader.pnl >= 0 ? "+" : ""}$BX {fmt(trader.pnl)}
-                      </span>
-                    </div>
-                    <div className="mt-4 truncate font-semibold">{trader.displayName}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {trader.trades} trades · {trader.winRate}% acerto · {trader.bestSymbol || "—"}
-                    </div>
-                  </article>
-                ))}
+              <div className="grid items-end gap-3 md:grid-cols-3">
+                {podium.map((trader, index) => {
+                  const rank = index === 0 ? 2 : index === 1 ? 1 : 3;
+                  const medal = rank === 1 ? "ouro" : rank === 2 ? "prata" : "bronze";
+                  const medalStyle =
+                    rank === 1
+                      ? "border-yellow-400/70 bg-yellow-400/10 md:-translate-y-3"
+                      : rank === 2
+                        ? "border-slate-300/60 bg-slate-300/10"
+                        : "border-amber-700/60 bg-amber-700/10";
+                  return (
+                    <article
+                      key={`podium-${trader.id}`}
+                      className={`rounded-xl border p-4 transition-transform ${medalStyle}`}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-full bg-background/70 font-mono font-bold">
+                          #{rank}
+                        </span>
+                        <span
+                          className={`font-mono font-bold ${trader.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                        >
+                          {trader.pnl >= 0 ? "+" : ""}$BX {fmt(trader.pnl)}
+                        </span>
+                      </div>
+                      <div className="mt-4 truncate font-semibold">{trader.displayName}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">
+                        {medal} · {trader.trades} trades · {trader.winRate}% acerto
+                      </div>
+                    </article>
+                  );
+                })}
               </div>
             </div>
             <div>
               <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
-                Top 10 · detalhes e operações
+                Top 5 recomendados · escolha quem copiar
               </h3>
-              <div className="space-y-3">
-                {traders.map((trader, index) => {
+              <div className="max-h-[min(60vh,34rem)] space-y-3 overflow-y-auto pr-1">
+                {recommendedTraders.map((trader, index) => {
                   const allocation = allocationByTrader.get(trader.id);
                   const isExpanded = chartOpen === trader.id;
                   return (
