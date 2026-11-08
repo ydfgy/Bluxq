@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -12,7 +12,9 @@ import {
   getCopyAllocations,
   getCopyEvents,
   getCopyLeaderboard,
+  getCopyTraderStatus,
   saveCopyAllocation,
+  setCopyTraderOptIn,
   toggleCopyAllocation,
 } from "@/lib/blux.functions";
 import { fmt } from "@/lib/markets";
@@ -66,11 +68,14 @@ function Copy() {
   const [budgetText, setBudgetText] = useState("10");
   const [chartOpen, setChartOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showName, setShowName] = useState(false);
   const uid = session?.user.id;
   const loadLeaderboard = useServerFn(getCopyLeaderboard);
   const loadAllocations = useServerFn(getCopyAllocations);
   const loadEvents = useServerFn(getCopyEvents);
+  const loadTraderStatus = useServerFn(getCopyTraderStatus);
   const saveAllocation = useServerFn(saveCopyAllocation);
+  const setTraderOptIn = useServerFn(setCopyTraderOptIn);
   const setAllocationActive = useServerFn(toggleCopyAllocation);
   const leaderboardQuery = useQuery({
     queryKey: ["copy-leaderboard"],
@@ -93,6 +98,12 @@ function Copy() {
     refetchInterval: 15_000,
     retry: false,
   });
+  const traderStatusQuery = useQuery({
+    queryKey: ["copy-trader-status", uid],
+    enabled: Boolean(uid),
+    queryFn: async () => (await loadTraderStatus()) as { enabled: boolean; showName: boolean },
+    retry: false,
+  });
   const traders = leaderboardQuery.data ?? [];
   const allocations = useMemo(() => allocationsQuery.data ?? [], [allocationsQuery.data]);
   const allocationByTrader = useMemo(
@@ -100,6 +111,11 @@ function Copy() {
     [allocations],
   );
   const balance = Number(profile?.balance ?? 0);
+  const traderEnabled = Boolean(traderStatusQuery.data?.enabled);
+
+  useEffect(() => {
+    if (traderStatusQuery.data) setShowName(traderStatusQuery.data.showName);
+  }, [traderStatusQuery.data]);
 
   async function run(action: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -144,6 +160,55 @@ function Copy() {
           <div className="font-mono text-xl font-bold">$BX {fmt(balance)}</div>
         </div>
       </header>
+
+      <section className="rounded-xl border bg-card/30 p-4 sm:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 className="font-semibold">Disponibilizar minhas operações</h2>
+            <p className="mt-1 max-w-2xl text-sm text-muted-foreground">
+              Entre no ranking para que outros usuários possam copiar suas novas posições. O
+              histórico exibido usa apenas operações encerradas e não garante lucro.
+            </p>
+          </div>
+          <Button
+            variant={traderEnabled ? "outline" : "default"}
+            disabled={busy || traderStatusQuery.isPending || traderStatusQuery.isError}
+            onClick={() =>
+              void run(
+                () =>
+                  setTraderOptIn({
+                    data: { enabled: !traderEnabled, showName: traderEnabled ? false : showName },
+                  }),
+                traderEnabled ? "Você saiu do ranking." : "Você entrou no ranking.",
+              )
+            }
+          >
+            {traderEnabled ? "Sair do ranking" : "Entrar no ranking"}
+          </Button>
+        </div>
+        {traderStatusQuery.isError ? (
+          <p className="mt-3 text-sm text-destructive">Não foi possível carregar seu status.</p>
+        ) : (
+          <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showName}
+              disabled={busy}
+              onChange={(event) => {
+                const next = event.target.checked;
+                setShowName(next);
+                if (traderEnabled) {
+                  void run(
+                    () => setTraderOptIn({ data: { enabled: true, showName: next } }),
+                    "Preferência de nome atualizada.",
+                  );
+                }
+              }}
+            />
+            Mostrar meu nome público no ranking (opcional)
+          </label>
+        )}
+      </section>
 
       <details className="rounded-xl border px-4 py-3">
         <summary className="cursor-pointer text-sm font-medium">Atividade</summary>
