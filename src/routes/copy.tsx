@@ -189,7 +189,7 @@ function Copy() {
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-bold">Top 5</h2>
+            <h2 className="text-xl font-bold">Ranking de traders</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Usuários verificados com histórico aparecem automaticamente pelo username da
               plataforma.
@@ -219,119 +219,160 @@ function Copy() {
             <h3 className="font-semibold">Nenhum trader no ranking ainda</h3>
           </div>
         ) : (
-          <div className="space-y-3">
-            {traders.map((trader, index) => {
-              const allocation = allocationByTrader.get(trader.id);
-              const isExpanded = chartOpen === trader.id;
-              return (
-                <article key={trader.id} className="rounded-xl border p-4 sm:p-5">
-                  <div className="grid items-center gap-4 lg:grid-cols-[auto_minmax(170px,1.1fr)_minmax(120px,.8fr)_minmax(130px,.8fr)_minmax(150px,1fr)_auto]">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-primary">
-                      #{index + 1}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="truncate font-semibold">{trader.displayName}</div>
-                      <div className="text-xs text-muted-foreground">
-                        {trader.trades} trades · {trader.winRate}% acerto
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Lucro</div>
-                      <div
+          <div className="space-y-5">
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Pódio · melhores 3
+              </h3>
+              <div className="grid gap-3 md:grid-cols-3">
+                {traders.slice(0, 3).map((trader, index) => (
+                  <article
+                    key={`podium-${trader.id}`}
+                    className={`rounded-xl border p-4 ${index === 0 ? "border-primary/60 bg-primary/5" : "bg-card/30"}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-primary">
+                        #{index + 1}
+                      </span>
+                      <span
                         className={`font-mono font-bold ${trader.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
                       >
                         {trader.pnl >= 0 ? "+" : ""}$BX {fmt(trader.pnl)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground">Moeda</div>
-                      <div className="font-semibold">{trader.bestSymbol || "—"}</div>
-                    </div>
-                    <button
-                      type="button"
-                      aria-expanded={isExpanded}
-                      aria-label={`${isExpanded ? "Recolher" : "Abrir"} gráfico de ${trader.displayName}`}
-                      onClick={() => setChartOpen(isExpanded ? null : trader.id)}
-                      className="rounded-lg border p-2 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-                    >
-                      <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
-                        <span>Desempenho</span>
-                        <span>{isExpanded ? "Fechar" : "Gráfico"}</span>
-                      </div>
-                      <MiniChart
-                        values={trader.curve.map((point) => point.value)}
-                        positive={trader.pnl >= 0}
-                      />
-                    </button>
-                    <Button onClick={() => openCopy(trader)} disabled={busy}>
-                      {allocation?.is_active ? "Editar limite" : allocation ? "Retomar" : "Copiar"}
-                    </Button>
-                  </div>
-                  {isExpanded && (
-                    <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-2">
-                      <div>
-                        <div className="mb-2 text-sm font-semibold">Por moeda</div>
-                        <div className="space-y-2">
-                          {trader.symbols.slice(0, 8).map((coin) => (
-                            <div
-                              key={coin.symbol}
-                              className="flex items-center justify-between gap-2 text-sm"
-                            >
-                              <span>
-                                {coin.symbol}{" "}
-                                <span className="text-xs text-muted-foreground">
-                                  · {coin.trades} trades
-                                </span>
-                              </span>
-                              <span
-                                className={`font-mono ${coin.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
-                              >
-                                {coin.pnl >= 0 ? "+" : ""}$BX {fmt(coin.pnl)}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                      <div>
-                        <div className="mb-2 text-sm font-semibold">Histórico</div>
-                        <MiniChart
-                          values={trader.curve.map((point) => point.value)}
-                          positive={trader.pnl >= 0}
-                          large
-                        />
-                      </div>
-                    </div>
-                  )}
-                  {allocation && (
-                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm">
-                      <span>
-                        <strong className="font-mono">$BX {fmt(Number(allocation.budget))}</strong>{" "}
-                        · {allocation.is_active ? "ativa" : "pausada"}
                       </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={busy}
-                        onClick={() =>
-                          void run(
-                            () =>
-                              setAllocationActive({
-                                data: {
-                                  allocationId: allocation.id,
-                                  active: !allocation.is_active,
-                                },
-                              }),
-                            allocation.is_active ? "Pausada." : "Retomada.",
-                          )
-                        }
-                      >
-                        {allocation.is_active ? "Pausar" : "Retomar"}
-                      </Button>
                     </div>
-                  )}
-                </article>
-              );
-            })}
+                    <div className="mt-4 truncate font-semibold">{trader.displayName}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {trader.trades} trades · {trader.winRate}% acerto · {trader.bestSymbol || "—"}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </div>
+            <div>
+              <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+                Top 10 · detalhes e operações
+              </h3>
+              <div className="space-y-3">
+                {traders.map((trader, index) => {
+                  const allocation = allocationByTrader.get(trader.id);
+                  const isExpanded = chartOpen === trader.id;
+                  return (
+                    <article key={trader.id} className="rounded-xl border p-4 sm:p-5">
+                      <div className="grid items-center gap-4 lg:grid-cols-[auto_minmax(170px,1.1fr)_minmax(120px,.8fr)_minmax(130px,.8fr)_minmax(150px,1fr)_auto]">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 font-mono font-bold text-primary">
+                          #{index + 1}
+                        </div>
+                        <div className="min-w-0">
+                          <div className="truncate font-semibold">{trader.displayName}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {trader.trades} trades · {trader.winRate}% acerto
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">Lucro</div>
+                          <div
+                            className={`font-mono font-bold ${trader.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                          >
+                            {trader.pnl >= 0 ? "+" : ""}$BX {fmt(trader.pnl)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-xs text-muted-foreground">Moeda</div>
+                          <div className="font-semibold">{trader.bestSymbol || "—"}</div>
+                        </div>
+                        <button
+                          type="button"
+                          aria-expanded={isExpanded}
+                          aria-label={`${isExpanded ? "Recolher" : "Abrir"} gráfico de ${trader.displayName}`}
+                          onClick={() => setChartOpen(isExpanded ? null : trader.id)}
+                          className="rounded-lg border p-2 text-left transition-colors hover:border-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                        >
+                          <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                            <span>Desempenho</span>
+                            <span>{isExpanded ? "Fechar" : "Gráfico"}</span>
+                          </div>
+                          <MiniChart
+                            values={trader.curve.map((point) => point.value)}
+                            positive={trader.pnl >= 0}
+                          />
+                        </button>
+                        <Button onClick={() => openCopy(trader)} disabled={busy}>
+                          {allocation?.is_active
+                            ? "Editar limite"
+                            : allocation
+                              ? "Retomar"
+                              : "Copiar"}
+                        </Button>
+                      </div>
+                      {isExpanded && (
+                        <div className="mt-4 grid gap-4 border-t pt-4 md:grid-cols-2">
+                          <div>
+                            <div className="mb-2 text-sm font-semibold">Por moeda</div>
+                            <div className="space-y-2">
+                              {trader.symbols.slice(0, 8).map((coin) => (
+                                <div
+                                  key={coin.symbol}
+                                  className="flex items-center justify-between gap-2 text-sm"
+                                >
+                                  <span>
+                                    {coin.symbol}{" "}
+                                    <span className="text-xs text-muted-foreground">
+                                      · {coin.trades} trades
+                                    </span>
+                                  </span>
+                                  <span
+                                    className={`font-mono ${coin.pnl >= 0 ? "text-emerald-500" : "text-destructive"}`}
+                                  >
+                                    {coin.pnl >= 0 ? "+" : ""}$BX {fmt(coin.pnl)}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                          <div>
+                            <div className="mb-2 text-sm font-semibold">Histórico</div>
+                            <MiniChart
+                              values={trader.curve.map((point) => point.value)}
+                              positive={trader.pnl >= 0}
+                              large
+                            />
+                          </div>
+                        </div>
+                      )}
+                      {allocation && (
+                        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-3 text-sm">
+                          <span>
+                            <strong className="font-mono">
+                              $BX {fmt(Number(allocation.budget))}
+                            </strong>{" "}
+                            · {allocation.is_active ? "ativa" : "pausada"}
+                          </span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              void run(
+                                () =>
+                                  setAllocationActive({
+                                    data: {
+                                      allocationId: allocation.id,
+                                      active: !allocation.is_active,
+                                    },
+                                  }),
+                                allocation.is_active ? "Pausada." : "Retomada.",
+                              )
+                            }
+                          >
+                            {allocation.is_active ? "Pausar" : "Retomar"}
+                          </Button>
+                        </div>
+                      )}
+                    </article>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         )}
       </section>

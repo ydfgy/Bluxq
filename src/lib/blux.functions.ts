@@ -328,7 +328,12 @@ export const unstake = createServerFn({ method: "POST" })
 export const marketStake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) =>
-    amount.extend({ symbol: z.string().refine((s) => SYMBOLS.includes(s)) }).parse(d),
+    amount
+      .extend({
+        symbol: z.string().refine((s) => SYMBOLS.includes(s)),
+        lockDays: z.number().int().min(0).max(3650),
+      })
+      .parse(d),
   )
   .handler(async ({ data, context }) => {
     const { error } = await (
@@ -337,6 +342,7 @@ export const marketStake = createServerFn({ method: "POST" })
       _user: context.userId,
       _symbol: data.symbol,
       _amount: data.amount,
+      _lock_days: data.lockDays,
     });
     rpcError(error);
     return { ok: true };
@@ -344,19 +350,30 @@ export const marketStake = createServerFn({ method: "POST" })
 
 export const marketUnstake = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) =>
-    amount.extend({ symbol: z.string().refine((s) => SYMBOLS.includes(s)) }).parse(d),
-  )
+  .validator((d) => z.object({ positionId: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { error } = await (
       await admin()
     ).rpc("fn_market_unstake", {
       _user: context.userId,
-      _symbol: data.symbol,
-      _amount: data.amount,
+      _position: data.positionId,
     });
     rpcError(error);
     return { ok: true };
+  });
+
+export const getOperationSettings = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { data, error } = await (await admin()).rpc("fn_get_operation_settings");
+    rpcError(error);
+    return (data ?? {}) as {
+      stake_min_amount: number;
+      stake_min_lock_days: number;
+      stake_max_lock_days: number;
+      stake_default_lock_days: number;
+      stake_allow_early_withdrawal: boolean;
+    };
   });
 
 export const getMarketPoolInsights = createServerFn({ method: "GET" })

@@ -405,6 +405,50 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["market_stakes"]["Row"]>;
         Relationships: [];
       };
+      market_stake_positions: {
+        Row: {
+          id: string;
+          user_id: string;
+          symbol: string;
+          shares: number;
+          principal: number;
+          lock_days: number;
+          started_at: string;
+          unlocks_at: string;
+          status: string;
+          closed_at: string | null;
+          close_value: number | null;
+          close_pnl: number | null;
+          close_pnl_percent: number | null;
+        };
+        Insert: Partial<Database["public"]["Tables"]["market_stake_positions"]["Row"]> & {
+          user_id: string;
+          symbol: string;
+          shares: number;
+          principal: number;
+          lock_days: number;
+          unlocks_at: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["market_stake_positions"]["Row"]>;
+        Relationships: [];
+      };
+      operation_settings: {
+        Row: {
+          id: boolean;
+          stake_min_amount: number;
+          stake_min_lock_days: number;
+          stake_max_lock_days: number;
+          stake_default_lock_days: number;
+          stake_allow_early_withdrawal: boolean;
+          ranking_min_trades: number;
+          ranking_min_pnl: number;
+          ranking_limit: number;
+          updated_at: string;
+        };
+        Insert: Partial<Database["public"]["Tables"]["operation_settings"]["Row"]>;
+        Update: Partial<Database["public"]["Tables"]["operation_settings"]["Row"]>;
+        Relationships: [];
+      };
       market_pool_daily: {
         Row: {
           symbol: string;
@@ -590,12 +634,16 @@ export type Database = {
         Returns: undefined;
       };
       fn_market_stake: {
-        Args: { _amount: number; _symbol: string; _user: string };
-        Returns: undefined;
+        Args: { _amount: number; _lock_days?: number; _symbol: string; _user: string };
+        Returns: Json;
       };
       fn_market_unstake: {
-        Args: { _amount: number; _symbol: string; _user: string };
-        Returns: undefined;
+        Args: { _position: string; _user: string };
+        Returns: Json;
+      };
+      fn_get_operation_settings: {
+        Args: Record<string, never>;
+        Returns: Json;
       };
       fn_snapshot_all_market_pools: { Args: Record<string, never>; Returns: undefined };
       fn_copy_leaderboard: { Args: Record<string, never>; Returns: Json };
