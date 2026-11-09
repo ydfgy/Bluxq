@@ -10,5 +10,6 @@
 - [x] Permitir ao admin cadastrar, editar e remover Game Passes com nome, ID, valor em Robux e estado ativo.
 - [x] Mostrar somente Game Passes ativos na carteira de depósito e manter a Creator API Key fora do navegador.
 - [x] Aplicar saque mínimo de 100, descontar 30% no saque Roblox e exibir bruto, taxa e líquido.
+- [x] Separar visualmente depósito e saque, exigir depósito Roblox mínimo de 50 Robux e recomendar o Game Pass disponível mais próximo quando o valor informado não existir.
 - [x] Salvar avatar oficial, nome e ID Roblox verificado e mostrar o avatar no painel administrativo.
 - [x] Rodar lint, TypeScript e build de produção; não foram encontrados erros nos arquivos alterados.

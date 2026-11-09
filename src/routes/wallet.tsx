@@ -45,6 +45,9 @@ type RobloxGamePass = {
   active: boolean;
 };
 
+const ROBLOX_MIN_DEPOSIT = 50;
+const CRYPTO_MIN_DEPOSIT = 10;
+
 function Wallet() {
   const { session } = useAuth();
   const { data: p } = useProfile();
@@ -68,12 +71,27 @@ function Wallet() {
   const uid = session?.user.id;
   const depositValue = Number(depositAmount);
   const withdrawValue = Number(withdrawAmount);
+  const gamePasses = gamePassesQuery.data ?? [];
+  const matchingGamePass =
+    depositMethod === "roblox"
+      ? gamePasses.find((pass) => pass.robux_amount === depositValue)
+      : undefined;
+  const recommendedGamePass =
+    depositMethod === "roblox" && gamePasses.length
+      ? [...gamePasses].sort(
+          (a, b) =>
+            Math.abs(a.robux_amount - depositValue) - Math.abs(b.robux_amount - depositValue),
+        )[0]
+      : undefined;
+  const depositMinimum = depositMethod === "roblox" ? ROBLOX_MIN_DEPOSIT : CRYPTO_MIN_DEPOSIT;
   const depositError =
-    !Number.isFinite(depositValue) || depositValue < 10
-      ? "Informe um depósito de pelo menos 10."
-      : depositMethod === "crypto" && !transactionHash.trim()
-        ? "Informe o hash da transação."
-        : "";
+    !Number.isFinite(depositValue) || depositValue < depositMinimum
+      ? `Informe um depósito de pelo menos ${depositMinimum}${depositMethod === "roblox" ? " Robux" : ""}.`
+      : depositMethod === "roblox" && !matchingGamePass
+        ? "Não existe Game Pass para esse valor. Selecione uma recomendação abaixo."
+        : depositMethod === "crypto" && !transactionHash.trim()
+          ? "Informe o hash da transação."
+          : "";
   const withdrawError =
     !Number.isFinite(withdrawValue) || withdrawValue < 100
       ? "Informe um saque de pelo menos 100."
@@ -124,14 +142,20 @@ function Wallet() {
     <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
       <div className="grid gap-6 md:grid-cols-2">
         <section className="space-y-3 rounded-xl border bg-transparent p-5">
-          <h2 className="text-lg font-bold">Depositar</h2>
+          <div>
+            <h2 className="text-lg font-bold">Depositar</h2>
+            <p className="text-sm text-muted-foreground">Adicione saldo por Roblox ou Crypto.</p>
+          </div>
           <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
           {depositMethod === "roblox" ? (
             <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-              <div className="text-xs text-muted-foreground">Game Pass para depósito</div>
-              {gamePassesQuery.data?.length ? (
+              <div className="flex items-center justify-between gap-3">
+                <div className="text-xs text-muted-foreground">Game Pass para depósito</div>
+                <div className="text-xs font-semibold text-primary">Mínimo: 50 Robux</div>
+              </div>
+              {gamePasses.length ? (
                 <div className="grid gap-2">
-                  {gamePassesQuery.data.map((pass) => (
+                  {gamePasses.map((pass) => (
                     <button
                       key={pass.id}
                       type="button"
@@ -148,9 +172,30 @@ function Wallet() {
                 </div>
               ) : (
                 <p className="text-xs text-muted-foreground">
-                  Nenhum Game Pass está disponível no momento.
+                  Nenhum Game Pass ativo está disponível no momento. Tente novamente mais tarde.
                 </p>
               )}
+              {Number.isFinite(depositValue) &&
+                depositValue >= ROBLOX_MIN_DEPOSIT &&
+                !matchingGamePass &&
+                recommendedGamePass && (
+                  <div className="flex items-center justify-between gap-3 rounded-md border border-gold/30 bg-gold/5 p-2 text-xs">
+                    <span>
+                      Esse valor não está disponível. Recomendamos{" "}
+                      {fmt(recommendedGamePass.robux_amount, 0)} Robux.
+                    </span>
+                    <button
+                      type="button"
+                      className="shrink-0 font-semibold text-primary underline"
+                      onClick={() => {
+                        setSelectedGamePassId(recommendedGamePass.id);
+                        setDepositAmount(String(recommendedGamePass.robux_amount));
+                      }}
+                    >
+                      Selecionar
+                    </button>
+                  </div>
+                )}
               <a
                 href={ROBLOX_GROUP_URL}
                 target="_blank"
@@ -180,9 +225,14 @@ function Wallet() {
           <Field label={depositMethod === "roblox" ? "Valor em Robux" : "Valor em B$"}>
             <Input
               type="number"
-              min={10}
+              min={depositMinimum}
               value={depositAmount}
-              onChange={(e) => setDepositAmount(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setDepositAmount(value);
+                const pass = gamePasses.find((item) => item.robux_amount === Number(value));
+                setSelectedGamePassId(pass?.id ?? "");
+              }}
               className="font-mono"
             />
           </Field>
@@ -198,10 +248,7 @@ function Wallet() {
                       amount: Math.floor(Number(depositAmount)),
                       paymentMethod: depositMethod,
                       gamePassId:
-                        depositMethod === "roblox"
-                          ? gamePassesQuery.data?.find((pass) => pass.id === selectedGamePassId)
-                              ?.game_pass_id
-                          : undefined,
+                        depositMethod === "roblox" ? matchingGamePass?.game_pass_id : undefined,
                       asset: depositMethod === "crypto" ? asset : undefined,
                       network: depositMethod === "crypto" ? network : undefined,
                       transactionHash: depositMethod === "crypto" ? transactionHash : undefined,
