@@ -515,7 +515,7 @@ export const requestDeposit = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
-    const { error } = await (
+    const { data: id, error } = await (
       await admin()
     ).rpc("fn_request_deposit_v3", {
       _user: context.userId,
@@ -527,7 +527,62 @@ export const requestDeposit = createServerFn({ method: "POST" })
       _transaction_hash: data.transactionHash ?? null,
     });
     rpcError(error);
+    return { ok: true, id: id as string };
+  });
+
+export const listMyDeposits = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await (
+      await admin()
+    )
+      .from("deposits")
+      .select("id, amount, payment_method, game_pass_id, status, created_at, expires_at")
+      .eq("user_id", context.userId)
+      .order("created_at", { ascending: false })
+      .limit(20);
+    rpcError(error);
+    return data ?? [];
+  });
+
+export const cancelDeposit = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ id: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_cancel_deposit", {
+      _user: context.userId,
+      _id: data.id,
+    });
+    rpcError(error);
     return { ok: true };
+  });
+
+export const saveRobloxCreatorApiKey = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((d) => z.object({ apiKey: z.string().trim().min(20).max(500) }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { error } = await (
+      await admin()
+    ).rpc("fn_save_roblox_creator_api_key", {
+      _user: context.userId,
+      _key: data.apiKey,
+    });
+    rpcError(error);
+    return { ok: true };
+  });
+
+export const hasRobloxCreatorApiKey = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { data, error } = await (
+      await admin()
+    ).rpc("fn_has_roblox_creator_api_key", {
+      _user: context.userId,
+    });
+    rpcError(error);
+    return { saved: Boolean(data) };
   });
 
 export const listRobloxGamePasses = createServerFn({ method: "GET" })

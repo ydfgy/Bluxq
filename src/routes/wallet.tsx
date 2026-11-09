@@ -1,11 +1,19 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
-import { useAuth, useProfile } from "@/hooks/use-auth";
-import { listRobloxGamePasses, requestDeposit, requestWithdraw } from "@/lib/blux.functions";
+import { useProfile } from "@/hooks/use-auth";
+import {
+  cancelDeposit,
+  hasRobloxCreatorApiKey,
+  listMyDeposits,
+  listRobloxGamePasses,
+  requestDeposit,
+  requestWithdraw,
+  saveRobloxCreatorApiKey,
+} from "@/lib/blux.functions";
 import { fmt, ROBLOX_GROUP_URL } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +44,13 @@ type RobloxGamePass = {
   robux_amount: number;
   active: boolean;
 };
+type Deposit = {
+  id: string;
+  amount: number;
+  status: string;
+  created_at: string;
+  expires_at: string;
+};
 
 const ROBLOX_MIN_DEPOSIT = 50;
 const CRYPTO_MIN_DEPOSIT = 10;
@@ -46,6 +61,19 @@ function Wallet() {
   const qc = useQueryClient();
   const dep = useServerFn(requestDeposit);
   const wd = useServerFn(requestWithdraw);
+  const cancel = useServerFn(cancelDeposit);
+  const saveApiKey = useServerFn(saveRobloxCreatorApiKey);
+  const checkApiKey = useServerFn(hasRobloxCreatorApiKey);
+  const depositsQuery = useQuery<Deposit[]>({
+    queryKey: ["my-deposits"],
+    queryFn: () => listMyDeposits() as Promise<Deposit[]>,
+    refetchInterval: 10_000,
+  });
+  const apiKeyQuery = useQuery({
+    queryKey: ["roblox-api-key-saved"],
+    queryFn: () => checkApiKey(),
+    staleTime: 30_000,
+  });
   const gamePassesQuery = useQuery<RobloxGamePass[]>({
     queryKey: ["roblox-game-passes"],
     queryFn: () => listRobloxGamePasses(),
@@ -67,6 +95,7 @@ function Wallet() {
   const depositValue = Number(depositAmount);
   const withdrawValue = Number(withdrawAmount);
   const gamePasses = gamePassesQuery.data ?? [];
+  const pendingDeposit = depositsQuery.data?.find((item) => item.status === "pending");
   const matchingGamePass =
     depositMethod === "roblox"
       ? gamePasses.find((pass) => pass.robux_amount === depositValue)
@@ -149,7 +178,19 @@ function Wallet() {
                   recommendedGamePass={recommendedGamePass}
                   depositError={depositError}
                   startAtGamepass={tutorialComplete}
+                  apiKeySaved={Boolean(apiKeyQuery.data?.saved)}
+                  pendingDeposit={pendingDeposit}
                   onConnectAccount={() => nav({ to: "/verify" })}
+                  onSaveApiKey={async (apiKey) => {
+                    await saveApiKey({ data: { apiKey } });
+                    await apiKeyQuery.refetch();
+                  }}
+                  onCancelDeposit={async () => {
+                    if (!pendingDeposit) return;
+                    await cancel({ data: { id: pendingDeposit.id } });
+                    await depositsQuery.refetch();
+                    toast.success("Depósito cancelado");
+                  }}
                   onSelectPass={(pass) => {
                     setSelectedGamePassId(pass.id);
                     setDepositAmount(String(pass.robux_amount));
@@ -436,26 +477,58 @@ function RobloxDepositFlow({
   recommendedGamePass,
   depositError,
   startAtGamepass,
+  apiKeySaved,
+  pendingDeposit,
   onConnectAccount,
+  onSaveApiKey,
+  onCancelDeposit,
   onSelectPass,
   onSubmit,
 }: {
-  username?: string | null;
+  username?: string | null | undefined;
   verified: boolean;
   gamePasses: RobloxGamePass[];
   amount: string;
   selectedGamePassId: string;
-  matchingGamePass?: RobloxGamePass;
-  recommendedGamePass?: RobloxGamePass;
+  matchingGamePass?: RobloxGamePass | undefined;
+  recommendedGamePass?: RobloxGamePass | undefined;
   depositError: string;
   startAtGamepass: boolean;
+  apiKeySaved: boolean;
+  pendingDeposit?: Deposit | undefined;
   onConnectAccount: () => void;
+  onSaveApiKey: (apiKey: string) => Promise<void>;
+  onCancelDeposit: () => Promise<void>;
   onSelectPass: (pass: RobloxGamePass) => void;
   onSubmit: () => Promise<boolean>;
 }) {
   const [step, setStep] = useState<"link" | "api-key" | "gamepass" | "waiting">(
-    startAtGamepass ? "gamepass" : verified && username ? "api-key" : "link",
+    startAtGamepass || apiKeySaved ? "gamepass" : verified && username ? "api-key" : "link",
   );
+  const [secondsLeft, setSecondsLeft] = useState(1800);
+  const [cancelAvailable, setCancelAvailable] = useState(false);
+  const connected = verified && Boolean(username);
+  const nav = useNavigate();
+  useEffect(() => {
+    if (pendingDeposit) {
+      const left = Math.max(
+        0,
+        Math.floor((new Date(pendingDeposit.expires_at).getTime() - Date.now()) / 1000),
+      );
+      setSecondsLeft(left);
+      setCancelAvailable(Date.now() - new Date(pendingDeposit.created_at).getTime() >= 60_000);
+    }
+  }, [pendingDeposit]);
+  useEffect(() => {
+    if (!pendingDeposit) return;
+    const timer = window.setInterval(() => {
+      const created = new Date(pendingDeposit.created_at).getTime();
+      const expires = new Date(pendingDeposit.expires_at).getTime();
+      setSecondsLeft(Math.max(0, Math.floor((expires - Date.now()) / 1000)));
+      setCancelAvailable(Date.now() - created >= 60_000);
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [pendingDeposit]);
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   return (
@@ -537,8 +610,15 @@ function RobloxDepositFlow({
               </Button>
             </div>
           </Field>
-          <Button className="w-full" disabled={!apiKey.trim()} onClick={() => setStep("gamepass")}>
-            Continuar
+          <Button
+            className="w-full"
+            disabled={!apiKey.trim()}
+            onClick={async () => {
+              await onSaveApiKey(apiKey);
+              setStep("gamepass");
+            }}
+          >
+            Salvar e continuar
           </Button>
         </div>
       )}
@@ -592,7 +672,13 @@ function RobloxDepositFlow({
                 Nenhum Game Pass ativo está disponível no momento.
               </p>
             )}
-            <div className="mt-2 text-xs text-gold">◷ Expira em 29:31</div>
+            <div className="mt-2 text-xs text-gold">
+              ◷ Expira em{" "}
+              {Math.floor(secondsLeft / 60)
+                .toString()
+                .padStart(2, "0")}
+              :{(secondsLeft % 60).toString().padStart(2, "0")}
+            </div>
           </div>
           {depositError && <p className="text-xs text-bear">{depositError}</p>}
           <Button
@@ -606,10 +692,11 @@ function RobloxDepositFlow({
           </Button>
           <button
             type="button"
-            onClick={() => setStep("methods")}
-            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
+            disabled={!cancelAvailable || !pendingDeposit}
+            onClick={() => void onCancelDeposit()}
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Cancelar depósito
+            {cancelAvailable ? "Cancelar depósito" : "Cancelar disponível após 60 segundos"}
           </button>
         </div>
       )}
@@ -633,11 +720,17 @@ function RobloxDepositFlow({
             <div className="mt-2 h-1 rounded-full bg-muted">
               <div className="h-full w-1/3 rounded-full bg-primary" />
             </div>
-            <div className="mt-2 text-xs text-muted-foreground">Expira em 29:31.</div>
+            <div className="mt-2 text-xs text-muted-foreground">
+              Expira em{" "}
+              {Math.floor(secondsLeft / 60)
+                .toString()
+                .padStart(2, "0")}
+              :{(secondsLeft % 60).toString().padStart(2, "0")}.
+            </div>
           </div>
           <button
             type="button"
-            onClick={() => setStep("methods")}
+            onClick={() => setStep("link")}
             className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
           >
             Fechar e acompanhar no histórico
