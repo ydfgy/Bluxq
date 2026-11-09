@@ -1,11 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useAuth, useProfile } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
 import { listRobloxGamePasses, requestDeposit, requestWithdraw } from "@/lib/blux.functions";
 import { fmt, ROBLOX_GROUP_URL } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
@@ -30,13 +29,6 @@ export const Route = createFileRoute("/wallet")({
     </Protected>
   ),
 });
-
-const STATUS: Record<string, string> = {
-  pending: "Pendente",
-  approved: "Aprovado",
-  rejected: "Rejeitado",
-  paid: "Pago",
-};
 
 type RobloxGamePass = {
   id: string;
@@ -72,7 +64,10 @@ function Wallet() {
   const [selectedGamePassId, setSelectedGamePassId] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletSection, setWalletSection] = useState<"deposit" | "withdraw" | null>(null);
-  const uid = session?.user.id;
+  useEffect(() => {
+    setWalletSection("deposit");
+    setWalletOpen(true);
+  }, []);
   const depositValue = Number(depositAmount);
   const withdrawValue = Number(withdrawAmount);
   const gamePasses = gamePassesQuery.data ?? [];
@@ -105,33 +100,6 @@ function Wallet() {
           ? "Informe o endereço de destino."
           : "";
 
-  const { data: hist } = useQuery({
-    queryKey: ["wallet-hist", uid],
-    refetchInterval: 5000,
-    queryFn: async () => {
-      const [a, b] = await Promise.all([
-        supabase
-          .from("deposits")
-          .select(
-            "id, amount, payment_method, asset, network, transaction_hash, status, created_at",
-          )
-          .eq("user_id", uid!)
-          .order("created_at", { ascending: false })
-          .limit(30),
-        supabase
-          .from("withdrawals")
-          .select("id, amount, payout_method, asset, network, destination, status, created_at")
-          .eq("user_id", uid!)
-          .order("created_at", { ascending: false })
-          .limit(30),
-      ]);
-      return [
-        ...(a.data ?? []).map((x) => ({ ...x, kind: "Deposit", method: x.payment_method })),
-        ...(b.data ?? []).map((x) => ({ ...x, kind: "Withdrawal", method: x.payout_method })),
-      ].sort((x, y) => y.created_at.localeCompare(x.created_at));
-    },
-  });
-
   async function run(fn: () => Promise<unknown>, msg: string) {
     try {
       await fn();
@@ -145,51 +113,14 @@ function Wallet() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
-      <div className="grid gap-4 md:grid-cols-2">
-        <button
-          type="button"
-          onClick={() => {
-            setWalletSection("deposit");
-            setWalletOpen(true);
-          }}
-          className="group rounded-xl border border-border bg-card p-5 text-left transition-colors hover:border-primary/60 hover:bg-primary/5"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-xl text-primary">
-              ＋
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Adicionar saldo
-            </span>
-          </div>
-          <h2 className="text-lg font-bold group-hover:text-primary">Depositar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Robux ou Crypto · mínimo de 50 Robux</p>
-        </button>
-        <button
-          type="button"
-          onClick={() => {
-            setWalletSection("withdraw");
-            setWalletOpen(true);
-          }}
-          className="group rounded-xl border border-border bg-card p-5 text-left transition-colors hover:border-primary/60 hover:bg-primary/5"
-        >
-          <div className="mb-4 flex items-center justify-between">
-            <span className="grid h-10 w-10 place-items-center rounded-full bg-primary/15 text-xl text-primary">
-              ↗
-            </span>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Retirar saldo
-            </span>
-          </div>
-          <h2 className="text-lg font-bold group-hover:text-primary">Sacar</h2>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Solicite o pagamento do seu saldo disponível
-          </p>
-        </button>
-      </div>
-
-      <Dialog open={walletOpen} onOpenChange={setWalletOpen}>
+    <main className="min-h-0">
+      <Dialog
+        open={walletOpen}
+        onOpenChange={(open) => {
+          setWalletOpen(open);
+          if (!open) window.history.back();
+        }}
+      >
         <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border-border bg-background p-0 text-foreground">
           <div className="border-b border-border px-5 py-4 pr-12">
             <DialogTitle className="text-left text-lg">
@@ -199,6 +130,22 @@ function Wallet() {
                   ? "Sacar"
                   : "Escolha uma operação"}
             </DialogTitle>
+            <div className="mt-4 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+              <button
+                type="button"
+                onClick={() => setWalletSection("deposit")}
+                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${walletSection === "deposit" ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Depositar
+              </button>
+              <button
+                type="button"
+                onClick={() => setWalletSection("withdraw")}
+                className={`rounded-md px-3 py-2 text-sm font-semibold transition-colors ${walletSection === "withdraw" ? "bg-card text-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                Sacar
+              </button>
+            </div>
           </div>
 
           <div className="space-y-6 p-5">
@@ -379,41 +326,6 @@ function Wallet() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <section className="rounded-xl border bg-transparent">
-        <h2 className="border-b p-4 font-bold">Histórico</h2>
-        {(hist ?? []).map((x) => (
-          <div
-            key={x.id}
-            className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-2 text-sm last:border-0"
-          >
-            <span>
-              {x.kind} ·{" "}
-              {x.method === "crypto" ? `Crypto${x.asset ? ` (${x.asset})` : ""}` : "Roblox"}
-            </span>
-            <span className="font-mono">{fmt(x.amount, 0)} $BX</span>
-            <span className="text-xs text-muted-foreground">
-              {new Date(x.created_at).toLocaleString("pt-BR")}
-            </span>
-            <span
-              className={
-                x.status === "pending"
-                  ? "text-gold"
-                  : x.status === "rejected"
-                    ? "text-bear"
-                    : "text-bull"
-              }
-            >
-              {STATUS[x.status] ?? x.status}
-            </span>
-          </div>
-        ))}
-        {!hist?.length && (
-          <div className="p-6 text-center text-sm text-muted-foreground">
-            Nenhuma atividade ainda.
-          </div>
-        )}
-      </section>
     </main>
   );
 }

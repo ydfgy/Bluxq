@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { fmt } from "@/lib/markets";
-import { ArrowRight, Check, X } from "lucide-react";
+import { ArrowRight, Check, Wallet as WalletIcon, X } from "lucide-react";
 
 export const BRAND_ICON_SRC = "/bluxq-favicon.png";
 export const BRAND_LOGO_SRC = "/bluxq-logo-trim.png";
@@ -151,11 +151,6 @@ export function Navbar() {
             Trade
           </Link>
           {session && (
-            <Link to="/wallet" className={link} activeProps={active}>
-              Wallet
-            </Link>
-          )}
-          {session && (
             <Link to="/copy" className={link} activeProps={active}>
               Copy
             </Link>
@@ -173,9 +168,10 @@ export function Navbar() {
               {profile && (
                 <Link
                   to="/wallet"
-                  className="flex items-center gap-1.5 font-mono text-sm text-gold"
+                  className="flex items-center gap-1.5 rounded-md px-1.5 font-mono text-sm text-gold transition-colors hover:bg-gold/10"
                   aria-label={`Saldo $BX ${fmt(profile.balance)}`}
                 >
+                  <WalletIcon className="h-4 w-4" aria-hidden="true" />
                   <img src="/bluxq-icon.png" alt="Saldo $BX" className="h-5 w-5 object-contain" />
                   <span>{fmt(profile.balance)}</span>
                 </Link>
@@ -208,11 +204,6 @@ export function Navbar() {
         <Link to="/trade" className={link} activeProps={active}>
           Trade
         </Link>
-        {session && (
-          <Link to="/wallet" className={link} activeProps={active}>
-            Wallet
-          </Link>
-        )}
         {session && (
           <Link to="/copy" className={link} activeProps={active}>
             Copy
