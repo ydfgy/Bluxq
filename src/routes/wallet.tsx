@@ -64,6 +64,9 @@ function Wallet() {
   const [selectedGamePassId, setSelectedGamePassId] = useState("");
   const [walletOpen, setWalletOpen] = useState(false);
   const [walletSection, setWalletSection] = useState<"deposit" | "withdraw" | null>(null);
+  const tutorialComplete =
+    typeof window !== "undefined" &&
+    window.sessionStorage.getItem("bluxq-roblox-tutorial-complete") === "1";
   useEffect(() => {
     setWalletSection("deposit");
     setWalletOpen(true);
@@ -168,6 +171,7 @@ function Wallet() {
                       matchingGamePass={matchingGamePass}
                       recommendedGamePass={recommendedGamePass}
                       depositError={depositError}
+                      startAtGamepass={tutorialComplete}
                       onConnectAccount={() => nav({ to: "/verify" })}
                       onSelectPass={(pass) => {
                         setSelectedGamePassId(pass.id);
@@ -456,6 +460,7 @@ function RobloxDepositFlow({
   matchingGamePass,
   recommendedGamePass,
   depositError,
+  startAtGamepass,
   onConnectAccount,
   onSelectPass,
   onSubmit,
@@ -468,12 +473,13 @@ function RobloxDepositFlow({
   matchingGamePass?: RobloxGamePass;
   recommendedGamePass?: RobloxGamePass;
   depositError: string;
+  startAtGamepass: boolean;
   onConnectAccount: () => void;
   onSelectPass: (pass: RobloxGamePass) => void;
   onSubmit: () => Promise<boolean>;
 }) {
   const [step, setStep] = useState<"link" | "api-key" | "tutorial" | "gamepass" | "waiting">(
-    verified && username ? "api-key" : "link",
+    startAtGamepass ? "gamepass" : verified && username ? "api-key" : "link",
   );
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
@@ -570,21 +576,8 @@ function RobloxDepositFlow({
               Robux.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() =>
-              window.open(
-                "https://create.roblox.com/dashboard/credentials",
-                "_blank",
-                "noopener,noreferrer",
-              )
-            }
-            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-bold hover:bg-accent"
-          >
-            Abrir tutorial da Creator API key
-          </button>
-          <Button className="w-full" onClick={() => setStep("gamepass")}>
-            Continuar para valor em Robux
+          <Button className="w-full" onClick={() => nav({ to: "/roblox-api-tutorial" })}>
+            Abrir página do tutorial
           </Button>
         </div>
       )}

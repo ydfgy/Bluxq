@@ -14,6 +14,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as CopyRouteImport } from './routes/copy'
 import { Route as OpsFe0286eca1e960bb557cdef0976fa9a2RouteImport } from './routes/ops-fe0286eca1e960bb557cdef0976fa9a2'
 import { Route as ReferralsRouteImport } from './routes/referrals'
+import { Route as RobloxApiTutorialRouteImport } from './routes/roblox-api-tutorial'
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TradeRouteImport } from './routes/trade'
@@ -45,6 +46,11 @@ const OpsFe0286eca1e960bb557cdef0976fa9a2Route =
 const ReferralsRoute = ReferralsRouteImport.update({
   id: '/referrals',
   path: '/referrals',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RobloxApiTutorialRoute = RobloxApiTutorialRouteImport.update({
+  id: '/roblox-api-tutorial',
+  path: '/roblox-api-tutorial',
   getParentRoute: () => rootRouteImport,
 } as any)
 const StakeRoute = StakeRouteImport.update({
@@ -84,6 +90,7 @@ export interface FileRoutesByFullPath {
   '/copy': typeof CopyRoute
   '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
+  '/roblox-api-tutorial': typeof RobloxApiTutorialRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
@@ -97,6 +104,7 @@ export interface FileRoutesByTo {
   '/copy': typeof CopyRoute
   '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
+  '/roblox-api-tutorial': typeof RobloxApiTutorialRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
@@ -111,6 +119,7 @@ export interface FileRoutesById {
   '/copy': typeof CopyRoute
   '/ops-fe0286eca1e960bb557cdef0976fa9a2': typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   '/referrals': typeof ReferralsRoute
+  '/roblox-api-tutorial': typeof RobloxApiTutorialRoute
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
@@ -126,6 +135,7 @@ export interface FileRouteTypes {
     | '/copy'
     | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
+    | '/roblox-api-tutorial'
     | '/stake'
     | '/terms'
     | '/trade'
@@ -139,6 +149,7 @@ export interface FileRouteTypes {
     | '/copy'
     | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
+    | '/roblox-api-tutorial'
     | '/stake'
     | '/terms'
     | '/trade'
@@ -152,6 +163,7 @@ export interface FileRouteTypes {
     | '/copy'
     | '/ops-fe0286eca1e960bb557cdef0976fa9a2'
     | '/referrals'
+    | '/roblox-api-tutorial'
     | '/stake'
     | '/terms'
     | '/trade'
@@ -166,6 +178,7 @@ export interface RootRouteChildren {
   CopyRoute: typeof CopyRoute
   OpsFe0286eca1e960bb557cdef0976fa9a2Route: typeof OpsFe0286eca1e960bb557cdef0976fa9a2Route
   ReferralsRoute: typeof ReferralsRoute
+  RobloxApiTutorialRoute: typeof RobloxApiTutorialRoute
   StakeRoute: typeof StakeRouteWithChildren
   TermsRoute: typeof TermsRoute
   TradeRoute: typeof TradeRoute
@@ -208,6 +221,13 @@ declare module '@tanstack/react-router' {
       path: '/referrals'
       fullPath: '/referrals'
       preLoaderRoute: typeof ReferralsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roblox-api-tutorial': {
+      id: '/roblox-api-tutorial'
+      path: '/roblox-api-tutorial'
+      fullPath: '/roblox-api-tutorial'
+      preLoaderRoute: typeof RobloxApiTutorialRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/stake': {
@@ -272,6 +292,7 @@ const rootRouteChildren: RootRouteChildren = {
   OpsFe0286eca1e960bb557cdef0976fa9a2Route:
     OpsFe0286eca1e960bb557cdef0976fa9a2Route,
   ReferralsRoute: ReferralsRoute,
+  RobloxApiTutorialRoute: RobloxApiTutorialRoute,
   StakeRoute: StakeRouteWithChildren,
   TermsRoute: TermsRoute,
   TradeRoute: TradeRoute,
