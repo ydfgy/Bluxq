@@ -315,6 +315,7 @@ export type Database = {
           is_anonymous: boolean;
           is_banned: boolean;
           roblox_created_at: string | null;
+          roblox_creator_api_key: string | null;
           roblox_display_name: string | null;
           roblox_user_id: number | null;
           roblox_username: string;
@@ -352,6 +353,7 @@ export type Database = {
           is_anonymous?: boolean;
           is_banned?: boolean;
           roblox_created_at?: string | null;
+          roblox_creator_api_key?: string | null;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username?: string;

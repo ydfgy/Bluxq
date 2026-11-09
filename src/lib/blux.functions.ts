@@ -565,10 +565,25 @@ export const cancelDeposit = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function introspectRobloxCreatorApiKey(apiKey: string) {
+  const response = await fetch("https://apis.roblox.com/api-keys/v1/introspect", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Accept: "application/json" },
+    body: JSON.stringify({ apiKey }),
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error("Creator API key inválida ou sem acesso ao Open Cloud.");
+  const details = (await response.json()) as { enabled?: boolean; expired?: boolean };
+  if (details.enabled === false || details.expired === true) {
+    throw new Error("Creator API key desativada ou expirada.");
+  }
+}
+
 export const saveRobloxCreatorApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) => z.object({ apiKey: z.string().trim().min(20).max(500) }).parse(d))
   .handler(async ({ data, context }) => {
+    await introspectRobloxCreatorApiKey(data.apiKey);
     const { error } = await (
       await admin()
     ).rpc("fn_save_roblox_creator_api_key", {
@@ -577,6 +592,71 @@ export const saveRobloxCreatorApiKey = createServerFn({ method: "POST" })
     });
     rpcError(error);
     return { ok: true };
+  });
+
+export const checkRobloxDeposit = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const sb = await admin();
+    const { data: deposit, error: depositError } = await sb
+      .from("deposits")
+      .select("id, game_pass_id, expires_at")
+      .eq("user_id", context.userId)
+      .eq("payment_method", "roblox")
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    rpcError(depositError);
+    if (!deposit) return { status: "none" as const };
+    if (new Date(deposit.expires_at).getTime() <= Date.now()) {
+      const { error } = await sb
+        .from("deposits")
+        .update({ status: "expired", reviewed_at: new Date().toISOString() })
+        .eq("id", deposit.id)
+        .eq("status", "pending");
+      rpcError(error);
+      return { status: "expired" as const };
+    }
+
+    const [{ data: profile, error: profileError }] = await Promise.all([
+      sb
+        .from("profiles")
+        .select("roblox_user_id, roblox_creator_api_key")
+        .eq("id", context.userId)
+        .maybeSingle(),
+    ]);
+    rpcError(profileError);
+    if (!profile?.roblox_user_id || !profile.roblox_creator_api_key || !deposit.game_pass_id) {
+      return { status: "waiting" as const };
+    }
+
+    const url = new URL(
+      `https://apis.roblox.com/cloud/v2/users/${profile.roblox_user_id}/inventory-items`,
+    );
+    url.searchParams.set("filter", `gamePassIds=${deposit.game_pass_id}`);
+    const response = await fetch(url, {
+      headers: { "x-api-key": profile.roblox_creator_api_key, Accept: "application/json" },
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (response.status === 401 || response.status === 403) {
+      throw new Error("A Creator API key não tem permissão para consultar o inventário Roblox.");
+    }
+    if (!response.ok) throw new Error("Não foi possível consultar o inventário Roblox agora.");
+    const result = (await response.json()) as {
+      inventoryItems?: { assetDetails?: { assetId?: string } }[];
+    };
+    const purchased = result.inventoryItems?.some(
+      (item) => String(item.assetDetails?.assetId) === String(deposit.game_pass_id),
+    );
+    if (!purchased) return { status: "waiting" as const };
+
+    const { error: approveError } = await sb.rpc("fn_review_deposit", {
+      _id: deposit.id,
+      _approve: true,
+    });
+    rpcError(approveError);
+    return { status: "approved" as const };
   });
 
 export const hasRobloxCreatorApiKey = createServerFn({ method: "GET" })

@@ -7,6 +7,7 @@ import { Protected } from "@/components/AppShell";
 import { useProfile } from "@/hooks/use-auth";
 import {
   cancelDeposit,
+  checkRobloxDeposit,
   hasRobloxCreatorApiKey,
   listMyDeposits,
   listRobloxGamePasses,
@@ -62,6 +63,7 @@ function Wallet() {
   const dep = useServerFn(requestDeposit);
   const wd = useServerFn(requestWithdraw);
   const cancel = useServerFn(cancelDeposit);
+  const checkDeposit = useServerFn(checkRobloxDeposit);
   const saveApiKey = useServerFn(saveRobloxCreatorApiKey);
   const checkApiKey = useServerFn(hasRobloxCreatorApiKey);
   const depositsQuery = useQuery<Deposit[]>({
@@ -96,6 +98,19 @@ function Wallet() {
   const withdrawValue = Number(withdrawAmount);
   const gamePasses = gamePassesQuery.data ?? [];
   const pendingDeposit = depositsQuery.data?.find((item) => item.status === "pending");
+  const robloxDepositQuery = useQuery({
+    queryKey: ["roblox-deposit-check", pendingDeposit?.id],
+    enabled: Boolean(pendingDeposit),
+    queryFn: () => checkDeposit(),
+    refetchInterval: pendingDeposit ? 5_000 : false,
+    retry: false,
+  });
+  useEffect(() => {
+    if (robloxDepositQuery.data?.status === "approved") {
+      void Promise.all([depositsQuery.refetch(), qc.invalidateQueries({ queryKey: ["profile"] })]);
+      toast.success("Compra confirmada. Seu saldo foi creditado.");
+    }
+  }, [depositsQuery, qc, robloxDepositQuery.data?.status]);
   const matchingGamePass =
     depositMethod === "roblox"
       ? gamePasses.find((pass) => pass.robux_amount === depositValue)
@@ -614,8 +629,15 @@ function RobloxDepositFlow({
             className="w-full"
             disabled={!apiKey.trim()}
             onClick={async () => {
-              await onSaveApiKey(apiKey);
-              setStep("gamepass");
+              try {
+                await onSaveApiKey(apiKey);
+                toast.success("Creator API key validada e salva.");
+                setStep("gamepass");
+              } catch (error) {
+                toast.error(
+                  error instanceof Error ? error.message : "Não foi possível validar a API key.",
+                );
+              }
             }}
           >
             Salvar e continuar
