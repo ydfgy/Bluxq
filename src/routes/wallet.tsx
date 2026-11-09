@@ -192,15 +192,6 @@ function Wallet() {
       <Dialog open={walletOpen} onOpenChange={setWalletOpen}>
         <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border-border bg-background p-0 text-foreground">
           <div className="border-b border-border px-5 py-4 pr-12">
-            {walletSection ? (
-              <button
-                type="button"
-                onClick={() => setWalletSection(null)}
-                className="mb-3 text-sm font-semibold text-foreground transition-colors hover:text-primary"
-              >
-                ← Voltar para métodos
-              </button>
-            ) : null}
             <DialogTitle className="text-left text-lg">
               {walletSection === "deposit"
                 ? "Depositar"
@@ -210,207 +201,182 @@ function Wallet() {
             </DialogTitle>
           </div>
 
-          {!walletSection ? (
-            <div className="grid gap-3 p-5">
-              <button
-                type="button"
-                onClick={() => setWalletSection("deposit")}
-                className="rounded-lg border border-border bg-background/40 p-4 text-left transition-colors hover:border-primary hover:bg-primary/5"
-              >
-                <div className="font-semibold">Depositar</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Adicionar Robux ou Crypto à carteira
-                </div>
-              </button>
-              <button
-                type="button"
-                onClick={() => setWalletSection("withdraw")}
-                className="rounded-lg border border-border bg-background/40 p-4 text-left transition-colors hover:border-primary hover:bg-primary/5"
-              >
-                <div className="font-semibold">Sacar</div>
-                <div className="mt-1 text-sm text-muted-foreground">
-                  Enviar uma solicitação de pagamento
-                </div>
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-6 p-5">
-              <div className="space-y-3">
-                {walletSection === "deposit" && (
-                  <section className="space-y-3 rounded-xl border bg-transparent p-5">
-                    <div>
-                      <h2 className="text-lg font-bold">Depositar</h2>
-                      <p className="text-sm text-muted-foreground">
-                        Adicione saldo por Roblox ou Crypto.
-                      </p>
-                    </div>
-                    {depositMethod === "roblox" ? (
-                      <RobloxDepositFlow
-                        username={p?.roblox_username}
-                        verified={Boolean(p?.verified)}
-                        gamePasses={gamePasses}
-                        amount={depositAmount}
-                        selectedGamePassId={selectedGamePassId}
-                        matchingGamePass={matchingGamePass}
-                        recommendedGamePass={recommendedGamePass}
-                        depositError={depositError}
-                        onConnectAccount={() => nav({ to: "/verify" })}
-                        onSelectPass={(pass) => {
-                          setSelectedGamePassId(pass.id);
-                          setDepositAmount(String(pass.robux_amount));
-                        }}
-                        onSubmit={() =>
+          <div className="space-y-6 p-5">
+            <div className="space-y-3">
+              {walletSection === "deposit" && (
+                <section className="space-y-3 rounded-xl border bg-transparent p-5">
+                  <div>
+                    <h2 className="text-lg font-bold">Depositar</h2>
+                    <p className="text-sm text-muted-foreground">
+                      Adicione saldo por Roblox ou Crypto.
+                    </p>
+                  </div>
+                  {depositMethod === "roblox" ? (
+                    <RobloxDepositFlow
+                      username={p?.roblox_username}
+                      verified={Boolean(p?.verified)}
+                      gamePasses={gamePasses}
+                      amount={depositAmount}
+                      selectedGamePassId={selectedGamePassId}
+                      matchingGamePass={matchingGamePass}
+                      recommendedGamePass={recommendedGamePass}
+                      depositError={depositError}
+                      onConnectAccount={() => nav({ to: "/verify" })}
+                      onSelectPass={(pass) => {
+                        setSelectedGamePassId(pass.id);
+                        setDepositAmount(String(pass.robux_amount));
+                      }}
+                      onSubmit={() =>
+                        run(
+                          () =>
+                            dep({
+                              data: {
+                                amount: Math.floor(Number(depositAmount)),
+                                paymentMethod: "roblox",
+                                gamePassId: matchingGamePass?.game_pass_id,
+                              },
+                            }),
+                          "Depósito enviado para confirmação",
+                        )
+                      }
+                    />
+                  ) : (
+                    <>
+                      <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
+                      <CryptoFields
+                        asset={asset}
+                        network={network}
+                        onAsset={setAsset}
+                        onNetwork={setNetwork}
+                      />
+                      <Field label="Hash da transação (TXID)">
+                        <Input
+                          value={transactionHash}
+                          onChange={(e) => setTransactionHash(e.target.value)}
+                          placeholder="Cole o hash da transação"
+                        />
+                      </Field>
+                    </>
+                  )}
+                  {depositMethod === "crypto" && (
+                    <>
+                      <Field label="Valor em B$">
+                        <Input
+                          type="number"
+                          min={CRYPTO_MIN_DEPOSIT}
+                          value={depositAmount}
+                          onChange={(e) => setDepositAmount(e.target.value)}
+                          className="font-mono"
+                        />
+                      </Field>
+                      {depositError && <p className="text-xs text-bear">{depositError}</p>}
+                      <Button
+                        className="w-full"
+                        disabled={Boolean(depositError)}
+                        onClick={() =>
                           run(
                             () =>
                               dep({
                                 data: {
                                   amount: Math.floor(Number(depositAmount)),
-                                  paymentMethod: "roblox",
-                                  gamePassId: matchingGamePass?.game_pass_id,
+                                  paymentMethod: "crypto",
+                                  asset,
+                                  network,
+                                  transactionHash,
                                 },
                               }),
-                            "Depósito enviado para confirmação",
+                            "Depósito cripto enviado para confirmação",
                           )
                         }
-                      />
-                    ) : (
-                      <>
-                        <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
-                        <CryptoFields
-                          asset={asset}
-                          network={network}
-                          onAsset={setAsset}
-                          onNetwork={setNetwork}
-                        />
-                        <Field label="Hash da transação (TXID)">
-                          <Input
-                            value={transactionHash}
-                            onChange={(e) => setTransactionHash(e.target.value)}
-                            placeholder="Cole o hash da transação"
-                          />
-                        </Field>
-                      </>
-                    )}
-                    {depositMethod === "crypto" && (
-                      <>
-                        <Field label="Valor em B$">
-                          <Input
-                            type="number"
-                            min={CRYPTO_MIN_DEPOSIT}
-                            value={depositAmount}
-                            onChange={(e) => setDepositAmount(e.target.value)}
-                            className="font-mono"
-                          />
-                        </Field>
-                        {depositError && <p className="text-xs text-bear">{depositError}</p>}
-                        <Button
-                          className="w-full"
-                          disabled={Boolean(depositError)}
-                          onClick={() =>
-                            run(
-                              () =>
-                                dep({
-                                  data: {
-                                    amount: Math.floor(Number(depositAmount)),
-                                    paymentMethod: "crypto",
-                                    asset,
-                                    network,
-                                    transactionHash,
-                                  },
-                                }),
-                              "Depósito cripto enviado para confirmação",
-                            )
-                          }
-                        >
-                          Enviar depósito
-                        </Button>
-                      </>
-                    )}
-                  </section>
-                )}
+                      >
+                        Enviar depósito
+                      </Button>
+                    </>
+                  )}
+                </section>
+              )}
 
-                {walletSection === "withdraw" && (
-                  <section className="space-y-3 rounded-xl border bg-transparent p-5">
-                    <h2 className="text-lg font-bold">Sacar</h2>
-                    <PaymentChoice selected={withdrawMethod} onSelect={setWithdrawMethod} />
-                    {withdrawMethod === "roblox" ? (
-                      <p className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
-                        O pagamento será enviado pelo grupo para a conta Roblox verificada:{" "}
-                        <b className="text-foreground">{p?.roblox_username}</b>.
-                      </p>
-                    ) : (
-                      <>
-                        <CryptoFields
-                          asset={asset}
-                          network={network}
-                          onAsset={setAsset}
-                          onNetwork={setNetwork}
-                        />
-                        <Field label="Endereço de destino">
-                          <Input
-                            value={destination}
-                            onChange={(e) => setDestination(e.target.value)}
-                            placeholder="Endereço da sua carteira"
-                          />
-                        </Field>
-                      </>
-                    )}
-                    <Field label="Valor bruto do saque em B$">
-                      <Input
-                        type="number"
-                        min={100}
-                        placeholder="Quantidade de $BX"
-                        value={withdrawAmount}
-                        onChange={(e) => setWithdrawAmount(e.target.value)}
-                        className="font-mono"
+              {walletSection === "withdraw" && (
+                <section className="space-y-3 rounded-xl border bg-transparent p-5">
+                  <h2 className="text-lg font-bold">Sacar</h2>
+                  <PaymentChoice selected={withdrawMethod} onSelect={setWithdrawMethod} />
+                  {withdrawMethod === "roblox" ? (
+                    <p className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm text-muted-foreground">
+                      O pagamento será enviado pelo grupo para a conta Roblox verificada:{" "}
+                      <b className="text-foreground">{p?.roblox_username}</b>.
+                    </p>
+                  ) : (
+                    <>
+                      <CryptoFields
+                        asset={asset}
+                        network={network}
+                        onAsset={setAsset}
+                        onNetwork={setNetwork}
                       />
-                    </Field>
-                    {withdrawMethod === "roblox" &&
-                      Number.isFinite(withdrawValue) &&
-                      withdrawValue >= 100 && (
-                        <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-                          <div className="flex justify-between">
-                            <span>Valor bruto</span>
-                            <b>{fmt(withdrawValue, 0)} R$</b>
-                          </div>
-                          <div className="flex justify-between text-muted-foreground">
-                            <span>Taxa Roblox (30%)</span>
-                            <span>-{fmt(withdrawValue * 0.3, 0)} R$</span>
-                          </div>
-                          <div className="mt-1 flex justify-between border-t border-primary/20 pt-1 font-semibold">
-                            <span>Você recebe</span>
-                            <span className="text-primary">{fmt(withdrawValue * 0.7, 0)} R$</span>
-                          </div>
+                      <Field label="Endereço de destino">
+                        <Input
+                          value={destination}
+                          onChange={(e) => setDestination(e.target.value)}
+                          placeholder="Endereço da sua carteira"
+                        />
+                      </Field>
+                    </>
+                  )}
+                  <Field label="Valor bruto do saque em B$">
+                    <Input
+                      type="number"
+                      min={100}
+                      placeholder="Quantidade de $BX"
+                      value={withdrawAmount}
+                      onChange={(e) => setWithdrawAmount(e.target.value)}
+                      className="font-mono"
+                    />
+                  </Field>
+                  {withdrawMethod === "roblox" &&
+                    Number.isFinite(withdrawValue) &&
+                    withdrawValue >= 100 && (
+                      <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                        <div className="flex justify-between">
+                          <span>Valor bruto</span>
+                          <b>{fmt(withdrawValue, 0)} R$</b>
                         </div>
-                      )}
-                    {withdrawError && <p className="text-xs text-bear">{withdrawError}</p>}
-                    <Button
-                      variant="outline"
-                      disabled={Boolean(withdrawError)}
-                      className="w-full"
-                      onClick={() =>
-                        run(
-                          () =>
-                            wd({
-                              data: {
-                                amount: Number(withdrawAmount),
-                                payoutMethod: withdrawMethod,
-                                asset: withdrawMethod === "crypto" ? asset : undefined,
-                                network: withdrawMethod === "crypto" ? network : undefined,
-                                destination: withdrawMethod === "crypto" ? destination : undefined,
-                              },
-                            }),
-                          "Saque solicitado",
-                        )
-                      }
-                    >
-                      Solicitar saque
-                    </Button>
-                  </section>
-                )}
-              </div>
+                        <div className="flex justify-between text-muted-foreground">
+                          <span>Taxa Roblox (30%)</span>
+                          <span>-{fmt(withdrawValue * 0.3, 0)} R$</span>
+                        </div>
+                        <div className="mt-1 flex justify-between border-t border-primary/20 pt-1 font-semibold">
+                          <span>Você recebe</span>
+                          <span className="text-primary">{fmt(withdrawValue * 0.7, 0)} R$</span>
+                        </div>
+                      </div>
+                    )}
+                  {withdrawError && <p className="text-xs text-bear">{withdrawError}</p>}
+                  <Button
+                    variant="outline"
+                    disabled={Boolean(withdrawError)}
+                    className="w-full"
+                    onClick={() =>
+                      run(
+                        () =>
+                          wd({
+                            data: {
+                              amount: Number(withdrawAmount),
+                              payoutMethod: withdrawMethod,
+                              asset: withdrawMethod === "crypto" ? asset : undefined,
+                              network: withdrawMethod === "crypto" ? network : undefined,
+                              destination: withdrawMethod === "crypto" ? destination : undefined,
+                            },
+                          }),
+                        "Saque solicitado",
+                      )
+                    }
+                  >
+                    Solicitar saque
+                  </Button>
+                </section>
+              )}
             </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -594,26 +560,14 @@ function RobloxDepositFlow({
   onSelectPass: (pass: RobloxGamePass) => void;
   onSubmit: () => Promise<boolean>;
 }) {
-  const [step, setStep] = useState<"methods" | "api-key" | "gamepass" | "waiting">("methods");
+  const [step, setStep] = useState<"link" | "api-key" | "tutorial" | "gamepass" | "waiting">(
+    verified && username ? "api-key" : "link",
+  );
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
-  const connected = verified && Boolean(username);
-
-  const backLabel = step === "api-key" ? "← Voltar para depósito Roblox" : "← Voltar para métodos";
-
   return (
     <div className="space-y-4">
-      {step !== "methods" && step !== "waiting" && (
-        <button
-          type="button"
-          onClick={() => setStep("methods")}
-          className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
-        >
-          {backLabel}
-        </button>
-      )}
-
-      {step === "methods" && (
+      {step === "link" && (
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <span className="grid h-8 w-8 place-items-center rounded-md border border-bull/60 bg-bull/15 text-bull">
@@ -635,10 +589,10 @@ function RobloxDepositFlow({
             </div>
             <button
               type="button"
-              onClick={() => setStep(connected ? "gamepass" : "api-key")}
+              onClick={onConnectAccount}
               className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
-              {connected ? "Depositar Robux" : "Vincular sua conta Roblox"}
+              Vincular sua conta Roblox
             </button>
           </div>
         </div>
@@ -689,8 +643,36 @@ function RobloxDepositFlow({
               </Button>
             </div>
           </Field>
-          <Button className="w-full" disabled={!apiKey.trim()} onClick={onConnectAccount}>
-            Continuar para verificação Roblox
+          <Button className="w-full" disabled={!apiKey.trim()} onClick={() => setStep("tutorial")}>
+            Continuar
+          </Button>
+        </div>
+      )}
+
+      {step === "tutorial" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-bold">Tutorial da Creator API key</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crie a chave com as permissões mostradas e, depois, continue para inserir o valor em
+              Robux.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              window.open(
+                "https://create.roblox.com/dashboard/credentials",
+                "_blank",
+                "noopener,noreferrer",
+              )
+            }
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-bold hover:bg-accent"
+          >
+            Abrir tutorial da Creator API key
+          </button>
+          <Button className="w-full" onClick={() => setStep("gamepass")}>
+            Continuar para valor em Robux
           </Button>
         </div>
       )}
