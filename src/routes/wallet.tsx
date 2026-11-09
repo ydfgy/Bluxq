@@ -453,7 +453,7 @@ function RobloxDepositFlow({
   onSelectPass: (pass: RobloxGamePass) => void;
   onSubmit: () => Promise<boolean>;
 }) {
-  const [step, setStep] = useState<"link" | "api-key" | "tutorial" | "gamepass" | "waiting">(
+  const [step, setStep] = useState<"link" | "api-key" | "gamepass" | "waiting">(
     startAtGamepass ? "gamepass" : verified && username ? "api-key" : "link",
   );
   const [apiKey, setApiKey] = useState("");
@@ -501,6 +501,7 @@ function RobloxDepositFlow({
           </div>
           <button
             type="button"
+            onClick={() => nav({ to: "/roblox-api-tutorial" })}
             className="w-full rounded-md bg-muted px-4 py-3 text-sm font-bold hover:bg-accent"
           >
             Como obter sua Creator API key
@@ -536,23 +537,8 @@ function RobloxDepositFlow({
               </Button>
             </div>
           </Field>
-          <Button className="w-full" disabled={!apiKey.trim()} onClick={() => setStep("tutorial")}>
+          <Button className="w-full" disabled={!apiKey.trim()} onClick={() => setStep("gamepass")}>
             Continuar
-          </Button>
-        </div>
-      )}
-
-      {step === "tutorial" && (
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-lg font-bold">Tutorial da Creator API key</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Crie a chave com as permissões mostradas e, depois, continue para inserir o valor em
-              Robux.
-            </p>
-          </div>
-          <Button className="w-full" onClick={() => nav({ to: "/roblox-api-tutorial" })}>
-            Abrir página do tutorial
           </Button>
         </div>
       )}
