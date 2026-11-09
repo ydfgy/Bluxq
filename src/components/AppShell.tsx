@@ -151,6 +151,11 @@ export function Navbar() {
             Trade
           </Link>
           {session && (
+            <Link to="/wallet" className={link} activeProps={active}>
+              Wallet
+            </Link>
+          )}
+          {session && (
             <Link to="/copy" className={link} activeProps={active}>
               Copy
             </Link>
@@ -204,6 +209,11 @@ export function Navbar() {
         <Link to="/trade" className={link} activeProps={active}>
           Trade
         </Link>
+        {session && (
+          <Link to="/wallet" className={link} activeProps={active}>
+            Wallet
+          </Link>
+        )}
         {session && (
           <Link to="/copy" className={link} activeProps={active}>
             Copy
