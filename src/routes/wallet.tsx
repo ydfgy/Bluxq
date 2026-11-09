@@ -60,7 +60,7 @@ function Wallet() {
     queryFn: () => listRobloxGamePasses(),
     staleTime: 30_000,
   });
-  const [depositAmount, setDepositAmount] = useState("100");
+  const [depositAmount, setDepositAmount] = useState("50");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState<"roblox" | "crypto">("roblox");
   const [withdrawMethod, setWithdrawMethod] = useState<"roblox" | "crypto">("roblox");
@@ -241,72 +241,37 @@ function Wallet() {
                         Adicione saldo por Roblox ou Crypto.
                       </p>
                     </div>
-                    <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
                     {depositMethod === "roblox" ? (
-                      <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="text-xs text-muted-foreground">
-                            Game Pass para depósito
-                          </div>
-                          <div className="text-xs font-semibold text-primary">Mínimo: 50 Robux</div>
-                        </div>
-                        {gamePasses.length ? (
-                          <div className="grid gap-2">
-                            {gamePasses.map((pass) => (
-                              <button
-                                key={pass.id}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedGamePassId(pass.id);
-                                  setDepositAmount(String(pass.robux_amount));
-                                }}
-                                className={`flex items-center justify-between rounded-md border px-3 py-2 text-left ${selectedGamePassId === pass.id ? "border-primary bg-primary/15" : "border-border"}`}
-                              >
-                                <span>{pass.name}</span>
-                                <span className="font-mono text-primary">
-                                  {fmt(pass.robux_amount, 0)} R$
-                                </span>
-                              </button>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-muted-foreground">
-                            Nenhum Game Pass ativo está disponível no momento. Tente novamente mais
-                            tarde.
-                          </p>
-                        )}
-                        {Number.isFinite(depositValue) &&
-                          depositValue >= ROBLOX_MIN_DEPOSIT &&
-                          !matchingGamePass &&
-                          recommendedGamePass && (
-                            <div className="flex items-center justify-between gap-3 rounded-md border border-gold/30 bg-gold/5 p-2 text-xs">
-                              <span>
-                                Esse valor não está disponível. Recomendamos{" "}
-                                {fmt(recommendedGamePass.robux_amount, 0)} Robux.
-                              </span>
-                              <button
-                                type="button"
-                                className="shrink-0 font-semibold text-primary underline"
-                                onClick={() => {
-                                  setSelectedGamePassId(recommendedGamePass.id);
-                                  setDepositAmount(String(recommendedGamePass.robux_amount));
-                                }}
-                              >
-                                Selecionar
-                              </button>
-                            </div>
-                          )}
-                        <a
-                          href={ROBLOX_GROUP_URL}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-block font-semibold text-primary underline"
-                        >
-                          Abrir grupo Roblox · {p?.roblox_username ?? "conta verificada"}
-                        </a>
-                      </div>
+                      <RobloxDepositFlow
+                        username={p?.roblox_username}
+                        verified={Boolean(p?.verified)}
+                        gamePasses={gamePasses}
+                        amount={depositAmount}
+                        selectedGamePassId={selectedGamePassId}
+                        matchingGamePass={matchingGamePass}
+                        recommendedGamePass={recommendedGamePass}
+                        depositError={depositError}
+                        onSelectPass={(pass) => {
+                          setSelectedGamePassId(pass.id);
+                          setDepositAmount(String(pass.robux_amount));
+                        }}
+                        onSubmit={() =>
+                          run(
+                            () =>
+                              dep({
+                                data: {
+                                  amount: Math.floor(Number(depositAmount)),
+                                  paymentMethod: "roblox",
+                                  gamePassId: matchingGamePass?.game_pass_id,
+                                },
+                              }),
+                            "Depósito enviado para confirmação",
+                          )
+                        }
+                      />
                     ) : (
                       <>
+                        <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
                         <CryptoFields
                           asset={asset}
                           network={network}
@@ -322,49 +287,41 @@ function Wallet() {
                         </Field>
                       </>
                     )}
-                    <Field label={depositMethod === "roblox" ? "Valor em Robux" : "Valor em B$"}>
-                      <Input
-                        type="number"
-                        min={depositMinimum}
-                        value={depositAmount}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          setDepositAmount(value);
-                          const pass = gamePasses.find(
-                            (item) => item.robux_amount === Number(value),
-                          );
-                          setSelectedGamePassId(pass?.id ?? "");
-                        }}
-                        className="font-mono"
-                      />
-                    </Field>
-                    {depositError && <p className="text-xs text-bear">{depositError}</p>}
-                    <Button
-                      className="w-full"
-                      disabled={Boolean(depositError)}
-                      onClick={() =>
-                        run(
-                          () =>
-                            dep({
-                              data: {
-                                amount: Math.floor(Number(depositAmount)),
-                                paymentMethod: depositMethod,
-                                gamePassId:
-                                  depositMethod === "roblox"
-                                    ? matchingGamePass?.game_pass_id
-                                    : undefined,
-                                asset: depositMethod === "crypto" ? asset : undefined,
-                                network: depositMethod === "crypto" ? network : undefined,
-                                transactionHash:
-                                  depositMethod === "crypto" ? transactionHash : undefined,
-                              },
-                            }),
-                          "Depósito enviado para confirmação",
-                        )
-                      }
-                    >
-                      Enviar depósito
-                    </Button>
+                    {depositMethod === "crypto" && (
+                      <>
+                        <Field label="Valor em B$">
+                          <Input
+                            type="number"
+                            min={CRYPTO_MIN_DEPOSIT}
+                            value={depositAmount}
+                            onChange={(e) => setDepositAmount(e.target.value)}
+                            className="font-mono"
+                          />
+                        </Field>
+                        {depositError && <p className="text-xs text-bear">{depositError}</p>}
+                        <Button
+                          className="w-full"
+                          disabled={Boolean(depositError)}
+                          onClick={() =>
+                            run(
+                              () =>
+                                dep({
+                                  data: {
+                                    amount: Math.floor(Number(depositAmount)),
+                                    paymentMethod: "crypto",
+                                    asset,
+                                    network,
+                                    transactionHash,
+                                  },
+                                }),
+                              "Depósito cripto enviado para confirmação",
+                            )
+                          }
+                        >
+                          Enviar depósito
+                        </Button>
+                      </>
+                    )}
                   </section>
                 )}
 
@@ -604,6 +561,206 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
     <div className="space-y-1">
       <Label>{label}</Label>
       {children}
+    </div>
+  );
+}
+
+function RobloxDepositFlow({
+  username,
+  verified,
+  gamePasses,
+  amount,
+  selectedGamePassId,
+  matchingGamePass,
+  recommendedGamePass,
+  depositError,
+  onSelectPass,
+  onSubmit,
+}: {
+  username?: string | null;
+  verified: boolean;
+  gamePasses: RobloxGamePass[];
+  amount: string;
+  selectedGamePassId: string;
+  matchingGamePass?: RobloxGamePass;
+  recommendedGamePass?: RobloxGamePass;
+  depositError: string;
+  onSelectPass: (pass: RobloxGamePass) => void;
+  onSubmit: () => void;
+}) {
+  const [step, setStep] = useState<"methods" | "api-key" | "gamepass">("methods");
+  const [apiKey, setApiKey] = useState("");
+  const [showApiKey, setShowApiKey] = useState(false);
+  const connected = verified && Boolean(username);
+
+  const backLabel = step === "api-key" ? "← Voltar para depósito Roblox" : "← Voltar para métodos";
+
+  return (
+    <div className="space-y-4">
+      {step !== "methods" && (
+        <button
+          type="button"
+          onClick={() => setStep(step === "api-key" ? "methods" : "methods")}
+          className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
+        >
+          {backLabel}
+        </button>
+      )}
+
+      {step === "methods" && (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-8 w-8 place-items-center rounded-md border border-bull/60 bg-bull/15 text-bull">
+              ◉
+            </span>
+            <div>
+              <h3 className="font-bold">Robux</h3>
+              <p className="text-sm leading-tight text-muted-foreground">
+                Conecte sua conta Roblox com uma Creator API key para depositar ou sacar Robux.
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-background/30 p-3">
+            <div className="flex items-center gap-3 text-sm font-semibold">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-muted text-foreground">
+                ●
+              </span>
+              {connected ? username : "Nenhuma conta conectada"}
+            </div>
+            <button
+              type="button"
+              onClick={() => setStep(connected ? "gamepass" : "api-key")}
+              className="rounded-md bg-lime-400 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-lime-300"
+            >
+              {connected ? "Depositar Robux" : "Vincular sua conta Roblox"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {step === "api-key" && (
+        <div className="space-y-4">
+          <div>
+            <h3 className="text-lg font-bold">Conecte com uma Creator API key</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Crie uma Creator API key com as permissões abaixo e cole-a aqui.
+            </p>
+          </div>
+          <button
+            type="button"
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-bold hover:bg-accent"
+          >
+            Como obter sua Creator API key
+          </button>
+          <div className="space-y-2 rounded-md bg-background/45 p-3 text-sm">
+            <div className="flex items-center justify-between">
+              <code className="rounded bg-muted px-2 py-1">inventory</code>
+              <span className="text-bull">✓ read</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <code className="rounded bg-muted px-2 py-1">game-passes</code>
+              <span className="text-bull">✓ read and write on your place</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <code className="rounded bg-muted px-2 py-1">Restrict IP</code>
+              <span className="text-bull">✓ off</span>
+            </div>
+          </div>
+          <Field label="Creator API key">
+            <div className="flex gap-2">
+              <Input
+                type={showApiKey ? "text" : "password"}
+                value={apiKey}
+                onChange={(event) => setApiKey(event.target.value)}
+                placeholder="Cole sua API key"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setShowApiKey((value) => !value)}
+              >
+                {showApiKey ? "Ocultar" : "Mostrar"}
+              </Button>
+            </div>
+          </Field>
+          <Button
+            className="w-full bg-lime-500 text-black hover:bg-lime-400"
+            disabled={!apiKey.trim()}
+            onClick={() => setStep("gamepass")}
+          >
+            Conectar API key
+          </Button>
+        </div>
+      )}
+
+      {step === "gamepass" && (
+        <div className="space-y-4">
+          <div className="flex items-start gap-3">
+            <span className="grid h-8 w-8 place-items-center rounded-md border border-bull/60 bg-bull/15 text-bull">
+              ◉
+            </span>
+            <div>
+              <h3 className="font-bold">Robux</h3>
+              <p className="text-sm leading-tight text-muted-foreground">
+                Compre o Game Pass abaixo com{" "}
+                <b className="text-foreground">{username ?? "sua conta Roblox"}</b>. Seu saldo será
+                creditado automaticamente.
+              </p>
+            </div>
+          </div>
+          <div className="rounded-md border border-gold/20 bg-gold/10 p-3 text-xs text-gold">
+            ⚠ Compre somente com {username ?? "a conta Roblox conectada"}; compras de outras contas
+            não serão creditadas.
+          </div>
+          <div className="rounded-lg border border-border bg-background/35 p-3">
+            <div className="mb-2 flex items-center justify-between text-sm font-semibold">
+              <span>{fmt(Number(amount) || 0, 0)} / 0</span>
+              <span className="rounded bg-bull/15 px-2 py-1 text-xs text-bull">0%</span>
+            </div>
+            <div className="mb-3 h-1 rounded-full bg-muted">
+              <div className="h-full w-0 rounded-full bg-bull" />
+            </div>
+            {gamePasses.length ? (
+              gamePasses.map((pass) => (
+                <button
+                  key={pass.id}
+                  type="button"
+                  onClick={() => onSelectPass(pass)}
+                  className={`mb-2 w-full rounded-md border p-3 text-left ${selectedGamePassId === pass.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+                >
+                  <div className="mb-2 flex items-center justify-between text-xs">
+                    <span>Game Pass {pass.name}</span>
+                    <span className="text-gold">Aguardando compra</span>
+                  </div>
+                  <div className="rounded bg-lime-400 px-3 py-2 text-center text-sm font-bold text-black">
+                    Comprar por ◉ {fmt(pass.robux_amount, 0)}
+                  </div>
+                </button>
+              ))
+            ) : (
+              <p className="rounded-md border border-border p-3 text-sm text-muted-foreground">
+                Nenhum Game Pass ativo está disponível no momento.
+              </p>
+            )}
+            <div className="mt-2 text-xs text-gold">◷ Expira em 29:31</div>
+          </div>
+          {depositError && <p className="text-xs text-bear">{depositError}</p>}
+          <Button
+            className="w-full"
+            disabled={Boolean(depositError) || !matchingGamePass}
+            onClick={onSubmit}
+          >
+            Confirmar depósito de {fmt(Number(amount) || 0, 0)} Robux
+          </Button>
+          <button
+            type="button"
+            onClick={() => setStep("methods")}
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
+          >
+            Cancelar depósito
+          </button>
+        </div>
+      )}
     </div>
   );
 }
