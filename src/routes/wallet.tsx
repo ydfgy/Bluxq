@@ -195,6 +195,7 @@ function Wallet() {
                   startAtGamepass={tutorialComplete}
                   apiKeySaved={Boolean(apiKeyQuery.data?.saved)}
                   pendingDeposit={pendingDeposit}
+                  onAmountChange={setDepositAmount}
                   onConnectAccount={() => nav({ to: "/verify" })}
                   onSaveApiKey={async (apiKey) => {
                     await saveApiKey({ data: { apiKey } });
@@ -494,6 +495,7 @@ function RobloxDepositFlow({
   startAtGamepass,
   apiKeySaved,
   pendingDeposit,
+  onAmountChange,
   onConnectAccount,
   onSaveApiKey,
   onCancelDeposit,
@@ -511,6 +513,7 @@ function RobloxDepositFlow({
   startAtGamepass: boolean;
   apiKeySaved: boolean;
   pendingDeposit?: Deposit | undefined;
+  onAmountChange: (value: string) => void;
   onConnectAccount: () => void;
   onSaveApiKey: (apiKey: string) => Promise<void>;
   onCancelDeposit: () => Promise<void>;
@@ -664,33 +667,48 @@ function RobloxDepositFlow({
             ⚠ Compre somente com {username ?? "a conta Roblox conectada"}; compras de outras contas
             não serão creditadas.
           </div>
+          <Field label="Quanto deseja depositar em Robux?">
+            <Input
+              type="number"
+              min={ROBLOX_MIN_DEPOSIT}
+              step="1"
+              value={amount}
+              onChange={(event) => onAmountChange(event.target.value)}
+              className="font-mono text-lg"
+              placeholder="Ex.: 500"
+            />
+          </Field>
           <div className="rounded-lg border border-border bg-background/35 p-3">
-            <div className="mb-2 flex items-center justify-between text-sm font-semibold">
-              <span>{fmt(Number(amount) || 0, 0)} / 0</span>
-              <span className="rounded bg-bull/15 px-2 py-1 text-xs text-bull">0%</span>
-            </div>
-            <div className="mb-3 h-1 rounded-full bg-muted">
-              <div className="h-full w-0 rounded-full bg-bull" />
-            </div>
-            {gamePasses.length ? (
-              gamePasses.map((pass) => (
-                <button
-                  key={pass.id}
-                  type="button"
-                  onClick={() => onSelectPass(pass)}
-                  className={`mb-2 w-full rounded-md border p-3 text-left ${selectedGamePassId === pass.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}
+            {matchingGamePass ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm font-semibold">
+                  <span>Game Pass de {fmt(matchingGamePass.robux_amount, 0)} Robux</span>
+                  <span className="text-gold">Aguardando compra</span>
+                </div>
+                <a
+                  href={`https://www.roblox.com/game-pass/${matchingGamePass.game_pass_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex text-sm font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
                 >
-                  <div className="mb-2 flex items-center justify-between text-xs">
-                    <span>Game Pass disponível</span>
-                    <span className="text-gold">Aguardando compra</span>
-                  </div>
-                  <div className="rounded bg-primary px-3 py-2 text-center text-sm font-bold text-primary-foreground">
-                    Comprar por ◉ {fmt(pass.robux_amount, 0)}
-                  </div>
+                  Abrir Game Pass no Roblox ↗
+                </a>
+              </div>
+            ) : recommendedGamePass ? (
+              <div className="space-y-2 text-sm">
+                <p className="text-muted-foreground">
+                  Não existe um Game Pass exato para esse valor.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => onSelectPass(recommendedGamePass)}
+                  className="font-semibold text-primary underline underline-offset-4 hover:text-primary/80"
+                >
+                  Usar o Game Pass de {fmt(recommendedGamePass.robux_amount, 0)} Robux
                 </button>
-              ))
+              </div>
             ) : (
-              <p className="rounded-md border border-border p-3 text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
                 Nenhum Game Pass ativo está disponível no momento.
               </p>
             )}
