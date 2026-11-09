@@ -659,7 +659,7 @@ function RobloxDepositFlow({
                   className={`mb-2 w-full rounded-md border p-3 text-left ${selectedGamePassId === pass.id ? "border-primary bg-primary/10" : "border-border bg-card"}`}
                 >
                   <div className="mb-2 flex items-center justify-between text-xs">
-                    <span>Game Pass {pass.name}</span>
+                    <span>Game Pass disponível</span>
                     <span className="text-gold">Aguardando compra</span>
                   </div>
                   <div className="rounded bg-primary px-3 py-2 text-center text-sm font-bold text-primary-foreground">
