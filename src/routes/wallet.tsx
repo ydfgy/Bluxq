@@ -197,6 +197,11 @@ function Wallet() {
                     data: {
                       amount: Math.floor(Number(depositAmount)),
                       paymentMethod: depositMethod,
+                      gamePassId:
+                        depositMethod === "roblox"
+                          ? gamePassesQuery.data?.find((pass) => pass.id === selectedGamePassId)
+                              ?.game_pass_id
+                          : undefined,
                       asset: depositMethod === "crypto" ? asset : undefined,
                       network: depositMethod === "crypto" ? network : undefined,
                       transactionHash: depositMethod === "crypto" ? transactionHash : undefined,

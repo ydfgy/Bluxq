@@ -507,6 +507,7 @@ export const requestDeposit = createServerFn({ method: "POST" })
       .object({
         amount: z.number().int().min(10).max(10_000_000),
         paymentMethod: z.enum(["roblox", "crypto"]),
+        gamePassId: z.number().int().positive().optional(),
         asset: z.string().trim().max(20).optional(),
         network: z.string().trim().max(30).optional(),
         transactionHash: z.string().trim().max(200).optional(),
@@ -516,10 +517,11 @@ export const requestDeposit = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { error } = await (
       await admin()
-    ).rpc("fn_request_deposit_v2", {
+    ).rpc("fn_request_deposit_v3", {
       _user: context.userId,
       _amount: data.amount,
       _payment_method: data.paymentMethod,
+      _game_pass_id: data.gamePassId ?? null,
       _asset: data.asset ?? null,
       _network: data.network ?? null,
       _transaction_hash: data.transactionHash ?? null,

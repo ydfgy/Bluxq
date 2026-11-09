@@ -585,6 +585,18 @@ export type Database = {
         };
         Returns: undefined;
       };
+      fn_request_deposit_v3: {
+        Args: {
+          _amount: number;
+          _asset?: string | null;
+          _game_pass_id?: number | null;
+          _network?: string | null;
+          _payment_method: string;
+          _transaction_hash?: string | null;
+          _user: string;
+        };
+        Returns: undefined;
+      };
       fn_close_position: {
         Args: {
           _force_liq?: boolean;
