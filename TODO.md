@@ -7,3 +7,8 @@
 - [ ] Limites operacionais de valor e prazo, política de saque antecipado e critérios do ranking devem ficar configuráveis no banco.
 - [ ] Corrigir a consulta/organização do ranking para mostrar pódio dos 3 melhores ao lado da lista Top 10, com nomes/avatares conforme a política de privacidade.
 - [ ] Rodar lint, testes e build; corrigir erros introduzidos antes de entregar.
+- [x] Permitir ao admin cadastrar, editar e remover Game Passes com nome, ID, valor em Robux e estado ativo.
+- [x] Mostrar somente Game Passes ativos na carteira de depósito e manter a Creator API Key fora do navegador.
+- [x] Aplicar saque mínimo de 100, descontar 30% no saque Roblox e exibir bruto, taxa e líquido.
+- [x] Salvar avatar oficial, nome e ID Roblox verificado e mostrar o avatar no painel administrativo.
+- [x] Rodar lint, TypeScript e build de produção; não foram encontrados erros nos arquivos alterados.

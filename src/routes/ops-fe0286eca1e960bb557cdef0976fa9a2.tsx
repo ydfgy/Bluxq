@@ -8,6 +8,8 @@ import {
   authenticateAdminPanel,
   reviewDeposit,
   reviewWithdraw,
+  saveRobloxGamePass,
+  deleteRobloxGamePass,
   searchAdminUsers,
   setAdminUserBan,
 } from "@/lib/blux.functions";
@@ -25,6 +27,7 @@ type AdminUser = {
   roblox_username: string;
   roblox_display_name: string | null;
   roblox_user_id: number | null;
+  avatar_url: string | null;
   verified: boolean;
   created_at: string;
   is_banned: boolean;
@@ -68,9 +71,13 @@ function Admin() {
   const [authStage, setAuthStage] = useState<
     "pin" | "pin-confirmation" | "password" | "password-confirmation"
   >("pin");
-  const [section, setSection] = useState<"overview" | "deposits" | "withdrawals" | "users">(
-    "overview",
-  );
+  const [section, setSection] = useState<
+    "overview" | "deposits" | "withdrawals" | "gamepasses" | "users"
+  >("overview");
+  const [gamePassName, setGamePassName] = useState("");
+  const [gamePassId, setGamePassId] = useState("");
+  const [gamePassAmount, setGamePassAmount] = useState("");
+  const [editingGamePassId, setEditingGamePassId] = useState<string | undefined>();
   const [userSearch, setUserSearch] = useState("");
   const [banDurationHours, setBanDurationHours] = useState("24");
   const [banReason, setBanReason] = useState("");
@@ -336,6 +343,16 @@ function Admin() {
           >
             Usuários
           </button>
+          <button
+            onClick={() => setSection("gamepasses")}
+            className={`block w-full rounded-lg px-3 py-2 text-left text-sm ${
+              section === "gamepasses"
+                ? "bg-zinc-100 text-black"
+                : "text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            }`}
+          >
+            Game Passes
+          </button>
         </nav>
         <Button
           variant="outline"
@@ -355,6 +372,7 @@ function Admin() {
               ["overview", "Visão geral"],
               ["deposits", "Depósitos"],
               ["withdrawals", "Saques"],
+              ["gamepasses", "Game Passes"],
               ["users", "Usuários"],
             ] as const
           ).map(([key, label]) => (
@@ -381,7 +399,9 @@ function Admin() {
                   ? "Depósitos pendentes"
                   : section === "withdrawals"
                     ? "Saques pendentes"
-                    : "Usuários e banimentos"}
+                    : section === "gamepasses"
+                      ? "Configuração de Game Passes"
+                      : "Usuários e banimentos"}
             </h1>
           </div>
           <Button
@@ -401,7 +421,7 @@ function Admin() {
           <Box k="Receita da plataforma" v={fmt(data?.pool?.platform_revenue)} />
         </div>
         <section
-          className={`${section === "withdrawals" || section === "users" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
+          className={`${section !== "overview" && section !== "deposits" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Depósitos aguardando ({data?.deposits.length ?? 0})
@@ -451,7 +471,7 @@ function Admin() {
           ))}
         </section>
         <section
-          className={`${section === "deposits" || section === "users" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
+          className={`${section !== "overview" && section !== "withdrawals" ? "hidden " : ""}rounded-xl border border-zinc-800 bg-zinc-900`}
         >
           <h2 className="border-b p-4 font-bold">
             Saques aguardando ({data?.withdrawals.length ?? 0})
@@ -466,7 +486,9 @@ function Admin() {
               className="flex flex-wrap items-center gap-3 border-b px-4 py-3 text-sm last:border-0"
             >
               <span className="flex-1">{user(x)}</span>
-              <span className="font-mono text-zinc-100">{fmt(x.amount, 0)} $BX</span>
+              <span className="font-mono text-zinc-100">
+                {fmt(x.amount, 0)} $BX · líquido {fmt(x.amount * 0.7, 0)} R$
+              </span>
               <span className="text-xs text-muted-foreground">
                 {x.payout_method === "crypto"
                   ? `Crypto: ${x.asset ?? "?"} / ${x.network ?? "?"} · ${x.destination ?? "?"}`
@@ -502,6 +524,111 @@ function Admin() {
           ))}
         </section>
         <section
+          className={`${section !== "gamepasses" ? "hidden " : ""}space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4`}
+        >
+          <div>
+            <h2 className="font-bold">Game Passes de depósito</h2>
+            <p className="mt-1 text-xs text-zinc-400">
+              Cadastre o nome, o ID real e o valor em Robux. A Creator API Key não deve ser colocada
+              no navegador: mantenha-a como segredo do servidor.
+            </p>
+          </div>
+          <div className="grid gap-2 md:grid-cols-3">
+            <Input
+              value={gamePassName}
+              onChange={(e) => setGamePassName(e.target.value)}
+              placeholder="Nome exibido"
+              className="border-zinc-700 bg-zinc-950"
+            />
+            <Input
+              value={gamePassId}
+              onChange={(e) => setGamePassId(e.target.value.replace(/\D/g, ""))}
+              placeholder="ID do Game Pass"
+              inputMode="numeric"
+              className="border-zinc-700 bg-zinc-950"
+            />
+            <Input
+              value={gamePassAmount}
+              onChange={(e) => setGamePassAmount(e.target.value.replace(/\D/g, ""))}
+              placeholder="Valor em Robux"
+              inputMode="numeric"
+              className="border-zinc-700 bg-zinc-950"
+            />
+          </div>
+          <Button
+            disabled={!gamePassName.trim() || !gamePassId || !gamePassAmount}
+            onClick={() =>
+              run(
+                () =>
+                  saveRobloxGamePass({
+                    data: {
+                      id: editingGamePassId,
+                      name: gamePassName,
+                      gamePassId: Number(gamePassId),
+                      robuxAmount: Number(gamePassAmount),
+                      active: true,
+                      adminAccessToken: accessToken!,
+                    },
+                  }),
+                editingGamePassId ? "Game Pass atualizado." : "Game Pass adicionado.",
+              ).then(() => {
+                setGamePassName("");
+                setGamePassId("");
+                setGamePassAmount("");
+                setEditingGamePassId(undefined);
+              })
+            }
+          >
+            {editingGamePassId ? "Salvar alteração" : "Adicionar Game Pass"}
+          </Button>
+          <div className="divide-y divide-zinc-800 rounded-lg border border-zinc-800">
+            {data?.gamePasses?.map(
+              (pass: { id: string; name: string; game_pass_id: number; robux_amount: number }) => (
+                <div key={pass.id} className="flex flex-wrap items-center gap-3 p-3 text-sm">
+                  <span className="flex-1 font-semibold">{pass.name}</span>
+                  <span className="font-mono text-primary">ID {pass.game_pass_id}</span>
+                  <span>{fmt(pass.robux_amount, 0)} R$</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setEditingGamePassId(pass.id);
+                      setGamePassName(pass.name);
+                      setGamePassId(String(pass.game_pass_id));
+                      setGamePassAmount(String(pass.robux_amount));
+                    }}
+                  >
+                    Editar
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() =>
+                      run(
+                        () =>
+                          deleteRobloxGamePass({
+                            data: { id: pass.id, adminAccessToken: accessToken! },
+                          }),
+                        "Game Pass removido.",
+                      )
+                    }
+                  >
+                    Remover
+                  </Button>
+                </div>
+              ),
+            )}
+            {!data?.gamePasses?.length && (
+              <p className="p-4 text-sm text-zinc-400">Nenhum Game Pass cadastrado.</p>
+            )}
+          </div>
+          <div className="rounded-lg border border-amber-900/50 bg-amber-950/20 p-3 text-xs text-amber-200">
+            Permissões recomendadas: <b>Inventory: Read</b>,{" "}
+            <b>Game Passes: Read &amp; Write on your place</b> e <b>Restrict IP: Off</b> somente se
+            o backend não tiver IP fixo.
+          </div>
+        </section>
+        <section
           className={`${section !== "users" ? "hidden " : ""}space-y-4 rounded-xl border border-zinc-800 bg-zinc-900 p-4`}
         >
           <div>
@@ -533,7 +660,18 @@ function Admin() {
                   <div key={user.id} className="space-y-3 rounded-lg border border-zinc-800 p-4">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="font-semibold">{user.roblox_username}</div>
+                        <div className="flex items-center gap-3">
+                          {user.avatar_url ? (
+                            <img
+                              src={user.avatar_url}
+                              alt=""
+                              className="h-10 w-10 rounded-full object-cover"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-zinc-800" />
+                          )}
+                          <div className="font-semibold">{user.roblox_username}</div>
+                        </div>
                         {user.roblox_display_name && (
                           <div className="text-xs text-zinc-400">{user.roblox_display_name}</div>
                         )}

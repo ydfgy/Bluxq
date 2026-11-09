@@ -528,12 +528,26 @@ export const requestDeposit = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+export const listRobloxGamePasses = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await ((await admin()) as any)
+      .from("roblox_game_passes")
+      .select("id, name, game_pass_id, robux_amount, active, created_at, updated_at")
+      .eq("active", true)
+      .order("robux_amount", { ascending: true })
+      .limit(100);
+    rpcError(error);
+    return data ?? [];
+  });
+
 export const requestWithdraw = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .validator((d) =>
     z
       .object({
-        amount: z.number().finite().min(60).max(100_000_000),
+        amount: z.number().finite().min(100).max(100_000_000),
         payoutMethod: z.enum(["roblox", "crypto"]),
         asset: z.string().trim().max(20).optional(),
         network: z.string().trim().max(30).optional(),
@@ -658,6 +672,19 @@ export const verifyRoblox = createServerFn({ method: "POST" })
     if (Number.isNaN(accountCreatedAt.getTime()) || accountCreatedAt > oneYearAgo) {
       throw new Error("Sua conta Roblox precisa ter pelo menos 1 ano para ser verificada.");
     }
+    let avatarUrl: string | null = null;
+    try {
+      const avatarResponse = await fetch(
+        `https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${user.id}&size=150x150&format=Png&isCircular=true`,
+        { headers: { Accept: "application/json" }, signal: AbortSignal.timeout(8000) },
+      );
+      if (avatarResponse.ok) {
+        const avatarJson = (await avatarResponse.json()) as { data?: { imageUrl?: string }[] };
+        avatarUrl = avatarJson.data?.[0]?.imageUrl ?? null;
+      }
+    } catch {
+      // Avatar is cosmetic; verification remains valid if thumbnails is unavailable.
+    }
     const bio = (j2.description ?? "").toLowerCase();
     if (!bio.includes(challenge.verify_phrase.toLowerCase())) {
       throw new Error(
@@ -682,6 +709,7 @@ export const verifyRoblox = createServerFn({ method: "POST" })
         roblox_username: user.name,
         roblox_display_name: user.displayName,
         roblox_created_at: accountCreatedAt.toISOString(),
+        avatar_url: avatarUrl,
       })
       .eq("id", context.userId);
     rpcError(error);
@@ -765,7 +793,7 @@ export const adminOverview = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     await assertAdminPanelAccess(data.adminAccessToken);
     const sb = await admin();
-    const [d, w, pool] = await Promise.all([
+    const [d, w, pool, gamePasses] = await Promise.all([
       sb
         .from("deposits")
         .select("id, user_id, amount, payment_method, asset, network, transaction_hash, created_at")
@@ -779,15 +807,31 @@ export const adminOverview = createServerFn({ method: "POST" })
         .order("created_at")
         .limit(200),
       sb.from("pool").select("total_assets, total_reserved, platform_revenue").maybeSingle(),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (sb as any)
+        .from("roblox_game_passes")
+        .select("id, name, game_pass_id, robux_amount, active, created_at, updated_at")
+        .order("robux_amount", { ascending: true })
+        .limit(100),
     ]);
     rpcError(d.error);
     rpcError(w.error);
     rpcError(pool.error);
+    rpcError(gamePasses.error);
     const ids = [...new Set([...(d.data ?? []), ...(w.data ?? [])].map((x) => x.user_id))];
     const { data: profs, error: profileError } = ids.length
-      ? await sb.from("profiles").select("id, roblox_username, roblox_user_id").in("id", ids)
+      ? await sb
+          .from("profiles")
+          .select("id, roblox_username, roblox_display_name, roblox_user_id, avatar_url")
+          .in("id", ids)
       : {
-          data: [] as { id: string; roblox_username: string; roblox_user_id: number | null }[],
+          data: [] as {
+            id: string;
+            roblox_username: string;
+            roblox_display_name: string | null;
+            roblox_user_id: number | null;
+            avatar_url: string | null;
+          }[],
           error: null,
         };
     rpcError(profileError);
@@ -795,12 +839,59 @@ export const adminOverview = createServerFn({ method: "POST" })
     return {
       deposits: (d.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
       withdrawals: (w.data ?? []).map((x) => ({ ...x, profile: map[x.user_id] })),
+      gamePasses: gamePasses.data ?? [],
       pool: pool.data ?? {
         total_assets: 0,
         total_reserved: 0,
         platform_revenue: 0,
       },
     };
+  });
+
+export const saveRobloxGamePass = createServerFn({ method: "POST" })
+  .validator((d) =>
+    z
+      .object({
+        id: z.string().uuid().optional(),
+        name: z.string().trim().min(1).max(80),
+        gamePassId: z.number().int().positive().max(9_000_000_000),
+        robuxAmount: z.number().int().positive().max(10_000_000),
+        active: z.boolean(),
+        adminAccessToken: z.string().min(1).max(500),
+      })
+      .parse(d),
+  )
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sb = (await admin()) as any;
+    const payload = {
+      name: data.name,
+      game_pass_id: data.gamePassId,
+      robux_amount: data.robuxAmount,
+      active: data.active,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = data.id
+      ? await sb.from("roblox_game_passes").update(payload).eq("id", data.id)
+      : await sb.from("roblox_game_passes").insert(payload);
+    rpcError(error);
+    return { ok: true };
+  });
+
+export const deleteRobloxGamePass = createServerFn({ method: "POST" })
+  .validator((d) =>
+    z.object({ id: z.string().uuid(), adminAccessToken: z.string().min(1).max(500) }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    await assertAdminPanelAccess(data.adminAccessToken);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await ((await admin()) as any)
+      .from("roblox_game_passes")
+      .delete()
+      .eq("id", data.id);
+    rpcError(error);
+    return { ok: true };
   });
 
 export const reviewDeposit = createServerFn({ method: "POST" })
@@ -859,7 +950,7 @@ export const searchAdminUsers = createServerFn({ method: "POST" })
     let request = sb
       .from("profiles")
       .select(
-        "id,roblox_username,roblox_display_name,roblox_user_id,verified,created_at,is_banned,banned_until,ban_reason",
+        "id,roblox_username,roblox_display_name,roblox_user_id,avatar_url,verified,created_at,is_banned,banned_until,ban_reason",
       )
       .order("created_at", { ascending: false })
       .limit(25);

@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useAuth, useProfile } from "@/hooks/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { requestDeposit, requestWithdraw } from "@/lib/blux.functions";
+import { listRobloxGamePasses, requestDeposit, requestWithdraw } from "@/lib/blux.functions";
 import { fmt, ROBLOX_GROUP_URL } from "@/lib/markets";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,12 +37,25 @@ const STATUS: Record<string, string> = {
   paid: "Pago",
 };
 
+type RobloxGamePass = {
+  id: string;
+  name: string;
+  game_pass_id: number;
+  robux_amount: number;
+  active: boolean;
+};
+
 function Wallet() {
   const { session } = useAuth();
   const { data: p } = useProfile();
   const qc = useQueryClient();
   const dep = useServerFn(requestDeposit);
   const wd = useServerFn(requestWithdraw);
+  const gamePassesQuery = useQuery<RobloxGamePass[]>({
+    queryKey: ["roblox-game-passes"],
+    queryFn: () => listRobloxGamePasses(),
+    staleTime: 30_000,
+  });
   const [depositAmount, setDepositAmount] = useState("100");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [depositMethod, setDepositMethod] = useState<"roblox" | "crypto">("roblox");
@@ -51,6 +64,7 @@ function Wallet() {
   const [network, setNetwork] = useState("TRC20");
   const [transactionHash, setTransactionHash] = useState("");
   const [destination, setDestination] = useState("");
+  const [selectedGamePassId, setSelectedGamePassId] = useState("");
   const uid = session?.user.id;
   const depositValue = Number(depositAmount);
   const withdrawValue = Number(withdrawAmount);
@@ -61,8 +75,8 @@ function Wallet() {
         ? "Informe o hash da transação."
         : "";
   const withdrawError =
-    !Number.isFinite(withdrawValue) || withdrawValue < 60
-      ? "Informe um saque de pelo menos 60."
+    !Number.isFinite(withdrawValue) || withdrawValue < 100
+      ? "Informe um saque de pelo menos 100."
       : withdrawValue > Number(p?.balance ?? 0)
         ? "O valor excede seu saldo disponível."
         : withdrawMethod === "crypto" && !destination.trim()
@@ -113,15 +127,37 @@ function Wallet() {
           <h2 className="text-lg font-bold">Depositar</h2>
           <PaymentChoice selected={depositMethod} onSelect={setDepositMethod} />
           {depositMethod === "roblox" ? (
-            <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
-              <div className="text-xs text-muted-foreground">Conta para depósito</div>
+            <div className="space-y-2 rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+              <div className="text-xs text-muted-foreground">Game Pass para depósito</div>
+              {gamePassesQuery.data?.length ? (
+                <div className="grid gap-2">
+                  {gamePassesQuery.data.map((pass) => (
+                    <button
+                      key={pass.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedGamePassId(pass.id);
+                        setDepositAmount(String(pass.robux_amount));
+                      }}
+                      className={`flex items-center justify-between rounded-md border px-3 py-2 text-left ${selectedGamePassId === pass.id ? "border-primary bg-primary/15" : "border-border"}`}
+                    >
+                      <span>{pass.name}</span>
+                      <span className="font-mono text-primary">{fmt(pass.robux_amount, 0)} R$</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Nenhum Game Pass está disponível no momento.
+                </p>
+              )}
               <a
                 href={ROBLOX_GROUP_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-1 inline-block font-semibold text-primary underline"
+                className="inline-block font-semibold text-primary underline"
               >
-                Grupo Roblox · {p?.roblox_username ?? "conta verificada"}
+                Abrir grupo Roblox · {p?.roblox_username ?? "conta verificada"}
               </a>
             </div>
           ) : (
@@ -199,16 +235,34 @@ function Wallet() {
               </Field>
             </>
           )}
-          <Field label="Valor em B$">
+          <Field label="Valor bruto do saque em B$">
             <Input
               type="number"
-              min={60}
+              min={100}
               placeholder="Quantidade de $BX"
               value={withdrawAmount}
               onChange={(e) => setWithdrawAmount(e.target.value)}
               className="font-mono"
             />
           </Field>
+          {withdrawMethod === "roblox" &&
+            Number.isFinite(withdrawValue) &&
+            withdrawValue >= 100 && (
+              <div className="rounded-md border border-primary/20 bg-primary/5 p-3 text-sm">
+                <div className="flex justify-between">
+                  <span>Valor bruto</span>
+                  <b>{fmt(withdrawValue, 0)} R$</b>
+                </div>
+                <div className="flex justify-between text-muted-foreground">
+                  <span>Taxa Roblox (30%)</span>
+                  <span>-{fmt(withdrawValue * 0.3, 0)} R$</span>
+                </div>
+                <div className="mt-1 flex justify-between border-t border-primary/20 pt-1 font-semibold">
+                  <span>Você recebe</span>
+                  <span className="text-primary">{fmt(withdrawValue * 0.7, 0)} R$</span>
+                </div>
+              </div>
+            )}
           {withdrawError && <p className="text-xs text-bear">{withdrawError}</p>}
           <Button
             variant="outline"
