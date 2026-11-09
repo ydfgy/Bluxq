@@ -533,9 +533,15 @@ export const requestDeposit = createServerFn({ method: "POST" })
 export const listMyDeposits = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data, error } = await (
-      await admin()
-    )
+    const sb = await admin();
+    const { error: expiryError } = await sb
+      .from("deposits")
+      .update({ status: "expired", reviewed_at: new Date().toISOString() })
+      .eq("user_id", context.userId)
+      .eq("status", "pending")
+      .lte("expires_at", new Date().toISOString());
+    rpcError(expiryError);
+    const { data, error } = await sb
       .from("deposits")
       .select("id, amount, payment_method, game_pass_id, status, created_at, expires_at")
       .eq("user_id", context.userId)
