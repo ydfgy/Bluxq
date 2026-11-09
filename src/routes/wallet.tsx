@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, type ReactNode } from "react";
@@ -52,6 +52,7 @@ const CRYPTO_MIN_DEPOSIT = 10;
 function Wallet() {
   const { session } = useAuth();
   const { data: p } = useProfile();
+  const nav = useNavigate();
   const qc = useQueryClient();
   const dep = useServerFn(requestDeposit);
   const wd = useServerFn(requestWithdraw);
@@ -136,8 +137,10 @@ function Wallet() {
       await fn();
       toast.success(msg);
       qc.invalidateQueries();
+      return true;
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Unable to complete the operation.");
+      return false;
     }
   }
 
@@ -187,7 +190,7 @@ function Wallet() {
       </div>
 
       <Dialog open={walletOpen} onOpenChange={setWalletOpen}>
-        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border-zinc-700 bg-[#20272d] p-0 text-foreground">
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border-border bg-background p-0 text-foreground">
           <div className="border-b border-border px-5 py-4 pr-12">
             {walletSection ? (
               <button
@@ -251,6 +254,7 @@ function Wallet() {
                         matchingGamePass={matchingGamePass}
                         recommendedGamePass={recommendedGamePass}
                         depositError={depositError}
+                        onConnectAccount={() => nav({ to: "/verify" })}
                         onSelectPass={(pass) => {
                           setSelectedGamePassId(pass.id);
                           setDepositAmount(String(pass.robux_amount));
@@ -574,6 +578,7 @@ function RobloxDepositFlow({
   matchingGamePass,
   recommendedGamePass,
   depositError,
+  onConnectAccount,
   onSelectPass,
   onSubmit,
 }: {
@@ -585,10 +590,11 @@ function RobloxDepositFlow({
   matchingGamePass?: RobloxGamePass;
   recommendedGamePass?: RobloxGamePass;
   depositError: string;
+  onConnectAccount: () => void;
   onSelectPass: (pass: RobloxGamePass) => void;
-  onSubmit: () => void;
+  onSubmit: () => Promise<boolean>;
 }) {
-  const [step, setStep] = useState<"methods" | "api-key" | "gamepass">("methods");
+  const [step, setStep] = useState<"methods" | "api-key" | "gamepass" | "waiting">("methods");
   const [apiKey, setApiKey] = useState("");
   const [showApiKey, setShowApiKey] = useState(false);
   const connected = verified && Boolean(username);
@@ -597,10 +603,10 @@ function RobloxDepositFlow({
 
   return (
     <div className="space-y-4">
-      {step !== "methods" && (
+      {step !== "methods" && step !== "waiting" && (
         <button
           type="button"
-          onClick={() => setStep(step === "api-key" ? "methods" : "methods")}
+          onClick={() => setStep("methods")}
           className="text-sm font-semibold text-foreground transition-colors hover:text-primary"
         >
           {backLabel}
@@ -630,7 +636,7 @@ function RobloxDepositFlow({
             <button
               type="button"
               onClick={() => setStep(connected ? "gamepass" : "api-key")}
-              className="rounded-md bg-lime-400 px-4 py-2 text-sm font-bold text-black transition-colors hover:bg-lime-300"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               {connected ? "Depositar Robux" : "Vincular sua conta Roblox"}
             </button>
@@ -683,12 +689,8 @@ function RobloxDepositFlow({
               </Button>
             </div>
           </Field>
-          <Button
-            className="w-full bg-lime-500 text-black hover:bg-lime-400"
-            disabled={!apiKey.trim()}
-            onClick={() => setStep("gamepass")}
-          >
-            Conectar API key
+          <Button className="w-full" disabled={!apiKey.trim()} onClick={onConnectAccount}>
+            Continuar para verificação Roblox
           </Button>
         </div>
       )}
@@ -732,7 +734,7 @@ function RobloxDepositFlow({
                     <span>Game Pass {pass.name}</span>
                     <span className="text-gold">Aguardando compra</span>
                   </div>
-                  <div className="rounded bg-lime-400 px-3 py-2 text-center text-sm font-bold text-black">
+                  <div className="rounded bg-primary px-3 py-2 text-center text-sm font-bold text-primary-foreground">
                     Comprar por ◉ {fmt(pass.robux_amount, 0)}
                   </div>
                 </button>
@@ -748,7 +750,9 @@ function RobloxDepositFlow({
           <Button
             className="w-full"
             disabled={Boolean(depositError) || !matchingGamePass}
-            onClick={onSubmit}
+            onClick={async () => {
+              if (await onSubmit()) setStep("waiting");
+            }}
           >
             Confirmar depósito de {fmt(Number(amount) || 0, 0)} Robux
           </Button>
@@ -758,6 +762,37 @@ function RobloxDepositFlow({
             className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
           >
             Cancelar depósito
+          </button>
+        </div>
+      )}
+
+      {step === "waiting" && (
+        <div className="space-y-4 py-4 text-center">
+          <div className="mx-auto grid h-14 w-14 place-items-center rounded-full border-4 border-primary/30 border-t-primary text-primary">
+            ↻
+          </div>
+          <div>
+            <h3 className="text-lg font-bold">Aguardando confirmação</h3>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Sua solicitação foi enviada. O saldo será creditado quando a compra for identificada.
+            </p>
+          </div>
+          <div className="rounded-lg border border-border bg-card p-4 text-left text-sm">
+            <div className="flex justify-between">
+              <span>Status</span>
+              <span className="text-gold">Aguardando compra</span>
+            </div>
+            <div className="mt-2 h-1 rounded-full bg-muted">
+              <div className="h-full w-1/3 rounded-full bg-primary" />
+            </div>
+            <div className="mt-2 text-xs text-muted-foreground">Expira em 29:31.</div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setStep("methods")}
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
+          >
+            Fechar e acompanhar no histórico
           </button>
         </div>
       )}
