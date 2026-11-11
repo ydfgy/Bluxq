@@ -16,3 +16,4 @@
 - [x] Salvar avatar oficial, nome e ID Roblox verificado e mostrar o avatar no painel administrativo.
 - [x] Rodar lint, TypeScript e build de produção; não foram encontrados erros nos arquivos alterados.
 - [x] Reorganizar `/roblox-api-tutorial` com visual limpo da plataforma, texto legível, etapas fáceis e prints visuais das quatro configurações da Creator API Key.
+- [x] Fazer a Wallet consultar a Creator API Key persistida no banco e bloquear depósitos Roblox no servidor quando ela não existir, estiver inválida ou não puder ser validada.

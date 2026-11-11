@@ -91,9 +91,6 @@ function Wallet() {
   const [destination, setDestination] = useState("");
   const [selectedGamePassId, setSelectedGamePassId] = useState("");
   const [walletSection, setWalletSection] = useState<"deposit" | "withdraw">("deposit");
-  const tutorialComplete =
-    typeof window !== "undefined" &&
-    window.sessionStorage.getItem("bluxq-roblox-tutorial-complete") === "1";
   const depositValue = Number(depositAmount);
   const withdrawValue = Number(withdrawAmount);
   const gamePasses = gamePassesQuery.data ?? [];
@@ -192,8 +189,10 @@ function Wallet() {
                   matchingGamePass={matchingGamePass}
                   recommendedGamePass={recommendedGamePass}
                   depositError={depositError}
-                  startAtGamepass={tutorialComplete}
                   apiKeySaved={Boolean(apiKeyQuery.data?.saved)}
+                  apiKeyLoading={
+                    apiKeyQuery.isLoading || (apiKeyQuery.isFetching && !apiKeyQuery.data)
+                  }
                   pendingDeposit={pendingDeposit}
                   onAmountChange={setDepositAmount}
                   onConnectAccount={() => nav({ to: "/verify" })}
@@ -492,8 +491,8 @@ function RobloxDepositFlow({
   matchingGamePass,
   recommendedGamePass,
   depositError,
-  startAtGamepass,
   apiKeySaved,
+  apiKeyLoading,
   pendingDeposit,
   onAmountChange,
   onConnectAccount,
@@ -510,8 +509,8 @@ function RobloxDepositFlow({
   matchingGamePass?: RobloxGamePass | undefined;
   recommendedGamePass?: RobloxGamePass | undefined;
   depositError: string;
-  startAtGamepass: boolean;
   apiKeySaved: boolean;
+  apiKeyLoading: boolean;
   pendingDeposit?: Deposit | undefined;
   onAmountChange: (value: string) => void;
   onConnectAccount: () => void;
@@ -520,13 +519,22 @@ function RobloxDepositFlow({
   onSelectPass: (pass: RobloxGamePass) => void;
   onSubmit: () => Promise<boolean>;
 }) {
-  const [step, setStep] = useState<"link" | "api-key" | "gamepass" | "waiting">(
-    startAtGamepass || apiKeySaved ? "gamepass" : verified && username ? "api-key" : "link",
+  const connected = verified && Boolean(username);
+  const [step, setStep] = useState<"checking" | "link" | "api-key" | "gamepass" | "waiting">(
+    apiKeyLoading ? "checking" : apiKeySaved ? "gamepass" : connected ? "api-key" : "link",
   );
   const [secondsLeft, setSecondsLeft] = useState(1800);
   const [cancelAvailable, setCancelAvailable] = useState(false);
-  const connected = verified && Boolean(username);
   const nav = useNavigate();
+  useEffect(() => {
+    if (apiKeyLoading) {
+      setStep("checking");
+    } else if (apiKeySaved) {
+      setStep((current) => (current === "waiting" ? current : "gamepass"));
+    } else if (step === "checking" || step === "gamepass") {
+      setStep(connected ? "api-key" : "link");
+    }
+  }, [apiKeyLoading, apiKeySaved, connected, step]);
   useEffect(() => {
     if (pendingDeposit) {
       const left = Math.max(
@@ -551,6 +559,14 @@ function RobloxDepositFlow({
   const [showApiKey, setShowApiKey] = useState(false);
   return (
     <div className="space-y-4">
+      {step === "checking" && (
+        <div className="space-y-2 rounded-lg border border-border bg-background/30 p-4">
+          <h3 className="font-bold">Verificando sua configuração</h3>
+          <p className="text-sm text-muted-foreground">
+            Consultando a Creator API Key salva na sua conta.
+          </p>
+        </div>
+      )}
       {step === "link" && (
         <div className="space-y-4">
           <div className="flex items-start gap-3">
@@ -560,7 +576,8 @@ function RobloxDepositFlow({
             <div>
               <h3 className="font-bold">Robux</h3>
               <p className="text-sm leading-tight text-muted-foreground">
-                Conecte sua conta Roblox com uma Creator API key para depositar ou sacar Robux.
+                Verifique sua conta Roblox e configure a Creator API Key para liberar depósitos em
+                Robux.
               </p>
             </div>
           </div>
@@ -585,7 +602,7 @@ function RobloxDepositFlow({
       {step === "api-key" && (
         <div className="space-y-4">
           <div>
-            <h3 className="text-lg font-bold">Conecte com uma Creator API key</h3>
+            <h3 className="text-lg font-bold">Configure sua Creator API Key</h3>
             <p className="mt-1 text-sm text-muted-foreground">
               Crie uma Creator API key com as permissões abaixo e cole-a aqui.
             </p>
@@ -662,6 +679,10 @@ function RobloxDepositFlow({
                 creditado automaticamente.
               </p>
             </div>
+          </div>
+          <div className="flex items-center gap-2 rounded-md border border-bull/30 bg-bull/10 p-3 text-sm text-bull">
+            <span aria-hidden="true">✓</span>
+            Creator API Key configurada e pronta para confirmar sua compra.
           </div>
           <div className="rounded-md border border-gold/20 bg-gold/10 p-3 text-xs text-gold">
             ⚠ Compre somente com {username ?? "a conta Roblox conectada"}; compras de outras contas

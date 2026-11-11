@@ -515,6 +515,20 @@ export const requestDeposit = createServerFn({ method: "POST" })
       .parse(d),
   )
   .handler(async ({ data, context }) => {
+    if (data.paymentMethod === "roblox") {
+      const { data: profile, error: profileError } = await (
+        await admin()
+      )
+        .from("profiles")
+        .select("roblox_creator_api_key")
+        .eq("id", context.userId)
+        .maybeSingle();
+      rpcError(profileError);
+      if (!profile?.roblox_creator_api_key) {
+        throw new Error("Configure e valide sua Creator API Key antes de depositar Robux.");
+      }
+      await introspectRobloxCreatorApiKey(profile.roblox_creator_api_key);
+    }
     const { data: id, error } = await (
       await admin()
     ).rpc("fn_request_deposit_v3", {
