@@ -18,7 +18,6 @@ import { Route as RobloxApiTutorialRouteImport } from './routes/roblox-api-tutor
 import { Route as StakeRouteImport } from './routes/stake'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as TradeRouteImport } from './routes/trade'
-import { Route as TutorialRouteImport } from './routes/tutorial'
 import { Route as VerifyRouteImport } from './routes/verify'
 import { Route as WalletRouteImport } from './routes/wallet'
 import { Route as StakeSymbolRouteImport } from './routes/stake.$symbol'
@@ -69,11 +68,6 @@ const TradeRoute = TradeRouteImport.update({
   path: '/trade',
   getParentRoute: () => rootRouteImport,
 } as any)
-const TutorialRoute = TutorialRouteImport.update({
-  id: '/tutorial',
-  path: '/tutorial',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const VerifyRoute = VerifyRouteImport.update({
   id: '/verify',
   path: '/verify',
@@ -100,7 +94,6 @@ export interface FileRoutesByFullPath {
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
-  '/tutorial': typeof TutorialRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/stake/$symbol': typeof StakeSymbolRoute
@@ -115,7 +108,6 @@ export interface FileRoutesByTo {
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
-  '/tutorial': typeof TutorialRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/stake/$symbol': typeof StakeSymbolRoute
@@ -131,7 +123,6 @@ export interface FileRoutesById {
   '/stake': typeof StakeRouteWithChildren
   '/terms': typeof TermsRoute
   '/trade': typeof TradeRoute
-  '/tutorial': typeof TutorialRoute
   '/verify': typeof VerifyRoute
   '/wallet': typeof WalletRoute
   '/stake/$symbol': typeof StakeSymbolRoute
@@ -148,7 +139,6 @@ export interface FileRouteTypes {
     | '/stake'
     | '/terms'
     | '/trade'
-    | '/tutorial'
     | '/verify'
     | '/wallet'
     | '/stake/$symbol'
@@ -163,7 +153,6 @@ export interface FileRouteTypes {
     | '/stake'
     | '/terms'
     | '/trade'
-    | '/tutorial'
     | '/verify'
     | '/wallet'
     | '/stake/$symbol'
@@ -178,7 +167,6 @@ export interface FileRouteTypes {
     | '/stake'
     | '/terms'
     | '/trade'
-    | '/tutorial'
     | '/verify'
     | '/wallet'
     | '/stake/$symbol'
@@ -194,7 +182,6 @@ export interface RootRouteChildren {
   StakeRoute: typeof StakeRouteWithChildren
   TermsRoute: typeof TermsRoute
   TradeRoute: typeof TradeRoute
-  TutorialRoute: typeof TutorialRoute
   VerifyRoute: typeof VerifyRoute
   WalletRoute: typeof WalletRoute
 }
@@ -264,13 +251,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TradeRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/tutorial': {
-      id: '/tutorial'
-      path: '/tutorial'
-      fullPath: '/tutorial'
-      preLoaderRoute: typeof TutorialRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/verify': {
       id: '/verify'
       path: '/verify'
@@ -316,7 +296,6 @@ const rootRouteChildren: RootRouteChildren = {
   StakeRoute: StakeRouteWithChildren,
   TermsRoute: TermsRoute,
   TradeRoute: TradeRoute,
-  TutorialRoute: TutorialRoute,
   VerifyRoute: VerifyRoute,
   WalletRoute: WalletRoute,
 }

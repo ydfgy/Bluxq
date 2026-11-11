@@ -150,9 +150,6 @@ export function Navbar() {
           <Link to="/trade" className={link} activeProps={active}>
             Trade
           </Link>
-          <Link to="/tutorial" className={link} activeProps={active}>
-            Tutorial
-          </Link>
           {session && (
             <Link to="/wallet" className={link} activeProps={active}>
               Wallet
@@ -211,9 +208,6 @@ export function Navbar() {
       <nav className="flex md:hidden items-center justify-around py-2">
         <Link to="/trade" className={link} activeProps={active}>
           Trade
-        </Link>
-        <Link to="/tutorial" className={link} activeProps={active}>
-          Tutorial
         </Link>
         {session && (
           <Link to="/wallet" className={link} activeProps={active}>

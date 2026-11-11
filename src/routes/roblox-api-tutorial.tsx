@@ -1,14 +1,16 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { ArrowRight, Check, ExternalLink, KeyRound, ShieldCheck } from "lucide-react";
+import type { ReactNode } from "react";
 import { Protected } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/roblox-api-tutorial")({
   head: () => ({
     meta: [
-      { title: "Tutorial Creator API Key — Bluxq" },
+      { title: "Tutorial Roblox — Bluxq" },
       {
         name: "description",
-        content: "Aprenda a criar uma Creator API Key do Roblox para usar depósitos e saques.",
+        content: "Aprenda a criar uma Creator API Key do Roblox com segurança.",
       },
     ],
   }),
@@ -19,133 +21,206 @@ export const Route = createFileRoute("/roblox-api-tutorial")({
   ),
 });
 
+type StepProps = {
+  number: string;
+  title: string;
+  description: string;
+  children: ReactNode;
+};
+
+function Step({ number, title, description, children }: StepProps) {
+  return (
+    <article className="grid gap-6 border-t border-border py-8 md:grid-cols-[minmax(0,0.78fr)_minmax(360px,1.22fr)] md:items-center md:gap-12">
+      <div>
+        <div className="mb-4 flex items-center gap-3">
+          <span className="grid h-8 w-8 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
+            {number}
+          </span>
+          <span className="text-sm font-semibold uppercase tracking-[0.16em] text-primary">
+            Etapa {number}
+          </span>
+        </div>
+        <h2 className="text-2xl font-bold tracking-tight text-foreground">{title}</h2>
+        <p className="mt-3 text-base leading-7 text-muted-foreground">{description}</p>
+      </div>
+      <div className="overflow-hidden rounded-xl border border-border bg-card p-4">{children}</div>
+    </article>
+  );
+}
+
+function FakeTopbar({ children }: { children: ReactNode }) {
+  return (
+    <div className="mb-4 flex items-center justify-between border-b border-border pb-3">
+      <span className="text-sm font-semibold text-foreground">Roblox Creator Dashboard</span>
+      <span className="rounded-md bg-muted px-3 py-1 text-xs text-muted-foreground">
+        create.roblox.com
+      </span>
+    </div>
+  );
+}
+
 function RobloxApiTutorial() {
   const nav = useNavigate();
 
   return (
-    <main className="mx-auto max-w-3xl space-y-6 px-4 py-10">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold uppercase tracking-widest text-primary">Roblox</p>
-        <h1 className="text-3xl font-bold">Como criar sua Creator API Key</h1>
-        <p className="max-w-2xl text-muted-foreground">
-          Siga os passos abaixo para criar uma chave segura e permitir que a Bluxq identifique suas
-          compras de Game Pass. Não compartilhe essa chave com ninguém.
+    <main className="mx-auto max-w-6xl px-4 pb-16 pt-10 sm:px-6 lg:px-8">
+      <header className="max-w-3xl border-b border-border pb-8">
+        <div className="mb-4 flex items-center gap-3 text-primary">
+          <KeyRound className="h-5 w-5" />
+          <span className="text-sm font-semibold uppercase tracking-[0.2em]">Tutorial Roblox</span>
+        </div>
+        <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl">
+          Crie sua Creator API Key
+        </h1>
+        <p className="mt-4 text-lg leading-8 text-muted-foreground">
+          Configure a chave uma vez e use depósitos Game Pass com segurança. Siga as quatro etapas
+          abaixo.
         </p>
-      </div>
+      </header>
 
-      <section className="rounded-xl border border-border bg-card p-5">
-        <h2 className="text-lg font-bold">Antes de começar</h2>
-        <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-muted-foreground">
-          <li>Use a mesma conta Roblox que está vinculada ao seu perfil Bluxq.</li>
-          <li>Você precisa ter acesso ao Roblox Creator Dashboard.</li>
-          <li>
-            A chave deve ser usada somente nesta plataforma e nunca publicada em chats ou imagens.
-          </li>
-        </ul>
+      <section
+        className="grid gap-4 border-b border-border py-8 sm:grid-cols-3"
+        aria-label="Requisitos"
+      >
+        <div>
+          <p className="font-semibold text-foreground">Conta correta</p>
+          <p className="mt-1 text-sm text-muted-foreground">Use o Roblox conectado à Bluxq.</p>
+        </div>
+        <div>
+          <p className="font-semibold text-foreground">Acesso ao Creator</p>
+          <p className="mt-1 text-sm text-muted-foreground">Abra o painel oficial do Roblox.</p>
+        </div>
+        <div>
+          <p className="font-semibold text-foreground">Chave privada</p>
+          <p className="mt-1 text-sm text-muted-foreground">Nunca compartilhe ou publique.</p>
+        </div>
       </section>
 
-      <ol className="space-y-4">
-        <li className="rounded-xl border border-border bg-card p-5">
-          <div className="flex gap-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              1
-            </span>
-            <div className="space-y-2">
-              <h2 className="font-bold">Abra as credenciais do Roblox</h2>
-              <p className="text-sm text-muted-foreground">
-                Entre no Creator Dashboard com a conta Roblox correta e abra a área de credenciais
-                para criar uma nova chave.
-              </p>
-              <a
-                href="https://create.roblox.com/dashboard/credentials"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground hover:bg-primary/90"
-              >
-                Abrir Creator Dashboard
-              </a>
-            </div>
+      <section aria-label="Passos para criar a chave">
+        <Step
+          number="1"
+          title="Abra o painel de credenciais"
+          description="Entre no Creator Dashboard com a conta Roblox correta e abra a área de credenciais."
+        >
+          <FakeTopbar>
+            <span />
+          </FakeTopbar>
+          <div className="rounded-lg bg-muted p-5">
+            <p className="text-lg font-semibold text-foreground">Credenciais</p>
+            <p className="mt-2 text-sm text-muted-foreground">Gerencie suas chaves de API</p>
+            <div className="mt-5 h-2 w-2/3 rounded bg-border" />
+            <div className="mt-3 h-2 w-1/2 rounded bg-border" />
           </div>
-        </li>
+          <a
+            href="https://create.roblox.com/dashboard/credentials"
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground hover:opacity-90"
+          >
+            Abrir Creator Dashboard <ExternalLink className="h-4 w-4" />
+          </a>
+        </Step>
 
-        <li className="rounded-xl border border-border bg-card p-5">
-          <div className="flex gap-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              2
-            </span>
-            <div className="space-y-2">
-              <h2 className="font-bold">Crie uma nova API Key</h2>
-              <p className="text-sm text-muted-foreground">
-                Clique para criar uma nova chave, dê um nome que você reconheça e mantenha a chave
-                restrita. Não use uma chave de outro projeto.
-              </p>
+        <Step
+          number="2"
+          title="Crie uma chave nova"
+          description="Clique em criar chave, dê um nome que você reconheça e mantenha a chave restrita ao uso necessário."
+        >
+          <FakeTopbar>
+            <span />
+          </FakeTopbar>
+          <div className="rounded-lg bg-muted p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-lg font-semibold text-foreground">API Keys</p>
+              <span className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground">
+                Create API Key
+              </span>
             </div>
-          </div>
-        </li>
-
-        <li className="rounded-xl border border-border bg-card p-5">
-          <div className="flex gap-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              3
-            </span>
-            <div className="space-y-3">
-              <h2 className="font-bold">Configure as permissões exigidas</h2>
-              <p className="text-sm text-muted-foreground">
-                Na seção de permissões da chave, deixe exatamente estas opções:
-              </p>
-              <div className="space-y-2 rounded-lg bg-background p-4 font-mono text-sm">
-                <div className="flex items-center justify-between gap-3">
-                  <span>inventory</span>
-                  <span className="text-bull">read</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>game-passes</span>
-                  <span className="text-bull">read and write on your place</span>
-                </div>
-                <div className="flex items-center justify-between gap-3">
-                  <span>Restrict IP</span>
-                  <span className="text-bull">off</span>
-                </div>
+            <div className="mt-5 rounded-lg border border-border bg-background p-4">
+              <p className="text-sm font-semibold text-foreground">Nome da chave</p>
+              <div className="mt-3 rounded-md border border-border px-3 py-2 text-sm text-muted-foreground">
+                Bluxq Game Pass
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-sm text-bull">
+                <Check className="h-4 w-4" /> Chave restrita
               </div>
             </div>
           </div>
-        </li>
+        </Step>
 
-        <li className="rounded-xl border border-border bg-card p-5">
-          <div className="flex gap-4">
-            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-sm font-bold text-primary-foreground">
-              4
-            </span>
-            <div className="space-y-2">
-              <h2 className="font-bold">Copie a chave uma única vez</h2>
-              <p className="text-sm text-muted-foreground">
-                Depois de criar a chave, copie o valor exibido. Cole-o somente no campo protegido da
-                Bluxq e confirme. Se você perder a chave, revogue-a no Roblox e crie outra.
-              </p>
+        <Step
+          number="3"
+          title="Configure somente estas permissões"
+          description="Na seção de permissões, use exatamente as opções abaixo. Não adicione permissões desnecessárias."
+        >
+          <FakeTopbar>
+            <span />
+          </FakeTopbar>
+          <div className="space-y-3 rounded-lg bg-muted p-5 text-sm">
+            <div className="flex items-center justify-between rounded-md bg-background p-3">
+              <span className="text-foreground">Inventory</span>
+              <span className="font-semibold text-bull">Read</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-background p-3">
+              <span className="text-foreground">Game Passes</span>
+              <span className="font-semibold text-bull">Read &amp; Write on your place</span>
+            </div>
+            <div className="flex items-center justify-between rounded-md bg-background p-3">
+              <span className="text-foreground">Restrict IP</span>
+              <span className="font-semibold text-bull">Off</span>
             </div>
           </div>
-        </li>
-      </ol>
+        </Step>
 
-      <section className="rounded-xl border border-gold/30 bg-gold/10 p-5 text-sm text-gold">
-        <b>Importante:</b> a chave não deve ser enviada por mensagem, colocada no código ou salva em
-        capturas de tela. Se suspeitar que ela vazou, revogue-a imediatamente no Creator Dashboard.
+        <Step
+          number="4"
+          title="Copie e cole somente na Bluxq"
+          description="Copie a chave uma única vez e cole apenas no campo protegido da Bluxq. Se ela vazar, revogue no Roblox e crie outra."
+        >
+          <FakeTopbar>
+            <span />
+          </FakeTopbar>
+          <div className="rounded-lg bg-muted p-5">
+            <div className="flex items-center gap-3 text-bull">
+              <ShieldCheck className="h-6 w-6" />
+              <p className="text-lg font-semibold text-foreground">Chave pronta</p>
+            </div>
+            <div className="mt-5 rounded-md border border-primary/40 bg-background px-4 py-3 font-mono text-sm text-primary">
+              ••••••••••••••••••••
+            </div>
+            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+              <Check className="h-4 w-4 text-bull" /> Cole no campo protegido da Bluxq
+            </div>
+          </div>
+        </Step>
       </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <section className="border-t border-border py-8">
+        <div className="flex items-start gap-3">
+          <ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <h2 className="font-bold text-foreground">Regra de segurança</h2>
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground">
+              A Creator API Key é secreta. Não envie por mensagem, não coloque no código e não salve
+              em capturas de tela. A Bluxq usa a chave somente no backend.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <footer className="flex flex-wrap items-center gap-3 border-t border-border pt-8">
         <Button
-          className="flex-1"
           onClick={() => {
             window.sessionStorage.setItem("bluxq-roblox-tutorial-complete", "1");
             nav({ to: "/wallet" });
           }}
         >
-          Continuar para o depósito
+          Continuar para a Wallet <ArrowRight className="h-4 w-4" />
         </Button>
-        <Button asChild variant="outline" className="flex-1">
-          <Link to="/trade">Voltar para o Bluxq</Link>
+        <Button asChild variant="outline">
+          <Link to="/trade">Voltar para a plataforma</Link>
         </Button>
-      </div>
+      </footer>
     </main>
   );
 }

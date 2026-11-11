@@ -15,4 +15,4 @@
 - [x] Separar visualmente depósito e saque, exigir depósito Roblox mínimo de 50 Robux e recomendar o Game Pass disponível mais próximo quando o valor informado não existir.
 - [x] Salvar avatar oficial, nome e ID Roblox verificado e mostrar o avatar no painel administrativo.
 - [x] Rodar lint, TypeScript e build de produção; não foram encontrados erros nos arquivos alterados.
-- [x] Criar página `/tutorial` limpa, sem textos pequenos em excesso, com passos fáceis e prints visuais de verificação, Trade, depósito Game Pass e saque.
+- [x] Reorganizar `/roblox-api-tutorial` com visual limpo da plataforma, texto legível, etapas fáceis e prints visuais das quatro configurações da Creator API Key.
