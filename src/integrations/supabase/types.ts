@@ -70,6 +70,8 @@ export type Database = {
           amount: number;
           created_at: string;
           id: string;
+          expires_at: string;
+          game_pass_id: number | null;
           asset: string | null;
           network: string | null;
           payment_method: string;
@@ -82,6 +84,8 @@ export type Database = {
           amount: number;
           created_at?: string;
           id?: string;
+          expires_at?: string;
+          game_pass_id?: number | null;
           asset?: string | null;
           network?: string | null;
           payment_method?: string;
@@ -94,6 +98,8 @@ export type Database = {
           amount?: number;
           created_at?: string;
           id?: string;
+          expires_at?: string;
+          game_pass_id?: number | null;
           reviewed_at?: string | null;
           status?: string;
           user_id?: string;
@@ -309,6 +315,7 @@ export type Database = {
           is_anonymous: boolean;
           is_banned: boolean;
           roblox_created_at: string | null;
+          roblox_creator_api_key: string | null;
           roblox_display_name: string | null;
           roblox_user_id: number | null;
           roblox_username: string;
@@ -346,6 +353,7 @@ export type Database = {
           is_anonymous?: boolean;
           is_banned?: boolean;
           roblox_created_at?: string | null;
+          roblox_creator_api_key?: string | null;
           roblox_display_name?: string | null;
           roblox_user_id?: number | null;
           roblox_username?: string;
@@ -595,7 +603,19 @@ export type Database = {
           _transaction_hash?: string | null;
           _user: string;
         };
+        Returns: string;
+      };
+      fn_cancel_deposit: {
+        Args: { _id: string; _user: string };
         Returns: undefined;
+      };
+      fn_save_roblox_creator_api_key: {
+        Args: { _key: string; _user: string };
+        Returns: undefined;
+      };
+      fn_has_roblox_creator_api_key: {
+        Args: { _user: string };
+        Returns: boolean;
       };
       fn_close_position: {
         Args: {

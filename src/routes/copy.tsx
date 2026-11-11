@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Protected } from "@/components/AppShell";
 import { useAuth, useProfile } from "@/hooks/use-auth";
@@ -68,7 +68,6 @@ function Copy() {
   const [budgetText, setBudgetText] = useState("10");
   const [chartOpen, setChartOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [showName, setShowName] = useState(false);
   const uid = session?.user.id;
   const loadLeaderboard = useServerFn(getCopyLeaderboard);
   const loadAllocations = useServerFn(getCopyAllocations);
@@ -116,10 +115,6 @@ function Copy() {
     Boolean(trader),
   );
   const recommendedTraders = traders.slice(0, 5);
-
-  useEffect(() => {
-    if (traderStatusQuery.data) setShowName(traderStatusQuery.data.showName);
-  }, [traderStatusQuery.data]);
 
   async function run(action: () => Promise<unknown>, success: string) {
     setBusy(true);
@@ -171,7 +166,7 @@ function Copy() {
               void run(
                 () =>
                   setTraderOptIn({
-                    data: { enabled: !traderEnabled, showName: traderEnabled ? false : showName },
+                    data: { enabled: !traderEnabled, showName: false },
                   }),
                 traderEnabled ? "Você saiu do ranking." : "Você entrou no ranking.",
               )
@@ -182,26 +177,7 @@ function Copy() {
         </div>
         {traderStatusQuery.isError ? (
           <p className="mt-3 text-sm text-destructive">Não foi possível carregar seu status.</p>
-        ) : (
-          <label className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={showName}
-              disabled={busy}
-              onChange={(event) => {
-                const next = event.target.checked;
-                setShowName(next);
-                if (traderEnabled) {
-                  void run(
-                    () => setTraderOptIn({ data: { enabled: true, showName: next } }),
-                    "Preferência de nome atualizada.",
-                  );
-                }
-              }}
-            />
-            Mostrar meu nome público no ranking (opcional)
-          </label>
-        )}
+        ) : null}
       </section>
 
       <details className="rounded-xl border px-4 py-3">
