@@ -12,3 +12,4 @@
 - [x] Aplicar saque mínimo de 100, descontar 30% no saque Roblox e exibir bruto, taxa e líquido.
 - [x] Salvar avatar oficial, nome e ID Roblox verificado e mostrar o avatar no painel administrativo.
 - [x] Rodar lint, TypeScript e build de produção; não foram encontrados erros nos arquivos alterados.
+- [x] Criar página `/tutorial` limpa, sem textos pequenos em excesso, com passos fáceis e prints visuais de verificação, Trade, depósito Game Pass e saque.

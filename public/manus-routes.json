@@ -7,6 +7,7 @@
     { "path": "/stake", "title": "Stake" },
     { "path": "/stake/:symbol", "title": "Pool details" },
     { "path": "/trade", "title": "Trade" },
+    { "path": "/tutorial", "title": "Tutorial" },
     { "path": "/verify", "title": "Roblox verification" },
     { "path": "/wallet", "title": "Wallet" }
   ]
