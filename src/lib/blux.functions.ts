@@ -595,7 +595,16 @@ async function introspectRobloxCreatorApiKey(apiKey: string) {
 
 export const saveRobloxCreatorApiKey = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .validator((d) => z.object({ apiKey: z.string().trim().min(20).max(500) }).parse(d))
+  .validator((d) =>
+    z
+      .object({
+        // Roblox keys are opaque secrets. Keep a generous upper bound so a valid
+        // key is not rejected by the old 500-character limit, while still
+        // preventing accidental unbounded input from reaching the server.
+        apiKey: z.string().trim().min(20).max(4096),
+      })
+      .parse(d),
+  )
   .handler(async ({ data, context }) => {
     await introspectRobloxCreatorApiKey(data.apiKey);
     const { error } = await (
