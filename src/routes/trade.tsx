@@ -268,10 +268,7 @@ function Trade() {
   const size = m * lev;
   const liqLong = calcLiquidationPrice("long", currentPrice, lev);
   const liqShort = calcLiquidationPrice("short", currentPrice, lev);
-  const orderBlocked =
-    busy ||
-    !currentPrice ||
-    (Boolean(session) && (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev));
+  const orderBlocked = busy || !currentPrice;
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -310,11 +307,11 @@ function Trade() {
       if (!Number.isFinite(currentPrice) || currentPrice <= 0) {
         throw new Error("Preço de mercado indisponível. Aguarde a atualização e tente novamente.");
       }
-      if (poolMaxLev < MIN_LEVERAGE)
+      if (pool && poolMaxLev < MIN_LEVERAGE)
         throw new Error(
           `The pool has liquidity for at most ${Math.max(poolMaxLev, 0)}x on this margin. Reduce the margin or wait for more stakes.`,
         );
-      if (lev > poolMaxLev)
+      if (pool && lev > poolMaxLev)
         throw new Error(`The maximum leverage available now is ${poolMaxLev}x.`);
       const r = await open({ data: { symbol, side, margin: m, leverage: lev } });
       toast.success(`${side === "long" ? "Long" : "Short"} aberto a ${fmtPrice(r.price ?? 0)}`);
@@ -982,24 +979,14 @@ function Trade() {
           )}
           <div className="grid grid-cols-2 items-stretch gap-2">
             <Button
-              disabled={
-                busy ||
-                !currentPrice ||
-                (Boolean(session) &&
-                  (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
-              }
+              disabled={orderBlocked}
               onClick={() => go("long")}
               className="h-11 rounded-md bg-bull text-bull-foreground hover:bg-bull/90"
             >
               Long ↑
             </Button>
             <Button
-              disabled={
-                busy ||
-                !currentPrice ||
-                (Boolean(session) &&
-                  (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev))
-              }
+              disabled={orderBlocked}
               onClick={() => go("short")}
               className="h-11 rounded-md bg-bear text-bear-foreground hover:bg-bear/90"
             >
@@ -1286,7 +1273,7 @@ function QuickTradeWidget({
   onTrade,
 }: QuickTradeWidgetProps) {
   const [minimized, setMinimized] = useState(false);
-  const [position, setPosition] = useState({ x: 18, y: 88 });
+  const [position, setPosition] = useState({ x: 18, y: 148 });
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ offsetX: number; offsetY: number } | null>(null);
 
@@ -1324,14 +1311,14 @@ function QuickTradeWidget({
   return (
     <div
       ref={panelRef}
-      className="fixed z-40 w-[min(242px,calc(100vw-1rem))] select-none rounded-lg border border-zinc-700 bg-zinc-950/95 p-1 shadow-2xl shadow-black/40 backdrop-blur"
+      onPointerDown={startDrag}
+      onPointerMove={moveDrag}
+      onPointerUp={stopDrag}
+      onPointerCancel={stopDrag}
+      className="fixed z-40 w-[min(242px,calc(100vw-1rem))] touch-none select-none rounded-lg border border-border bg-card/95 p-1 shadow-2xl shadow-black/40 backdrop-blur"
       style={{ left: position.x, top: position.y }}
     >
       <div
-        onPointerDown={startDrag}
-        onPointerMove={moveDrag}
-        onPointerUp={stopDrag}
-        onPointerCancel={stopDrag}
         className="flex cursor-grab touch-none items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground active:cursor-grabbing"
         aria-label="Arraste o ticket de compra e venda"
       >
@@ -1367,7 +1354,7 @@ function QuickTradeWidget({
               Vender
             </span>
           </button>
-          <span className="text-[10px] text-zinc-600">|</span>
+          <span className="text-[10px] text-border">|</span>
           <button
             type="button"
             disabled={disabled || askPrice <= 0}
