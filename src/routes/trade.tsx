@@ -1,13 +1,16 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from "react";
 import {
   ArrowLeftRight,
   BarChart3,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
+  Maximize2,
+  Minus,
   Search,
   ShieldCheck,
   TrendingUp,
@@ -221,6 +224,8 @@ function Trade() {
     return !query || `${market.base} ${market.name}`.toLowerCase().includes(query);
   });
   const selectedMarket = MARKETS.find((market) => market.symbol === symbol) ?? MARKETS[0];
+  const bestAsk = orderBook?.asks[0]?.price ?? currentPrice;
+  const bestBid = orderBook?.bids[0]?.price ?? currentPrice;
   const recentPositions = [...platformPositions]
     .sort((a, b) => new Date(b.opened_at).getTime() - new Date(a.opened_at).getTime())
     .slice(0, 10);
@@ -263,6 +268,10 @@ function Trade() {
   const size = m * lev;
   const liqLong = calcLiquidationPrice("long", currentPrice, lev);
   const liqShort = calcLiquidationPrice("short", currentPrice, lev);
+  const orderBlocked =
+    busy ||
+    !currentPrice ||
+    (Boolean(session) && (m < 10 || !canAfford || poolMaxLev < MIN_LEVERAGE || lev > poolMaxLev));
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -432,6 +441,13 @@ function Trade() {
       className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_256px]" : "lg:grid-cols-[40px_minmax(0,1fr)_256px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_256px]" : "lg:grid-cols-[minmax(0,1fr)_40px_256px]"}`}
     >
       <CoinRain show={rain} />
+      <QuickTradeWidget
+        symbol={selectedMarket.base}
+        bidPrice={bestBid}
+        askPrice={bestAsk}
+        disabled={orderBlocked}
+        onTrade={go}
+      />
       {/* livro de ordens e posições abertas */}
       <section
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
@@ -1250,6 +1266,123 @@ function MetricCard({
       >
         {value}
       </div>
+    </div>
+  );
+}
+
+type QuickTradeWidgetProps = {
+  symbol: string;
+  bidPrice: number;
+  askPrice: number;
+  disabled: boolean;
+  onTrade: (side: "long" | "short") => void;
+};
+
+function QuickTradeWidget({
+  symbol,
+  bidPrice,
+  askPrice,
+  disabled,
+  onTrade,
+}: QuickTradeWidgetProps) {
+  const [minimized, setMinimized] = useState(false);
+  const [position, setPosition] = useState({ x: 18, y: 88 });
+  const panelRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<{ offsetX: number; offsetY: number } | null>(null);
+
+  function startDrag(event: PointerEvent<HTMLDivElement>) {
+    if ((event.target as HTMLElement).closest("button")) return;
+    const panel = panelRef.current;
+    if (!panel) return;
+    const rect = panel.getBoundingClientRect();
+    dragRef.current = {
+      offsetX: event.clientX - rect.left,
+      offsetY: event.clientY - rect.top,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!dragRef.current || !panelRef.current) return;
+    const { offsetX, offsetY } = dragRef.current;
+    const panel = panelRef.current;
+    const maxX = Math.max(8, window.innerWidth - panel.offsetWidth - 8);
+    const maxY = Math.max(8, window.innerHeight - panel.offsetHeight - 8);
+    setPosition({
+      x: Math.min(maxX, Math.max(8, event.clientX - offsetX)),
+      y: Math.min(maxY, Math.max(8, event.clientY - offsetY)),
+    });
+  }
+
+  function stopDrag(event: PointerEvent<HTMLDivElement>) {
+    dragRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  return (
+    <div
+      ref={panelRef}
+      className="fixed z-40 w-[min(242px,calc(100vw-1rem))] select-none rounded-lg border border-zinc-700 bg-zinc-950/95 p-1 shadow-2xl shadow-black/40 backdrop-blur"
+      style={{ left: position.x, top: position.y }}
+    >
+      <div
+        onPointerDown={startDrag}
+        onPointerMove={moveDrag}
+        onPointerUp={stopDrag}
+        onPointerCancel={stopDrag}
+        className="flex cursor-grab touch-none items-center gap-1 px-1.5 py-1 text-[10px] text-muted-foreground active:cursor-grabbing"
+        aria-label="Arraste o ticket de compra e venda"
+      >
+        <GripVertical aria-hidden="true" className="h-3.5 w-3.5" />
+        <span className="font-mono font-semibold tracking-wide">{symbol}/USDT</span>
+        <span className="ml-auto text-[9px] uppercase tracking-[0.14em]">rápido</span>
+        <button
+          type="button"
+          onClick={() => setMinimized((value) => !value)}
+          className="rounded p-0.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          aria-label={minimized ? "Reabrir ticket" : "Minimizar ticket"}
+          title={minimized ? "Reabrir" : "Minimizar"}
+        >
+          {minimized ? (
+            <Maximize2 aria-hidden="true" className="h-3.5 w-3.5" />
+          ) : (
+            <Minus aria-hidden="true" className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </div>
+      {!minimized && (
+        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+          <button
+            type="button"
+            disabled={disabled || bidPrice <= 0}
+            onClick={() => onTrade("short")}
+            className="rounded-md border border-bear/80 bg-bear/10 px-2 py-1.5 text-left leading-none transition-colors hover:bg-bear/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="block font-mono text-[11px] font-semibold text-bear">
+              {bidPrice > 0 ? fmtPrice(bidPrice) : "—"}
+            </span>
+            <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-bear/80">
+              Vender
+            </span>
+          </button>
+          <span className="text-[10px] text-zinc-600">|</span>
+          <button
+            type="button"
+            disabled={disabled || askPrice <= 0}
+            onClick={() => onTrade("long")}
+            className="rounded-md border border-primary/80 bg-primary/10 px-2 py-1.5 text-right leading-none transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <span className="block font-mono text-[11px] font-semibold text-primary">
+              {askPrice > 0 ? fmtPrice(askPrice) : "—"}
+            </span>
+            <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-primary/80">
+              Comprar
+            </span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
