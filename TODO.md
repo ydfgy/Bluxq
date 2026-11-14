@@ -1,5 +1,6 @@
 # TODO
 
+- [x] Reorganizar o depósito Roblox em um fluxo linear: vincular conta, solicitar a Creator API Key apenas quando ainda não existir, informar o valor em Robux, confirmar e acompanhar a transação sem avisos redundantes.
 - [ ] Cada stake deve registrar valor, moeda, data de início, prazo próprio e data de desbloqueio, sem misturar aportes diferentes do mesmo usuário.
 - [ ] A tela deve mostrar quanto está travado, quanto tempo falta, valor atual e PnL em porcentagem para cada posição.
 - [ ] O usuário só pode retirar uma posição individual depois do fim do prazo, e a retirada deve respeitar a liquidez livre da pool.

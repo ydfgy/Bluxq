@@ -137,10 +137,10 @@ function Wallet() {
           ? "Informe o endereço de destino."
           : "";
 
-  async function run(fn: () => Promise<unknown>, msg: string) {
+  async function run(fn: () => Promise<unknown>, msg?: string) {
     try {
       await fn();
-      toast.success(msg);
+      if (msg) toast.success(msg);
       qc.invalidateQueries();
       return true;
     } catch (e: unknown) {
@@ -211,16 +211,14 @@ function Wallet() {
                     setDepositAmount(String(pass.robux_amount));
                   }}
                   onSubmit={() =>
-                    run(
-                      () =>
-                        dep({
-                          data: {
-                            amount: Math.floor(Number(depositAmount)),
-                            paymentMethod: "roblox",
-                            gamePassId: matchingGamePass?.game_pass_id,
-                          },
-                        }),
-                      "Depósito enviado para confirmação",
+                    run(() =>
+                      dep({
+                        data: {
+                          amount: Math.floor(Number(depositAmount)),
+                          paymentMethod: "roblox",
+                          gamePassId: matchingGamePass?.game_pass_id,
+                        },
+                      }),
                     )
                   }
                 />
@@ -520,21 +518,27 @@ function RobloxDepositFlow({
   onSubmit: () => Promise<boolean>;
 }) {
   const connected = verified && Boolean(username);
-  const [step, setStep] = useState<"checking" | "link" | "api-key" | "gamepass" | "waiting">(
-    apiKeyLoading ? "checking" : apiKeySaved ? "gamepass" : connected ? "api-key" : "link",
+  const [step, setStep] = useState<"checking" | "link" | "api-key" | "amount" | "waiting">(
+    apiKeyLoading ? "checking" : !connected ? "link" : !apiKeySaved ? "api-key" : "amount",
   );
   const [secondsLeft, setSecondsLeft] = useState(1800);
   const [cancelAvailable, setCancelAvailable] = useState(false);
   const nav = useNavigate();
   useEffect(() => {
-    if (apiKeyLoading) {
+    if (pendingDeposit) {
+      setStep("waiting");
+    } else if (apiKeyLoading) {
       setStep("checking");
-    } else if (apiKeySaved) {
-      setStep((current) => (current === "waiting" ? current : "gamepass"));
-    } else if (step === "checking" || step === "gamepass") {
-      setStep(connected ? "api-key" : "link");
+    } else if (
+      step === "checking" ||
+      step === "link" ||
+      step === "api-key" ||
+      step === "amount" ||
+      step === "waiting"
+    ) {
+      setStep(!connected ? "link" : !apiKeySaved ? "api-key" : "amount");
     }
-  }, [apiKeyLoading, apiKeySaved, connected, step]);
+  }, [apiKeyLoading, apiKeySaved, connected, pendingDeposit, step]);
   useEffect(() => {
     if (pendingDeposit) {
       const left = Math.max(
@@ -576,8 +580,7 @@ function RobloxDepositFlow({
             <div>
               <h3 className="font-bold">Robux</h3>
               <p className="text-sm leading-tight text-muted-foreground">
-                Verifique sua conta Roblox e configure a Creator API Key para liberar depósitos em
-                Robux.
+                Vincule sua conta Roblox para continuar com o depósito em Robux.
               </p>
             </div>
           </div>
@@ -651,8 +654,7 @@ function RobloxDepositFlow({
             onClick={async () => {
               try {
                 await onSaveApiKey(apiKey);
-                toast.success("Creator API key validada e salva.");
-                setStep("gamepass");
+                setStep("amount");
               } catch (error) {
                 toast.error(
                   error instanceof Error ? error.message : "Não foi possível validar a API key.",
@@ -665,30 +667,25 @@ function RobloxDepositFlow({
         </div>
       )}
 
-      {step === "gamepass" && (
+      {step === "amount" && (
         <div className="space-y-4">
           <div className="flex items-start gap-3">
             <span className="grid h-8 w-8 place-items-center rounded-md border border-bull/60 bg-bull/15 text-bull">
               ◉
             </span>
             <div>
-              <h3 className="font-bold">Robux</h3>
+              <h3 className="font-bold">Depositar Robux</h3>
               <p className="text-sm leading-tight text-muted-foreground">
-                Compre o Game Pass abaixo com{" "}
-                <b className="text-foreground">{username ?? "sua conta Roblox"}</b>. Seu saldo será
-                creditado automaticamente.
+                Informe quanto deseja depositar. Depois da confirmação, a transação ficará nesta
+                tela até a compra ser identificada.
               </p>
             </div>
-          </div>
-          <div className="flex items-center gap-2 rounded-md border border-bull/30 bg-bull/10 p-3 text-sm text-bull">
-            <span aria-hidden="true">✓</span>
-            Creator API Key configurada e pronta para confirmar sua compra.
           </div>
           <div className="rounded-md border border-gold/20 bg-gold/10 p-3 text-xs text-gold">
             ⚠ Compre somente com {username ?? "a conta Roblox conectada"}; compras de outras contas
             não serão creditadas.
           </div>
-          <Field label="Quanto deseja depositar em Robux?">
+          <Field label="Valor do depósito em Robux">
             <Input
               type="number"
               min={ROBLOX_MIN_DEPOSIT}
@@ -704,7 +701,7 @@ function RobloxDepositFlow({
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm font-semibold">
                   <span>Game Pass de {fmt(matchingGamePass.robux_amount, 0)} Robux</span>
-                  <span className="text-gold">Aguardando compra</span>
+                  <span className="text-bull">Disponível</span>
                 </div>
                 <a
                   href={`https://www.roblox.com/game-pass/${matchingGamePass.game_pass_id}`}
@@ -733,13 +730,6 @@ function RobloxDepositFlow({
                 Nenhum Game Pass ativo está disponível no momento.
               </p>
             )}
-            <div className="mt-2 text-xs text-gold">
-              ◷ Expira em{" "}
-              {Math.floor(secondsLeft / 60)
-                .toString()
-                .padStart(2, "0")}
-              :{(secondsLeft % 60).toString().padStart(2, "0")}
-            </div>
           </div>
           {depositError && <p className="text-xs text-bear">{depositError}</p>}
           <Button
@@ -751,14 +741,6 @@ function RobloxDepositFlow({
           >
             Confirmar depósito de {fmt(Number(amount) || 0, 0)} Robux
           </Button>
-          <button
-            type="button"
-            disabled={!cancelAvailable || !pendingDeposit}
-            onClick={() => void onCancelDeposit()}
-            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {cancelAvailable ? "Cancelar depósito" : "Cancelar disponível após 60 segundos"}
-          </button>
         </div>
       )}
 
@@ -775,6 +757,12 @@ function RobloxDepositFlow({
           </div>
           <div className="rounded-lg border border-border bg-card p-4 text-left text-sm">
             <div className="flex justify-between">
+              <span>Valor</span>
+              <span className="font-semibold">
+                {fmt(Number(pendingDeposit?.amount ?? amount) || 0, 0)} Robux
+              </span>
+            </div>
+            <div className="mt-2 flex justify-between">
               <span>Status</span>
               <span className="text-gold">Aguardando compra</span>
             </div>
@@ -791,10 +779,11 @@ function RobloxDepositFlow({
           </div>
           <button
             type="button"
-            onClick={() => setStep("link")}
-            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent"
+            disabled={!cancelAvailable || !pendingDeposit}
+            onClick={() => void onCancelDeposit()}
+            className="w-full rounded-md bg-muted px-4 py-3 text-sm font-semibold hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Fechar e acompanhar no histórico
+            {cancelAvailable ? "Cancelar depósito" : "Cancelar disponível após 60 segundos"}
           </button>
         </div>
       )}
