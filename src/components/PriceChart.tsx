@@ -1,7 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from "react";
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, Time } from "lightweight-charts";
+import { Eraser, Hand, Pencil, Save, Trash2 } from "lucide-react";
 
 export type Line = { price: number; color: string; title: string };
+type Point = { x: number; y: number };
+type Stroke = Point[];
+type ChartTool = "pan" | "pencil" | "eraser";
 
 /** O canvas do Lightweight Charts 4.x não aceita a sintaxe oklch do tema. */
 function chartColor(variable: string, fallback: string) {
@@ -17,7 +27,11 @@ function chartColor(variable: string, fallback: string) {
     : fallback;
 }
 
-/** Gráfico de velas ao vivo (Binance), carregado só no navegador. */
+function annotationKey(symbol: string, interval: string) {
+  return `bluxq.chart-annotations.${symbol}.${interval}`;
+}
+
+/** Gráfico de velas ao vivo (Binance), com ferramentas de desenho persistentes. */
 export function PriceChart({
   symbol,
   interval,
@@ -30,12 +44,29 @@ export function PriceChart({
   onPrice: (p: number) => void;
 }) {
   const el = useRef<HTMLDivElement>(null);
+  const drawingEl = useRef<HTMLDivElement>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const priceLines = useRef<IPriceLine[]>([]);
   const cb = useRef(onPrice);
+  const drawingRef = useRef<Stroke | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
+  const [tool, setTool] = useState<ChartTool>("pan");
+  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [saved, setSaved] = useState(false);
   cb.current = onPrice;
+
+  useEffect(() => {
+    try {
+      const stored = JSON.parse(
+        localStorage.getItem(annotationKey(symbol, interval)) ?? "[]",
+      ) as unknown;
+      setStrokes(Array.isArray(stored) ? (stored as Stroke[]) : []);
+    } catch {
+      setStrokes([]);
+    }
+    setSaved(false);
+  }, [symbol, interval]);
 
   useEffect(() => {
     let chart: IChartApi | undefined;
@@ -78,11 +109,7 @@ export function PriceChart({
           const [timestamp, open, high, low, close] = row;
           const values = [timestamp, open, high, low, close].map(Number);
           const [timestampValue, openValue, highValue, lowValue, closeValue] = values;
-          if (
-            values.length !== 5 ||
-            values.some((value) => !Number.isFinite(value)) ||
-            values.some((value) => value <= 0)
-          ) {
+          if (values.some((value) => !Number.isFinite(value) || value <= 0)) {
             throw new Error("A Binance retornou um candle inválido");
           }
           return {
@@ -163,9 +190,113 @@ export function PriceChart({
     return () => clearInterval(t);
   }, [lines]);
 
+  function pointFromEvent(event: ReactPointerEvent<HTMLDivElement>): Point | null {
+    const rect = drawingEl.current?.getBoundingClientRect();
+    if (!rect || !rect.width || !rect.height) return null;
+    return {
+      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
+    };
+  }
+
+  function startDrawing(event: ReactPointerEvent<HTMLDivElement>) {
+    if (tool === "pan") return;
+    const point = pointFromEvent(event);
+    if (!point) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    if (tool === "eraser") {
+      setStrokes((current) => current.slice(0, -1));
+      return;
+    }
+    drawingRef.current = [point];
+    setStrokes((current) => [...current, [point]]);
+  }
+
+  function moveDrawing(event: ReactPointerEvent<HTMLDivElement>) {
+    if (tool !== "pencil" || !drawingRef.current) return;
+    const point = pointFromEvent(event);
+    if (!point) return;
+    drawingRef.current = [...drawingRef.current, point];
+    setStrokes((current) => [...current.slice(0, -1), drawingRef.current!]);
+  }
+
+  function stopDrawing(event: ReactPointerEvent<HTMLDivElement>) {
+    drawingRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
+
+  function saveAnnotations() {
+    localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(strokes));
+    setSaved(true);
+    window.setTimeout(() => setSaved(false), 1800);
+  }
+
+  function clearAnnotations() {
+    setStrokes([]);
+    localStorage.removeItem(annotationKey(symbol, interval));
+    setSaved(false);
+  }
+
   return (
     <div className="relative h-full w-full">
       <div ref={el} className="h-full w-full" />
+      <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/75 p-1 backdrop-blur">
+        <ToolButton
+          active={tool === "pan"}
+          label="Navegar e arrastar o gráfico"
+          onClick={() => setTool("pan")}
+        >
+          <Hand className="h-3.5 w-3.5" />
+        </ToolButton>
+        <ToolButton
+          active={tool === "pencil"}
+          label="Desenhar no gráfico"
+          onClick={() => setTool("pencil")}
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </ToolButton>
+        <ToolButton
+          label="Apagar última marcação"
+          onClick={() => setStrokes((current) => current.slice(0, -1))}
+        >
+          <Eraser className="h-3.5 w-3.5" />
+        </ToolButton>
+        <ToolButton label="Limpar marcações" onClick={clearAnnotations}>
+          <Trash2 className="h-3.5 w-3.5" />
+        </ToolButton>
+        <ToolButton label="Salvar marcações" onClick={saveAnnotations}>
+          <Save className={`h-3.5 w-3.5 ${saved ? "text-bull" : ""}`} />
+        </ToolButton>
+        <span className="px-1 text-[10px] text-muted-foreground">
+          {saved ? "Salvo" : `${strokes.length} marcações`}
+        </span>
+      </div>
+      <div
+        ref={drawingEl}
+        className={`absolute inset-0 ${tool === "pencil" ? "cursor-crosshair" : tool === "eraser" ? "cursor-cell" : "pointer-events-none"}`}
+        onPointerDown={startDrawing}
+        onPointerMove={moveDrawing}
+        onPointerUp={stopDrawing}
+        onPointerCancel={stopDrawing}
+        aria-label="Camada de anotações do gráfico"
+      >
+        <svg className="h-full w-full overflow-visible" preserveAspectRatio="none">
+          {strokes.map((stroke, index) => (
+            <polyline
+              key={index}
+              points={stroke.map((point) => `${point.x * 100}%,${point.y * 100}%`).join(" ")}
+              fill="none"
+              stroke="#facc15"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+        </svg>
+      </div>
       {status === "loading" && (
         <div className="pointer-events-none absolute inset-0 grid place-items-center text-sm text-muted-foreground">
           Carregando candles da Binance…
@@ -184,5 +315,29 @@ export function PriceChart({
         </div>
       )}
     </div>
+  );
+}
+
+function ToolButton({
+  active = false,
+  label,
+  onClick,
+  children,
+}: {
+  active?: boolean;
+  label: string;
+  onClick: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      title={label}
+      aria-label={label}
+      className={`rounded p-1.5 transition-colors ${active ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-white/10 hover:text-foreground"}`}
+    >
+      {children}
+    </button>
   );
 }

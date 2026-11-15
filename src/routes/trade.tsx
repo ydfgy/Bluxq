@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GripVertical,
+  GripHorizontal,
   Minus,
   Search,
   Settings2,
@@ -166,6 +167,12 @@ function Trade() {
   const [quickTradeOpen, setQuickTradeOpen] = useState(true);
   const { data: tickers, dataUpdatedAt: tickersUpdatedAt } = useTickers();
   const [chartPriceUpdatedAt, setChartPriceUpdatedAt] = useState(0);
+  const [chartHeight, setChartHeight] = useState(() => {
+    if (typeof window === "undefined") return 552;
+    const stored = Number(window.localStorage.getItem("bluxq.chart-height"));
+    return Number.isFinite(stored) ? Math.min(900, Math.max(460, stored)) : 552;
+  });
+  const chartResizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const orderBook = useOrderBook(symbol);
   useEffect(() => {
@@ -178,6 +185,10 @@ function Trade() {
       // Prefer the in-memory settings when storage is unavailable.
     }
   }, [margin, lev]);
+
+  useEffect(() => {
+    window.localStorage.setItem("bluxq.chart-height", String(chartHeight));
+  }, [chartHeight]);
   const { data: pool, error: poolError } = useQuery({
     queryKey: ["market-pool", symbol],
     refetchInterval: 5000,
@@ -295,6 +306,31 @@ function Trade() {
   const liqLong = calcLiquidationPrice("long", currentPrice, lev);
   const liqShort = calcLiquidationPrice("short", currentPrice, lev);
   const orderBlocked = busy || !currentPrice;
+
+  function startChartResize(event: PointerEvent<HTMLDivElement>) {
+    chartResizeRef.current = { startY: event.clientY, startHeight: chartHeight };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+
+  function moveChartResize(event: PointerEvent<HTMLDivElement>) {
+    if (!chartResizeRef.current) return;
+    const nextHeight = Math.min(
+      900,
+      Math.max(
+        460,
+        chartResizeRef.current.startHeight + event.clientY - chartResizeRef.current.startY,
+      ),
+    );
+    setChartHeight(nextHeight);
+  }
+
+  function stopChartResize(event: PointerEvent<HTMLDivElement>) {
+    if (!chartResizeRef.current) return;
+    chartResizeRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }
 
   useEffect(() => {
     if (pool && lev > sliderMax) setLev(sliderMax);
@@ -718,7 +754,7 @@ function Trade() {
               ))}
             </div>
           </div>
-          <div className="h-[460px] bg-black p-1">
+          <div className="relative bg-black p-1" style={{ height: chartHeight }}>
             <PriceChart
               symbol={symbol}
               interval={interval}
@@ -728,6 +764,18 @@ function Trade() {
                 setChartPriceUpdatedAt(Date.now());
               }}
             />
+            <div
+              role="separator"
+              aria-label="Arraste para aumentar ou reduzir a altura do gráfico"
+              title="Arraste para redimensionar o gráfico"
+              onPointerDown={startChartResize}
+              onPointerMove={moveChartResize}
+              onPointerUp={stopChartResize}
+              onPointerCancel={stopChartResize}
+              className="absolute inset-x-0 bottom-0 z-20 flex h-3 cursor-row-resize items-center justify-center bg-black/70 text-muted-foreground transition-colors hover:text-primary"
+            >
+              <GripHorizontal className="h-3.5 w-8" aria-hidden="true" />
+            </div>
           </div>
         </div>
 
