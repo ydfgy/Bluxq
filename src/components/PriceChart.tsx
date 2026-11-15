@@ -1,4 +1,20 @@
 import {
+  ArrowUpRight,
+  Crosshair,
+  Eye,
+  Hand,
+  LockKeyhole,
+  Magnet,
+  Minus,
+  MoveVertical,
+  Pencil,
+  Ruler,
+  RotateCcw,
+  Save,
+  Trash2,
+  ZoomIn,
+} from "lucide-react";
+import {
   useEffect,
   useRef,
   useState,
@@ -6,12 +22,11 @@ import {
   type ReactNode,
 } from "react";
 import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, Time } from "lightweight-charts";
-import { Eraser, Hand, Pencil, Save, Trash2 } from "lucide-react";
 
 export type Line = { price: number; color: string; title: string };
 type Point = { x: number; y: number };
-type Stroke = Point[];
-type ChartTool = "pan" | "pencil" | "eraser";
+type Annotation = { kind: "freehand" | "line" | "hline" | "vline"; points: Point[] };
+type ChartTool = "pan" | Annotation["kind"];
 
 /** O canvas do Lightweight Charts 4.x não aceita a sintaxe oklch do tema. */
 function chartColor(variable: string, fallback: string) {
@@ -45,15 +60,19 @@ export function PriceChart({
 }) {
   const el = useRef<HTMLDivElement>(null);
   const drawingEl = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const priceLines = useRef<IPriceLine[]>([]);
   const cb = useRef(onPrice);
-  const drawingRef = useRef<Stroke | null>(null);
+  const drawingRef = useRef<Annotation | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [error, setError] = useState("");
   const [tool, setTool] = useState<ChartTool>("pan");
-  const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [saved, setSaved] = useState(false);
+  const [showAnnotations, setShowAnnotations] = useState(true);
+  const [locked, setLocked] = useState(false);
+  const [snapEnabled, setSnapEnabled] = useState(false);
   cb.current = onPrice;
 
   useEffect(() => {
@@ -61,17 +80,17 @@ export function PriceChart({
       const stored = JSON.parse(
         localStorage.getItem(annotationKey(symbol, interval)) ?? "[]",
       ) as unknown;
-      setStrokes(Array.isArray(stored) ? (stored as Stroke[]) : []);
+      setAnnotations(Array.isArray(stored) ? (stored as Annotation[]) : []);
     } catch {
-      setStrokes([]);
+      setAnnotations([]);
     }
     setSaved(false);
   }, [symbol, interval]);
 
   useEffect(() => {
     try {
-      localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(strokes));
-      if (strokes.length > 0) {
+      localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(annotations));
+      if (annotations.length > 0) {
         setSaved(true);
         const timer = window.setTimeout(() => setSaved(false), 1200);
         return () => window.clearTimeout(timer);
@@ -80,7 +99,7 @@ export function PriceChart({
       // Mantém as marcações na memória se o navegador bloquear o armazenamento local.
     }
     return undefined;
-  }, [strokes, symbol, interval]);
+  }, [annotations, symbol, interval]);
 
   useEffect(() => {
     let chart: IChartApi | undefined;
@@ -100,6 +119,7 @@ export function PriceChart({
           crosshair: { mode: CrosshairMode.Normal },
           timeScale: { timeVisible: true, secondsVisible: false },
         });
+        chartRef.current = chart;
         const s = chart.addCandlestickSeries({
           upColor: "#16a34a",
           downColor: "#dc2626",
@@ -179,6 +199,7 @@ export function PriceChart({
       dead = true;
       ws?.close();
       chart?.remove();
+      chartRef.current = null;
       seriesRef.current = null;
       priceLines.current = [];
     };
@@ -207,31 +228,43 @@ export function PriceChart({
   function pointFromEvent(event: ReactPointerEvent<HTMLDivElement>): Point | null {
     const rect = drawingEl.current?.getBoundingClientRect();
     if (!rect || !rect.width || !rect.height) return null;
+    const rawX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    const rawY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
     return {
-      x: Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width)),
-      y: Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height)),
+      x: snapEnabled ? Math.round(rawX * 100) / 100 : rawX,
+      y: snapEnabled ? Math.round(rawY * 100) / 100 : rawY,
     };
   }
 
   function startDrawing(event: ReactPointerEvent<HTMLDivElement>) {
-    if (tool === "pan") return;
+    if (tool === "pan" || locked) return;
     const point = pointFromEvent(event);
     if (!point) return;
     event.currentTarget.setPointerCapture(event.pointerId);
-    if (tool === "eraser") {
-      setStrokes((current) => current.slice(0, -1));
-      return;
-    }
-    drawingRef.current = [point];
-    setStrokes((current) => [...current, [point]]);
+    const kind = tool as Annotation["kind"];
+    const annotation: Annotation = { kind, points: [point, point] };
+    drawingRef.current = annotation;
+    setAnnotations((current) => [...current, annotation]);
   }
 
   function moveDrawing(event: ReactPointerEvent<HTMLDivElement>) {
-    if (tool !== "pencil" || !drawingRef.current) return;
+    if (!drawingRef.current) return;
     const point = pointFromEvent(event);
     if (!point) return;
-    drawingRef.current = [...drawingRef.current, point];
-    setStrokes((current) => [...current.slice(0, -1), drawingRef.current!]);
+    const current = drawingRef.current;
+    const points =
+      current.kind === "freehand"
+        ? [...current.points, point]
+        : [
+            current.points[0]!,
+            current.kind === "hline"
+              ? { x: point.x, y: current.points[0]!.y }
+              : current.kind === "vline"
+                ? { x: current.points[0]!.x, y: point.y }
+                : point,
+          ];
+    drawingRef.current = { ...current, points };
+    setAnnotations((items) => [...items.slice(0, -1), drawingRef.current!]);
   }
 
   function stopDrawing(event: ReactPointerEvent<HTMLDivElement>) {
@@ -242,13 +275,13 @@ export function PriceChart({
   }
 
   function saveAnnotations() {
-    localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(strokes));
+    localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(annotations));
     setSaved(true);
     window.setTimeout(() => setSaved(false), 1800);
   }
 
   function clearAnnotations() {
-    setStrokes([]);
+    setAnnotations([]);
     localStorage.removeItem(annotationKey(symbol, interval));
     setSaved(false);
   }
@@ -256,59 +289,121 @@ export function PriceChart({
   return (
     <div className="relative h-full w-full">
       <div ref={el} className="h-full w-full" />
-      <div className="pointer-events-auto absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/75 p-1 backdrop-blur">
+      <div className="pointer-events-auto absolute left-1 top-2 z-10 flex max-h-[calc(100%-1rem)] w-9 flex-col items-center gap-0.5 overflow-y-auto rounded-lg border border-white/15 bg-black/85 p-1 backdrop-blur">
         <ToolButton
           active={tool === "pan"}
           label="Navegar e arrastar o gráfico"
           onClick={() => setTool("pan")}
         >
-          <Hand className="h-3.5 w-3.5" />
+          <Hand className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton active={tool === "pan"} label="Cursor e mira" onClick={() => setTool("pan")}>
+          <Crosshair className="h-4 w-4" />
+        </ToolButton>
+        <ToolDivider />
+        <ToolButton
+          active={tool === "freehand"}
+          label="Lápis / desenho livre"
+          onClick={() => setTool("freehand")}
+        >
+          <Pencil className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          active={tool === "pencil"}
-          label="Desenhar no gráfico"
-          onClick={() => setTool("pencil")}
+          active={tool === "line"}
+          label="Linha de tendência"
+          onClick={() => setTool("line")}
         >
-          <Pencil className="h-3.5 w-3.5" />
+          <ArrowUpRight className="h-4 w-4" />
         </ToolButton>
         <ToolButton
-          label="Apagar última marcação"
-          onClick={() => setStrokes((current) => current.slice(0, -1))}
+          active={tool === "hline"}
+          label="Linha horizontal"
+          onClick={() => setTool("hline")}
         >
-          <Eraser className="h-3.5 w-3.5" />
+          <Minus className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton
+          active={tool === "vline"}
+          label="Linha vertical"
+          onClick={() => setTool("vline")}
+        >
+          <MoveVertical className="h-4 w-4" />
+        </ToolButton>
+        <ToolDivider />
+        <ToolButton
+          label="Enquadrar gráfico"
+          onClick={() => chartRef.current?.timeScale().fitContent()}
+        >
+          <ZoomIn className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton
+          active={snapEnabled}
+          label="Ativar imã de pontos"
+          onClick={() => setSnapEnabled((value) => !value)}
+        >
+          <Magnet className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton
+          active={!showAnnotations}
+          label="Mostrar ou ocultar desenhos"
+          onClick={() => setShowAnnotations((value) => !value)}
+        >
+          <Eye className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton
+          active={locked}
+          label="Bloquear ou desbloquear desenhos"
+          onClick={() => setLocked((value) => !value)}
+        >
+          <LockKeyhole className="h-4 w-4" />
+        </ToolButton>
+        <ToolDivider />
+        <ToolButton
+          label="Desfazer última marcação"
+          onClick={() => setAnnotations((current) => current.slice(0, -1))}
+        >
+          <RotateCcw className="h-4 w-4" />
+        </ToolButton>
+        <ToolButton label="Régua / medir distância" onClick={() => setTool("line")}>
+          <Ruler className="h-4 w-4" />
         </ToolButton>
         <ToolButton label="Limpar marcações" onClick={clearAnnotations}>
-          <Trash2 className="h-3.5 w-3.5" />
+          <Trash2 className="h-4 w-4" />
         </ToolButton>
         <ToolButton label="Salvar marcações" onClick={saveAnnotations}>
-          <Save className={`h-3.5 w-3.5 ${saved ? "text-bull" : ""}`} />
+          <Save className={`h-4 w-4 ${saved ? "text-bull" : ""}`} />
         </ToolButton>
-        <span className="px-1 text-[10px] text-muted-foreground">
-          {saved ? "Salvo" : `${strokes.length} marcações`}
-        </span>
+        <span className="py-0.5 text-[8px] text-muted-foreground">{annotations.length}</span>
       </div>
       <div
         ref={drawingEl}
-        className={`absolute inset-0 ${tool === "pencil" ? "cursor-crosshair" : tool === "eraser" ? "cursor-cell" : "pointer-events-none"}`}
+        className={`absolute inset-0 ${tool !== "pan" && !locked ? "cursor-crosshair" : "pointer-events-none"}`}
         onPointerDown={startDrawing}
         onPointerMove={moveDrawing}
         onPointerUp={stopDrawing}
         onPointerCancel={stopDrawing}
         aria-label="Camada de anotações do gráfico"
       >
-        <svg className="h-full w-full overflow-visible" preserveAspectRatio="none">
-          {strokes.map((stroke, index) => (
-            <polyline
-              key={index}
-              points={stroke.map((point) => `${point.x * 100}%,${point.y * 100}%`).join(" ")}
-              fill="none"
-              stroke="#facc15"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              vectorEffect="non-scaling-stroke"
-            />
-          ))}
+        <svg
+          className="h-full w-full overflow-visible"
+          viewBox="0 0 1000 1000"
+          preserveAspectRatio="none"
+        >
+          {showAnnotations &&
+            annotations.map((annotation, index) => (
+              <polyline
+                key={index}
+                points={annotation.points
+                  .map((point) => `${point.x * 1000},${point.y * 1000}`)
+                  .join(" ")}
+                fill="none"
+                stroke="#facc15"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                vectorEffect="non-scaling-stroke"
+              />
+            ))}
         </svg>
       </div>
       {status === "loading" && (
@@ -354,4 +449,8 @@ function ToolButton({
       {children}
     </button>
   );
+}
+
+function ToolDivider() {
+  return <span className="my-0.5 h-px w-6 bg-white/15" aria-hidden="true" />;
 }
