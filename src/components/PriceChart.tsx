@@ -239,6 +239,7 @@ export function PriceChart({
   function startDrawing(event: ReactPointerEvent<HTMLDivElement>) {
     if (tool === "pan" || locked) return;
     event.preventDefault();
+    event.stopPropagation();
     const point = pointFromEvent(event);
     if (!point) return;
     try {
@@ -255,6 +256,7 @@ export function PriceChart({
   function moveDrawing(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drawingRef.current) return;
     event.preventDefault();
+    event.stopPropagation();
     const point = pointFromEvent(event);
     if (!point) return;
     const current = drawingRef.current;
@@ -274,6 +276,7 @@ export function PriceChart({
   }
 
   function stopDrawing(event: ReactPointerEvent<HTMLDivElement>) {
+    event.stopPropagation();
     drawingRef.current = null;
     try {
       if (event.currentTarget.hasPointerCapture(event.pointerId)) {
@@ -299,7 +302,7 @@ export function PriceChart({
   return (
     <div className="relative h-full w-full">
       <div ref={el} className="h-full w-full" />
-      <div className="pointer-events-auto absolute left-1 top-2 z-10 flex max-h-[calc(100%-1rem)] w-9 flex-col items-center gap-0.5 overflow-y-auto rounded-lg border border-white/15 bg-black/85 p-1 backdrop-blur">
+      <div className="pointer-events-auto absolute left-1 top-2 z-30 flex max-h-[calc(100%-1rem)] w-9 flex-col items-center gap-0.5 overflow-y-auto rounded-lg border border-white/15 bg-black/85 p-1 backdrop-blur">
         <ToolButton
           active={tool === "pan"}
           label="Navegar e arrastar o gráfico"
@@ -387,7 +390,7 @@ export function PriceChart({
       </div>
       <div
         ref={drawingEl}
-        className={`absolute inset-0 touch-none select-none ${tool !== "pan" && !locked ? "cursor-crosshair" : "pointer-events-none"}`}
+        className={`absolute inset-0 touch-none select-none ${tool !== "pan" && !locked ? "z-20 pointer-events-auto cursor-crosshair" : "pointer-events-none z-0"}`}
         onPointerDown={startDrawing}
         onPointerMove={moveDrawing}
         onPointerUp={stopDrawing}
