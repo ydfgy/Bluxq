@@ -9,9 +9,9 @@ import {
   ChevronLeft,
   ChevronRight,
   GripVertical,
-  Maximize2,
   Minus,
   Search,
+  Settings2,
   ShieldCheck,
   TrendingUp,
   X,
@@ -63,6 +63,20 @@ export const Route = createFileRoute("/trade")({
 });
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
+const QUICK_TRADE_SETTINGS_KEY = "bluxq.quick-trade-settings";
+
+function readQuickTradeSettings() {
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(QUICK_TRADE_SETTINGS_KEY) ?? "null") as {
+      margin?: string;
+      leverage?: number;
+    } | null;
+    return stored && typeof stored === "object" ? stored : null;
+  } catch {
+    return null;
+  }
+}
 
 function marginWithinBudget(balance: number, fraction = 1) {
   const budgetCents = Math.max(0, Math.floor(balance * fraction * 100 + 0.000001));
@@ -129,6 +143,7 @@ function Trade() {
   const nav = useNavigate();
   const { data: profile } = useProfile();
   const qc = useQueryClient();
+  const savedQuickTradeSettings = readQuickTradeSettings();
   const [symbol, setSymbol] = useState(() => {
     if (typeof window === "undefined") return "BTCUSDT";
     const requested = new URLSearchParams(window.location.search).get("symbol");
@@ -136,8 +151,8 @@ function Trade() {
   });
   const [interval, setIntervalV] = useState("15m");
   const [price, setPrice] = useState(0);
-  const [margin, setMargin] = useState("100");
-  const [lev, setLev] = useState(MIN_LEVERAGE);
+  const [margin, setMargin] = useState(savedQuickTradeSettings?.margin ?? "100");
+  const [lev, setLev] = useState(savedQuickTradeSettings?.leverage ?? MIN_LEVERAGE);
   const [busy, setBusy] = useState(false);
   const [rain, setRain] = useState(0);
   const [marketMenuOpen, setMarketMenuOpen] = useState(false);
@@ -148,10 +163,21 @@ function Trade() {
   const [selectedPosition, setSelectedPosition] = useState<PositionDetails | null>(null);
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [orderPanelOpen, setOrderPanelOpen] = useState(true);
+  const [quickTradeOpen, setQuickTradeOpen] = useState(true);
   const { data: tickers, dataUpdatedAt: tickersUpdatedAt } = useTickers();
   const [chartPriceUpdatedAt, setChartPriceUpdatedAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
   const orderBook = useOrderBook(symbol);
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        QUICK_TRADE_SETTINGS_KEY,
+        JSON.stringify({ margin, leverage: lev }),
+      );
+    } catch {
+      // Prefer the in-memory settings when storage is unavailable.
+    }
+  }, [margin, lev]);
   const { data: pool, error: poolError } = useQuery({
     queryKey: ["market-pool", symbol],
     refetchInterval: 5000,
@@ -323,6 +349,11 @@ function Trade() {
       setBusy(false);
     }
   }
+
+  function applyMarginPreset(fraction: number) {
+    setMargin(marginWithinBudget(balance, fraction).toFixed(2));
+  }
+
   async function doClose(id: string) {
     try {
       const r = await close({ data: { id } });
@@ -435,16 +466,35 @@ function Trade() {
 
   return (
     <main
-      className={`mx-auto grid max-w-[1800px] -translate-y-1 gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_256px]" : "lg:grid-cols-[40px_minmax(0,1fr)_256px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_256px]" : "lg:grid-cols-[minmax(0,1fr)_40px_256px]"}`}
+      className={`mx-auto grid max-w-[1800px] gap-3 p-3 ${orderBookSide === "left" ? (orderBookOpen ? "lg:grid-cols-[220px_minmax(0,1fr)_256px]" : "lg:grid-cols-[40px_minmax(0,1fr)_256px]") : orderBookOpen ? "lg:grid-cols-[minmax(0,1fr)_220px_256px]" : "lg:grid-cols-[minmax(0,1fr)_40px_256px]"}`}
     >
       <CoinRain show={rain} />
-      <QuickTradeWidget
-        symbol={selectedMarket.base}
-        bidPrice={bestBid}
-        askPrice={bestAsk}
-        disabled={orderBlocked}
-        onTrade={go}
-      />
+      {quickTradeOpen ? (
+        <QuickTradeWidget
+          symbol={selectedMarket.base}
+          bidPrice={bestBid}
+          askPrice={bestAsk}
+          disabled={orderBlocked}
+          margin={margin}
+          leverage={lev}
+          maxLeverage={MAX_LEVERAGE}
+          onMarginChange={setMargin}
+          onLeverageChange={setLev}
+          onMarginPreset={applyMarginPreset}
+          onTrade={go}
+          onMinimize={() => setQuickTradeOpen(false)}
+        />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setQuickTradeOpen(true)}
+          className="fixed right-4 top-1/3 z-40 rounded-lg border border-border bg-card p-2 text-muted-foreground shadow-lg transition-colors hover:border-primary hover:text-primary"
+          aria-label="Reabrir ticket rápido de compra e venda"
+          title="Reabrir ticket rápido"
+        >
+          <Settings2 aria-hidden="true" className="h-4 w-4" />
+        </button>
+      )}
       {/* livro de ordens e posições abertas */}
       <section
         className={`order-2 space-y-3 ${orderBookSide === "left" ? "lg:order-1" : "lg:order-2"}`}
@@ -1262,7 +1312,14 @@ type QuickTradeWidgetProps = {
   bidPrice: number;
   askPrice: number;
   disabled: boolean;
+  margin: string;
+  leverage: number;
+  maxLeverage: number;
+  onMarginChange: (value: string) => void;
+  onLeverageChange: (value: number) => void;
+  onMarginPreset: (fraction: number) => void;
   onTrade: (side: "long" | "short") => void;
+  onMinimize: () => void;
 };
 
 function QuickTradeWidget({
@@ -1270,9 +1327,16 @@ function QuickTradeWidget({
   bidPrice,
   askPrice,
   disabled,
+  margin,
+  leverage,
+  maxLeverage,
+  onMarginChange,
+  onLeverageChange,
+  onMarginPreset,
   onTrade,
+  onMinimize,
 }: QuickTradeWidgetProps) {
-  const [minimized, setMinimized] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 18, y: 148 });
   const panelRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ offsetX: number; offsetY: number } | null>(null);
@@ -1327,49 +1391,96 @@ function QuickTradeWidget({
         <span className="ml-auto text-[9px] uppercase tracking-[0.14em]">rápido</span>
         <button
           type="button"
-          onClick={() => setMinimized((value) => !value)}
+          onClick={() => setSettingsOpen((value) => !value)}
           className="rounded p-0.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
-          aria-label={minimized ? "Reabrir ticket" : "Minimizar ticket"}
-          title={minimized ? "Reabrir" : "Minimizar"}
+          aria-label="Abrir configurações do ticket"
+          title="Configurações"
         >
-          {minimized ? (
-            <Maximize2 aria-hidden="true" className="h-3.5 w-3.5" />
-          ) : (
-            <Minus aria-hidden="true" className="h-3.5 w-3.5" />
-          )}
+          <Settings2 aria-hidden="true" className="h-3.5 w-3.5" />
+        </button>
+        <button
+          type="button"
+          onClick={onMinimize}
+          className="rounded p-0.5 text-muted-foreground hover:bg-white/10 hover:text-foreground"
+          aria-label="Minimizar ticket"
+          title="Minimizar"
+        >
+          <Minus aria-hidden="true" className="h-3.5 w-3.5" />
         </button>
       </div>
-      {!minimized && (
-        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
-          <button
-            type="button"
-            disabled={disabled || bidPrice <= 0}
-            onClick={() => onTrade("short")}
-            className="rounded-md border border-bear/80 bg-bear/10 px-2 py-1.5 text-left leading-none transition-colors hover:bg-bear/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="block font-mono text-[11px] font-semibold text-bear">
-              {bidPrice > 0 ? fmtPrice(bidPrice) : "—"}
-            </span>
-            <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-bear/80">
-              Vender
-            </span>
-          </button>
-          <span className="text-[10px] text-border">|</span>
-          <button
-            type="button"
-            disabled={disabled || askPrice <= 0}
-            onClick={() => onTrade("long")}
-            className="rounded-md border border-primary/80 bg-primary/10 px-2 py-1.5 text-right leading-none transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <span className="block font-mono text-[11px] font-semibold text-primary">
-              {askPrice > 0 ? fmtPrice(askPrice) : "—"}
-            </span>
-            <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-primary/80">
-              Comprar
-            </span>
-          </button>
+      {settingsOpen && (
+        <div className="space-y-2 border-t border-border px-2 py-2 text-[10px]">
+          <div className="flex items-center justify-between gap-2">
+            <label htmlFor="quick-trade-margin" className="text-muted-foreground">
+              Margem padrão
+            </label>
+            <input
+              id="quick-trade-margin"
+              type="number"
+              min={10}
+              step="0.01"
+              value={margin}
+              onChange={(event) => onMarginChange(event.target.value)}
+              className="h-7 w-24 rounded border border-input bg-background px-2 text-right font-mono text-xs outline-none focus:border-primary"
+            />
+          </div>
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span>Alavancagem padrão</span>
+            <span className="font-mono text-primary">{leverage}x</span>
+          </div>
+          <input
+            aria-label="Alavancagem padrão"
+            type="range"
+            min={MIN_LEVERAGE}
+            max={maxLeverage}
+            step={1}
+            value={Math.min(leverage, maxLeverage)}
+            onChange={(event) => onLeverageChange(Number(event.target.value))}
+            className="blux-range"
+          />
+          <div className="flex items-center gap-1">
+            {[0.25, 0.5, 1].map((fraction) => (
+              <button
+                key={fraction}
+                type="button"
+                onClick={() => onMarginPreset(fraction)}
+                className="flex-1 rounded border border-border px-1 py-1 text-muted-foreground hover:border-primary hover:text-primary"
+              >
+                {fraction * 100}%
+              </button>
+            ))}
+          </div>
         </div>
       )}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-1">
+        <button
+          type="button"
+          disabled={disabled || bidPrice <= 0}
+          onClick={() => onTrade("short")}
+          className="rounded-md border border-bear/80 bg-bear/10 px-2 py-1.5 text-left leading-none transition-colors hover:bg-bear/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className="block font-mono text-[11px] font-semibold text-bear">
+            {bidPrice > 0 ? fmtPrice(bidPrice) : "—"}
+          </span>
+          <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-bear/80">
+            Vender
+          </span>
+        </button>
+        <span className="text-[10px] text-border">|</span>
+        <button
+          type="button"
+          disabled={disabled || askPrice <= 0}
+          onClick={() => onTrade("long")}
+          className="rounded-md border border-primary/80 bg-primary/10 px-2 py-1.5 text-right leading-none transition-colors hover:bg-primary/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <span className="block font-mono text-[11px] font-semibold text-primary">
+            {askPrice > 0 ? fmtPrice(askPrice) : "—"}
+          </span>
+          <span className="mt-0.5 block text-[9px] font-bold uppercase tracking-wide text-primary/80">
+            Comprar
+          </span>
+        </button>
+      </div>
     </div>
   );
 }

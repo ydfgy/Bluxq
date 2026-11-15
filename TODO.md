@@ -1,6 +1,6 @@
 # TODO
 
-- [x] Adicionar um ticket compacto flutuante de compra/venda no trading, com melhor preço do order book, ações Long/Short, arraste pela tela e estado minimizado/reaberto.
+- [x] Adicionar um ticket compacto flutuante de compra/venda no trading, com melhor preço do order book, ações Long/Short, arraste pelo próprio cartão sem deslocamento, engrenagem para margem/alavancagem/atalhos persistentes e minimização para um ícone lateral que reabre o ticket.
 - [x] Reorganizar o depósito Roblox em um fluxo linear: vincular conta, solicitar a Creator API Key apenas quando ainda não existir, informar o valor em Robux, confirmar e acompanhar a transação sem avisos redundantes.
 - [ ] Cada stake deve registrar valor, moeda, data de início, prazo próprio e data de desbloqueio, sem misturar aportes diferentes do mesmo usuário.
 - [ ] A tela deve mostrar quanto está travado, quanto tempo falta, valor atual e PnL em porcentagem para cada posição.
