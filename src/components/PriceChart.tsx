@@ -1,19 +1,4 @@
-import {
-  ArrowUpRight,
-  Crosshair,
-  Eye,
-  Hand,
-  LockKeyhole,
-  Magnet,
-  Minus,
-  MoveVertical,
-  Pencil,
-  Ruler,
-  RotateCcw,
-  Save,
-  Trash2,
-  ZoomIn,
-} from "lucide-react";
+import { ArrowUpRight, Hand, Pencil, RotateCcw, Save, Trash2 } from "lucide-react";
 import {
   useEffect,
   useRef,
@@ -25,7 +10,7 @@ import type { CandlestickData, IChartApi, IPriceLine, ISeriesApi, Time } from "l
 
 export type Line = { price: number; color: string; title: string };
 type Point = { x: number; y: number };
-type Annotation = { kind: "freehand" | "line" | "hline" | "vline"; points: Point[] };
+type Annotation = { kind: "freehand" | "line"; points: Point[] };
 type ChartTool = "pan" | Annotation["kind"];
 
 /** O canvas do Lightweight Charts 4.x não aceita a sintaxe oklch do tema. */
@@ -60,7 +45,6 @@ export function PriceChart({
 }) {
   const el = useRef<HTMLDivElement>(null);
   const drawingEl = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
   const seriesRef = useRef<ISeriesApi<"Candlestick", Time> | null>(null);
   const priceLines = useRef<IPriceLine[]>([]);
   const cb = useRef(onPrice);
@@ -70,9 +54,6 @@ export function PriceChart({
   const [tool, setTool] = useState<ChartTool>("pan");
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [saved, setSaved] = useState(false);
-  const [showAnnotations, setShowAnnotations] = useState(true);
-  const [locked, setLocked] = useState(false);
-  const [snapEnabled, setSnapEnabled] = useState(false);
   cb.current = onPrice;
 
   useEffect(() => {
@@ -119,7 +100,6 @@ export function PriceChart({
           crosshair: { mode: CrosshairMode.Normal },
           timeScale: { timeVisible: true, secondsVisible: false },
         });
-        chartRef.current = chart;
         const s = chart.addCandlestickSeries({
           upColor: "#16a34a",
           downColor: "#dc2626",
@@ -199,7 +179,6 @@ export function PriceChart({
       dead = true;
       ws?.close();
       chart?.remove();
-      chartRef.current = null;
       seriesRef.current = null;
       priceLines.current = [];
     };
@@ -230,14 +209,11 @@ export function PriceChart({
     if (!rect || !rect.width || !rect.height) return null;
     const rawX = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
     const rawY = Math.max(0, Math.min(1, (event.clientY - rect.top) / rect.height));
-    return {
-      x: snapEnabled ? Math.round(rawX * 100) / 100 : rawX,
-      y: snapEnabled ? Math.round(rawY * 100) / 100 : rawY,
-    };
+    return { x: rawX, y: rawY };
   }
 
   function startDrawing(event: ReactPointerEvent<HTMLDivElement>) {
-    if (tool === "pan" || locked) return;
+    if (tool === "pan") return;
     event.preventDefault();
     event.stopPropagation();
     const point = pointFromEvent(event);
@@ -261,16 +237,7 @@ export function PriceChart({
     if (!point) return;
     const current = drawingRef.current;
     const points =
-      current.kind === "freehand"
-        ? [...current.points, point]
-        : [
-            current.points[0]!,
-            current.kind === "hline"
-              ? { x: point.x, y: current.points[0]!.y }
-              : current.kind === "vline"
-                ? { x: current.points[0]!.x, y: point.y }
-                : point,
-          ];
+      current.kind === "freehand" ? [...current.points, point] : [current.points[0]!, point];
     drawingRef.current = { ...current, points };
     setAnnotations((items) => [...items.slice(0, -1), drawingRef.current!]);
   }
@@ -310,10 +277,6 @@ export function PriceChart({
         >
           <Hand className="h-4 w-4" />
         </ToolButton>
-        <ToolButton active={tool === "pan"} label="Cursor e mira" onClick={() => setTool("pan")}>
-          <Crosshair className="h-4 w-4" />
-        </ToolButton>
-        <ToolDivider />
         <ToolButton
           active={tool === "freehand"}
           label="Lápis / desenho livre"
@@ -328,57 +291,12 @@ export function PriceChart({
         >
           <ArrowUpRight className="h-4 w-4" />
         </ToolButton>
-        <ToolButton
-          active={tool === "hline"}
-          label="Linha horizontal"
-          onClick={() => setTool("hline")}
-        >
-          <Minus className="h-4 w-4" />
-        </ToolButton>
-        <ToolButton
-          active={tool === "vline"}
-          label="Linha vertical"
-          onClick={() => setTool("vline")}
-        >
-          <MoveVertical className="h-4 w-4" />
-        </ToolButton>
-        <ToolDivider />
-        <ToolButton
-          label="Enquadrar gráfico"
-          onClick={() => chartRef.current?.timeScale().fitContent()}
-        >
-          <ZoomIn className="h-4 w-4" />
-        </ToolButton>
-        <ToolButton
-          active={snapEnabled}
-          label="Ativar imã de pontos"
-          onClick={() => setSnapEnabled((value) => !value)}
-        >
-          <Magnet className="h-4 w-4" />
-        </ToolButton>
-        <ToolButton
-          active={!showAnnotations}
-          label="Mostrar ou ocultar desenhos"
-          onClick={() => setShowAnnotations((value) => !value)}
-        >
-          <Eye className="h-4 w-4" />
-        </ToolButton>
-        <ToolButton
-          active={locked}
-          label="Bloquear ou desbloquear desenhos"
-          onClick={() => setLocked((value) => !value)}
-        >
-          <LockKeyhole className="h-4 w-4" />
-        </ToolButton>
         <ToolDivider />
         <ToolButton
           label="Desfazer última marcação"
           onClick={() => setAnnotations((current) => current.slice(0, -1))}
         >
           <RotateCcw className="h-4 w-4" />
-        </ToolButton>
-        <ToolButton label="Régua / medir distância" onClick={() => setTool("line")}>
-          <Ruler className="h-4 w-4" />
         </ToolButton>
         <ToolButton label="Limpar marcações" onClick={clearAnnotations}>
           <Trash2 className="h-4 w-4" />
@@ -390,7 +308,7 @@ export function PriceChart({
       </div>
       <div
         ref={drawingEl}
-        className={`absolute inset-0 touch-none select-none ${tool !== "pan" && !locked ? "z-20 pointer-events-auto cursor-crosshair" : "pointer-events-none z-0"}`}
+        className={`absolute inset-0 touch-none select-none ${tool !== "pan" ? "z-20 pointer-events-auto cursor-crosshair" : "pointer-events-none z-0"}`}
         onPointerDown={startDrawing}
         onPointerMove={moveDrawing}
         onPointerUp={stopDrawing}
@@ -402,21 +320,20 @@ export function PriceChart({
           viewBox="0 0 1000 1000"
           preserveAspectRatio="none"
         >
-          {showAnnotations &&
-            annotations.map((annotation, index) => (
-              <polyline
-                key={index}
-                points={annotation.points
-                  .map((point) => `${point.x * 1000},${point.y * 1000}`)
-                  .join(" ")}
-                fill="none"
-                stroke="#facc15"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                vectorEffect="non-scaling-stroke"
-              />
-            ))}
+          {annotations.map((annotation, index) => (
+            <polyline
+              key={index}
+              points={annotation.points
+                .map((point) => `${point.x * 1000},${point.y * 1000}`)
+                .join(" ")}
+              fill="none"
+              stroke="#facc15"
+              strokeWidth="3"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
         </svg>
       </div>
       {status === "loading" && (
