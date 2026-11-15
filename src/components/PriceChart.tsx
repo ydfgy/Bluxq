@@ -69,6 +69,20 @@ export function PriceChart({
   }, [symbol, interval]);
 
   useEffect(() => {
+    try {
+      localStorage.setItem(annotationKey(symbol, interval), JSON.stringify(strokes));
+      if (strokes.length > 0) {
+        setSaved(true);
+        const timer = window.setTimeout(() => setSaved(false), 1200);
+        return () => window.clearTimeout(timer);
+      }
+    } catch {
+      // Mantém as marcações na memória se o navegador bloquear o armazenamento local.
+    }
+    return undefined;
+  }, [strokes, symbol, interval]);
+
+  useEffect(() => {
     let chart: IChartApi | undefined;
     let ws: WebSocket | null = null;
     let dead = false;
@@ -242,7 +256,7 @@ export function PriceChart({
   return (
     <div className="relative h-full w-full">
       <div ref={el} className="h-full w-full" />
-      <div className="absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/75 p-1 backdrop-blur">
+      <div className="pointer-events-auto absolute left-2 top-2 z-10 flex items-center gap-1 rounded-lg border border-white/10 bg-black/75 p-1 backdrop-blur">
         <ToolButton
           active={tool === "pan"}
           label="Navegar e arrastar o gráfico"

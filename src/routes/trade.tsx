@@ -65,6 +65,8 @@ export const Route = createFileRoute("/trade")({
 
 const INTERVALS = ["1m", "5m", "15m", "1h", "4h", "1d"];
 const QUICK_TRADE_SETTINGS_KEY = "bluxq.quick-trade-settings";
+const DEFAULT_CHART_HEIGHT = 460;
+const MAX_CHART_HEIGHT = Math.round(DEFAULT_CHART_HEIGHT * 1.2);
 
 function readQuickTradeSettings() {
   if (typeof window === "undefined") return null;
@@ -168,9 +170,11 @@ function Trade() {
   const { data: tickers, dataUpdatedAt: tickersUpdatedAt } = useTickers();
   const [chartPriceUpdatedAt, setChartPriceUpdatedAt] = useState(0);
   const [chartHeight, setChartHeight] = useState(() => {
-    if (typeof window === "undefined") return 552;
+    if (typeof window === "undefined") return MAX_CHART_HEIGHT;
     const stored = Number(window.localStorage.getItem("bluxq.chart-height"));
-    return Number.isFinite(stored) ? Math.min(900, Math.max(460, stored)) : 552;
+    return Number.isFinite(stored)
+      ? Math.min(MAX_CHART_HEIGHT, Math.max(DEFAULT_CHART_HEIGHT, stored))
+      : MAX_CHART_HEIGHT;
   });
   const chartResizeRef = useRef<{ startY: number; startHeight: number } | null>(null);
   const [now, setNow] = useState(() => Date.now());
@@ -315,9 +319,9 @@ function Trade() {
   function moveChartResize(event: PointerEvent<HTMLDivElement>) {
     if (!chartResizeRef.current) return;
     const nextHeight = Math.min(
-      900,
+      MAX_CHART_HEIGHT,
       Math.max(
-        460,
+        DEFAULT_CHART_HEIGHT,
         chartResizeRef.current.startHeight + event.clientY - chartResizeRef.current.startY,
       ),
     );
