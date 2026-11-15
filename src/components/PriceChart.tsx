@@ -238,9 +238,14 @@ export function PriceChart({
 
   function startDrawing(event: ReactPointerEvent<HTMLDivElement>) {
     if (tool === "pan" || locked) return;
+    event.preventDefault();
     const point = pointFromEvent(event);
     if (!point) return;
-    event.currentTarget.setPointerCapture(event.pointerId);
+    try {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    } catch {
+      // Alguns navegadores não permitem captura em camadas SVG durante o primeiro toque.
+    }
     const kind = tool as Annotation["kind"];
     const annotation: Annotation = { kind, points: [point, point] };
     drawingRef.current = annotation;
@@ -249,6 +254,7 @@ export function PriceChart({
 
   function moveDrawing(event: ReactPointerEvent<HTMLDivElement>) {
     if (!drawingRef.current) return;
+    event.preventDefault();
     const point = pointFromEvent(event);
     if (!point) return;
     const current = drawingRef.current;
@@ -269,8 +275,12 @@ export function PriceChart({
 
   function stopDrawing(event: ReactPointerEvent<HTMLDivElement>) {
     drawingRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    try {
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+    } catch {
+      // A captura pode já ter sido liberada pelo navegador.
     }
   }
 
@@ -377,7 +387,7 @@ export function PriceChart({
       </div>
       <div
         ref={drawingEl}
-        className={`absolute inset-0 ${tool !== "pan" && !locked ? "cursor-crosshair" : "pointer-events-none"}`}
+        className={`absolute inset-0 touch-none select-none ${tool !== "pan" && !locked ? "cursor-crosshair" : "pointer-events-none"}`}
         onPointerDown={startDrawing}
         onPointerMove={moveDrawing}
         onPointerUp={stopDrawing}
@@ -441,6 +451,7 @@ function ToolButton({
   return (
     <button
       type="button"
+      onPointerDown={(event) => event.stopPropagation()}
       onClick={onClick}
       title={label}
       aria-label={label}
