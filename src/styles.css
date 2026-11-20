@@ -768,3 +768,254 @@ html[data-capture-shield="black"] .capture-blackout {
     animation: none !important;
   }
 }
+
+/* Presentation revision: visual scenes over separators and generic card chrome */
+.presentation-hero::before {
+  display: none;
+}
+.presentation-orbit {
+  display: none;
+}
+.bluxq-art {
+  border-color: transparent;
+  box-shadow: inset 0 0 90px color-mix(in oklab, var(--primary) 9%, transparent) !important;
+}
+.bluxq-art::before,
+.bluxq-art::after {
+  border-color: transparent;
+  box-shadow: 0 0 70px color-mix(in oklab, var(--primary) 11%, transparent) !important;
+}
+.bluxq-art-ring {
+  border-color: transparent;
+  box-shadow: 0 0 30px color-mix(in oklab, var(--primary) 14%, transparent) !important;
+}
+.bluxq-art-ring-two {
+  box-shadow: 0 0 30px color-mix(in oklab, var(--gold) 10%, transparent) !important;
+}
+.bluxq-art-node {
+  border-left: 0;
+  border-radius: 1rem;
+  box-shadow: 0 12px 30px -20px black !important;
+}
+.flow-step {
+  border: 0;
+  background: transparent;
+  padding: 0 1rem 1.5rem;
+}
+.flow-step:hover {
+  background: transparent;
+}
+.flow-step::after {
+  display: none;
+}
+.flow-scene {
+  position: relative;
+  display: grid;
+  height: 170px;
+  place-items: center;
+  overflow: hidden;
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklab, var(--primary) 16%, transparent),
+      transparent 55%
+    ),
+    color-mix(in oklab, var(--card) 55%, transparent);
+}
+.flow-scene::before,
+.flow-scene::after {
+  position: absolute;
+  width: 105px;
+  height: 105px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--primary) 12%, transparent);
+  content: "";
+  filter: blur(1px);
+  animation: scene-breathe 4s ease-in-out infinite;
+}
+.flow-scene::after {
+  width: 44px;
+  height: 44px;
+  background: color-mix(in oklab, var(--gold) 18%, transparent);
+  animation-delay: -1.3s;
+}
+.flow-scene-2 {
+  background:
+    radial-gradient(
+      circle at 65% 35%,
+      color-mix(in oklab, var(--primary) 20%, transparent),
+      transparent 52%
+    ),
+    color-mix(in oklab, var(--card) 55%, transparent);
+}
+.flow-scene-2::before {
+  width: 150px;
+  height: 34px;
+  border-radius: 50%;
+  transform: rotate(-18deg);
+  animation: scene-sweep 3.5s ease-in-out infinite;
+}
+.flow-scene-2::after {
+  width: 12px;
+  height: 12px;
+  animation: scene-dot 2.2s ease-in-out infinite;
+}
+.flow-scene-3 {
+  background:
+    radial-gradient(
+      circle at 35% 50%,
+      color-mix(in oklab, var(--gold) 16%, transparent),
+      transparent 50%
+    ),
+    color-mix(in oklab, var(--card) 55%, transparent);
+}
+.flow-scene-3::before {
+  width: 90px;
+  height: 90px;
+  background: color-mix(in oklab, var(--gold) 13%, transparent);
+  animation: scene-orbit 6s linear infinite;
+}
+.flow-scene-3::after {
+  width: 190px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--bull) 12%, transparent);
+  transform: rotate(22deg);
+  animation: scene-orbit 5s linear infinite reverse;
+}
+.flow-scene-4 {
+  background:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in oklab, var(--bull) 17%, transparent),
+      transparent 52%
+    ),
+    color-mix(in oklab, var(--card) 55%, transparent);
+}
+.flow-scene-4::before {
+  width: 120px;
+  height: 120px;
+  background: color-mix(in oklab, var(--bull) 10%, transparent);
+  animation: scene-protect 3.8s ease-in-out infinite;
+}
+.flow-scene-4::after {
+  width: 55px;
+  height: 55px;
+  background: color-mix(in oklab, var(--bull) 20%, transparent);
+  animation: scene-protect 3.8s ease-in-out infinite reverse;
+}
+.flow-scene .flow-icon {
+  position: relative;
+  z-index: 2;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 1.2rem;
+  box-shadow: 0 0 30px color-mix(in oklab, currentColor 35%, transparent) !important;
+}
+.flow-scene-orbit {
+  position: absolute;
+  width: 128px;
+  height: 58px;
+  border-radius: 50%;
+  background: transparent;
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent) !important;
+  transform: rotate(-22deg);
+  animation: scene-orbit 7s linear infinite;
+}
+.flow-scene-spark {
+  position: absolute;
+  z-index: 3;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 12px 3px currentColor !important;
+  animation: scene-dot 2.7s ease-in-out infinite;
+}
+.flow-scene-spark-one {
+  top: 26%;
+  left: 28%;
+}
+.flow-scene-spark-two {
+  right: 25%;
+  bottom: 25%;
+  color: var(--gold);
+  animation-delay: -1.2s;
+}
+.flow-step:nth-child(2) .flow-scene-orbit {
+  animation-duration: 5s;
+  transform: rotate(48deg);
+}
+.flow-step:nth-child(3) .flow-scene-orbit {
+  animation-duration: 8s;
+  transform: rotate(90deg);
+}
+.flow-step:nth-child(4) .flow-scene-orbit {
+  animation-duration: 4s;
+  transform: rotate(-65deg);
+}
+.capability-card {
+  border-top: 0;
+  border-bottom: 0;
+  padding: 1.2rem;
+  border-radius: 1.25rem;
+  background: color-mix(in oklab, var(--card) 42%, transparent);
+}
+@keyframes scene-breathe {
+  0%,
+  100% {
+    transform: scale(0.7);
+    opacity: 0.28;
+  }
+  50% {
+    transform: scale(1.3);
+    opacity: 0.75;
+  }
+}
+@keyframes scene-sweep {
+  0%,
+  100% {
+    translate: -30px 12px;
+    rotate: -8deg;
+    opacity: 0.2;
+  }
+  50% {
+    translate: 34px -16px;
+    rotate: 10deg;
+    opacity: 0.9;
+  }
+}
+@keyframes scene-dot {
+  0%,
+  100% {
+    transform: translate(-34px, 18px) scale(0.7);
+    opacity: 0.25;
+  }
+  50% {
+    transform: translate(30px, -22px) scale(1.4);
+    opacity: 1;
+  }
+}
+@keyframes scene-orbit {
+  from {
+    transform: rotate(0deg) translateX(22px) rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg) translateX(22px) rotate(-360deg);
+  }
+}
+@keyframes scene-protect {
+  0%,
+  100% {
+    transform: scale(0.82);
+    opacity: 0.3;
+  }
+  50% {
+    transform: scale(1.14);
+    opacity: 0.9;
+  }
+}
+.flow-arrow {
+  display: none !important;
+}

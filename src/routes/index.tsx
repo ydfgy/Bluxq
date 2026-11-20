@@ -158,7 +158,7 @@ function Index() {
         </div>
       </section>
 
-      <section className="relative border-y border-border/70 bg-card/25 px-5 py-20 sm:px-8">
+      <section className="relative bg-card/20 px-5 py-20 sm:px-8">
         <div className="mx-auto max-w-7xl">
           <div className="mb-12 max-w-2xl presentation-reveal-on-scroll">
             <p className="text-xs font-bold uppercase tracking-[0.24em] text-primary">
@@ -176,8 +176,13 @@ function Index() {
                   key={step.number}
                   className={`flow-step presentation-reveal-on-scroll flow-step-${index + 1}`}
                 >
-                  <div className={`flow-icon flow-icon-${step.tone}`}>
-                    <Icon className="h-5 w-5" />
+                  <div className={`flow-scene flow-scene-${index + 1}`}>
+                    <div className={`flow-icon flow-icon-${step.tone}`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="flow-scene-orbit" />
+                    <span className="flow-scene-spark flow-scene-spark-one" />
+                    <span className="flow-scene-spark flow-scene-spark-two" />
                   </div>
                   <p className="mt-7 font-mono text-xs font-bold tracking-[0.2em] text-muted-foreground">
                     {step.number}
