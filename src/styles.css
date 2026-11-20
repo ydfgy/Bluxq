@@ -194,3 +194,288 @@ html[data-capture-shield="black"] .capture-blackout {
 @utility animate-pop {
   animation: pop-in 0.5s ease-out;
 }
+
+/* Presentation motion system */
+.presentation-page {
+  background:
+    radial-gradient(
+      circle at 75% 5%,
+      color-mix(in oklab, var(--primary) 8%, transparent),
+      transparent 32%
+    ),
+    var(--background);
+}
+.presentation-hero {
+  isolation: isolate;
+}
+.presentation-hero::before {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--primary) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(90deg, color-mix(in oklab, var(--primary) 8%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
+  content: "";
+  opacity: 0.28;
+}
+.presentation-orbit {
+  position: absolute;
+  z-index: -1;
+  border: 1px solid color-mix(in oklab, var(--primary) 25%, transparent);
+  border-radius: 999px;
+  pointer-events: none;
+}
+.presentation-orbit-one {
+  top: -240px;
+  right: -170px;
+  width: 560px;
+  height: 560px;
+  animation: orbit-drift 14s ease-in-out infinite;
+}
+.presentation-orbit-two {
+  top: 40px;
+  right: 70px;
+  width: 320px;
+  height: 320px;
+  border-color: color-mix(in oklab, var(--gold) 22%, transparent);
+  animation: orbit-drift 10s ease-in-out infinite reverse;
+}
+.presentation-reveal {
+  animation: presentation-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.presentation-reveal-delay {
+  animation-delay: 0.15s;
+}
+.presentation-reveal-on-scroll {
+  animation: presentation-rise 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  animation-timeline: view(85% 0%);
+}
+.terminal-card {
+  box-shadow: 0 24px 80px -35px color-mix(in oklab, var(--primary) 70%, transparent) !important;
+  animation: terminal-float 7s ease-in-out infinite;
+}
+.terminal-scanline {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    transparent 0%,
+    color-mix(in oklab, var(--primary) 10%, transparent) 48%,
+    transparent 52%
+  );
+  background-size: 100% 14px;
+  opacity: 0.14;
+  pointer-events: none;
+}
+.chart-grid {
+  background-image:
+    linear-gradient(color-mix(in oklab, var(--foreground) 8%, transparent) 1px, transparent 1px),
+    linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 42px 42px;
+}
+.chart-glow {
+  color: var(--bull);
+  filter: blur(8px);
+  opacity: 0.55;
+}
+.chart-dot {
+  box-shadow:
+    0 0 0 6px color-mix(in oklab, var(--bull) 16%, transparent),
+    0 0 22px var(--bull);
+  animation: chart-pulse 2s ease-in-out infinite;
+}
+.floating-chip {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid color-mix(in oklab, var(--foreground) 14%, transparent);
+  border-radius: 999px;
+  background: color-mix(in oklab, var(--card) 86%, transparent);
+  padding: 0.6rem 0.8rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  box-shadow: 0 14px 30px -18px black !important;
+  backdrop-filter: blur(12px);
+}
+.floating-chip-top {
+  top: 22%;
+  right: -6%;
+  animation: chip-float 4.5s ease-in-out infinite;
+}
+.floating-chip-bottom {
+  bottom: 15%;
+  left: -7%;
+  animation: chip-float 5.5s ease-in-out infinite reverse;
+}
+.flow-step {
+  position: relative;
+  min-height: 246px;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: color-mix(in oklab, var(--card) 72%, transparent);
+  padding: 1.35rem;
+  transition:
+    border-color 0.25s ease,
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+.flow-step:hover {
+  border-color: color-mix(in oklab, var(--primary) 65%, var(--border));
+  background: color-mix(in oklab, var(--primary) 8%, var(--card));
+  transform: translateY(-5px);
+}
+.flow-icon,
+.capability-icon {
+  display: grid;
+  width: 2.75rem;
+  height: 2.75rem;
+  place-items: center;
+  border-radius: 0.8rem;
+}
+.flow-icon-bull,
+.capability-icon-bull {
+  color: var(--bull);
+  background: color-mix(in oklab, var(--bull) 12%, transparent);
+}
+.flow-icon-primary,
+.capability-icon-primary {
+  color: var(--primary);
+  background: color-mix(in oklab, var(--primary) 14%, transparent);
+}
+.flow-icon-gold,
+.capability-icon-gold {
+  color: var(--gold);
+  background: color-mix(in oklab, var(--gold) 12%, transparent);
+}
+.flow-arrow {
+  position: absolute;
+  top: 2.15rem;
+  right: -1.05rem;
+  z-index: 1;
+  width: 2rem;
+  height: 2rem;
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--background);
+  color: var(--muted-foreground);
+}
+.capability-card {
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+  transition: transform 0.25s ease;
+}
+.capability-card:hover {
+  transform: translateY(-5px);
+}
+.capability-delay-2 {
+  animation-delay: 0.12s;
+}
+.capability-delay-3 {
+  animation-delay: 0.24s;
+}
+.cta-radar {
+  position: absolute;
+  top: 50%;
+  right: 15%;
+  width: 360px;
+  height: 360px;
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, transparent);
+  border-radius: 50%;
+  transform: translateY(-50%);
+  box-shadow:
+    0 0 0 42px color-mix(in oklab, var(--primary) 4%, transparent),
+    0 0 0 84px color-mix(in oklab, var(--primary) 3%, transparent) !important;
+  animation: radar-spin 12s linear infinite;
+  pointer-events: none;
+}
+.cta-radar::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 24px 5px var(--primary) !important;
+  content: "";
+  transform: translate(-50%, -50%);
+}
+@keyframes presentation-rise {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes terminal-float {
+  0%,
+  100% {
+    transform: translateY(0) rotateX(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotateX(1deg);
+  }
+}
+@keyframes chip-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+@keyframes orbit-drift {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(8deg) scale(1.03);
+  }
+}
+@keyframes chart-pulse {
+  0%,
+  100% {
+    transform: scale(0.85);
+    opacity: 0.75;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+@keyframes radar-spin {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .presentation-reveal,
+  .presentation-reveal-on-scroll,
+  .terminal-card,
+  .floating-chip,
+  .presentation-orbit-one,
+  .presentation-orbit-two,
+  .chart-dot,
+  .cta-radar {
+    animation: none !important;
+  }
+  .flow-step,
+  .capability-card {
+    transition: none;
+  }
+}
