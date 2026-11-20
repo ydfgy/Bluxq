@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowDown, ArrowRight, MoveUpRight } from "lucide-react";
+import heroImage from "@/assets/hero.jpg";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -9,6 +10,11 @@ function Index() {
   return (
     <main className="bluxq-showcase">
       <section className="showcase-hero">
+        <div
+          className="showcase-hero-source"
+          style={{ backgroundImage: `url(${heroImage})` }}
+          aria-hidden="true"
+        />
         <div className="showcase-hero-copy">
           <p className="showcase-kicker">BLUXQ / digital movement</p>
           <h1>

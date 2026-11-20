@@ -1665,3 +1665,83 @@ html[data-capture-shield="black"] .capture-blackout {
     animation: none !important;
   }
 }
+/* Platform palette: black / neon green / gold / market red */
+.bluxq-showcase {
+  --background: #050805;
+  --card: #09100a;
+  --panel: #071008;
+  --primary: #47ff68;
+  --primary-foreground: #041006;
+  --bull: #62ff78;
+  --gold: #f2c84b;
+  --bear: #ff4d3d;
+  --accent: #12391b;
+  --border: #1b3420;
+  --input: #17311c;
+  --ring: #47ff68;
+  --muted: #0c170e;
+}
+.showcase-hero-source {
+  position: absolute;
+  inset: 0;
+  z-index: -3;
+  background-position: center;
+  background-size: cover;
+  mix-blend-mode: screen;
+  opacity: 0.12;
+  filter: saturate(1.5) hue-rotate(18deg) contrast(1.2);
+  mask-image: linear-gradient(90deg, transparent 0%, black 42%, black 80%, transparent 100%);
+}
+.showcase-hero-source::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #050805 0%, transparent 52%, #050805 100%);
+  content: "";
+}
+.bluxq-showcase .showcase-kicker {
+  color: var(--primary);
+}
+.bluxq-showcase .showcase-hero h1 em {
+  color: var(--gold);
+}
+.bluxq-showcase .showcase-action {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+.bluxq-showcase .showcase-action:hover {
+  background: var(--bull);
+}
+.bluxq-showcase .portal-main {
+  background: conic-gradient(
+    from 220deg,
+    var(--primary),
+    transparent 28%,
+    var(--gold) 58%,
+    transparent 75%,
+    var(--bull)
+  );
+}
+.bluxq-showcase .portal-small {
+  background: radial-gradient(circle at 36% 35%, var(--gold), var(--primary) 48%, transparent 68%);
+}
+.bluxq-showcase .orbit-a {
+  border-color: color-mix(in oklab, var(--primary) 45%, transparent);
+}
+.bluxq-showcase .orbit-b {
+  border-color: color-mix(in oklab, var(--gold) 42%, transparent);
+}
+.bluxq-showcase .orbit-c {
+  border-color: color-mix(in oklab, var(--bear) 45%, transparent);
+}
+.bluxq-showcase .market-wave-one {
+  border-color: var(--primary);
+}
+.bluxq-showcase .market-wave-two {
+  border-color: var(--bear);
+}
+.bluxq-showcase .showcase-statement-two {
+  background: color-mix(in oklab, var(--primary) 4%, transparent);
+}
+.bluxq-showcase .showcase-text-link {
+  color: var(--gold);
+}
