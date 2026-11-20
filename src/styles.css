@@ -479,3 +479,292 @@ html[data-capture-shield="black"] .capture-blackout {
     transition: none;
   }
 }
+
+/* Bluxq signature art: a living exchange, not a dashboard mockup */
+.bluxq-art {
+  position: relative;
+  min-height: 510px;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--primary) 24%, transparent);
+  border-radius: 2rem;
+  background:
+    radial-gradient(
+      circle at 50% 46%,
+      color-mix(in oklab, var(--primary) 18%, transparent),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 18% 82%,
+      color-mix(in oklab, var(--gold) 10%, transparent),
+      transparent 25%
+    ),
+    #07080b;
+  isolation: isolate;
+}
+.bluxq-art::before,
+.bluxq-art::after {
+  position: absolute;
+  inset: 12%;
+  border: 1px solid color-mix(in oklab, var(--foreground) 9%, transparent);
+  border-radius: 44% 56% 52% 48%;
+  content: "";
+  animation: art-morph 16s ease-in-out infinite;
+}
+.bluxq-art::after {
+  inset: 24% 16%;
+  border-color: color-mix(in oklab, var(--gold) 16%, transparent);
+  border-radius: 56% 44% 48% 52%;
+  animation-duration: 11s;
+  animation-direction: reverse;
+}
+.bluxq-art-noise {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  background-image: radial-gradient(
+    color-mix(in oklab, var(--foreground) 30%, transparent) 0.6px,
+    transparent 0.6px
+  );
+  background-size: 6px 6px;
+  mask-image: radial-gradient(circle at center, black, transparent 72%);
+}
+.bluxq-art-core {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 3;
+  display: grid;
+  width: 106px;
+  height: 106px;
+  place-items: center;
+  padding: 24px;
+  border: 1px solid color-mix(in oklab, var(--primary) 60%, transparent);
+  border-radius: 34% 66% 58% 42%;
+  background: color-mix(in oklab, var(--primary) 11%, #090b10);
+  box-shadow:
+    0 0 0 12px color-mix(in oklab, var(--primary) 6%, transparent),
+    0 0 60px -14px var(--primary) !important;
+  transform: translate(-50%, -50%) rotate(8deg);
+  animation: art-core 6s ease-in-out infinite;
+}
+.bluxq-art-core img {
+  transform: rotate(-8deg);
+}
+.bluxq-art-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 286px;
+  height: 116px;
+  border: 1px solid color-mix(in oklab, var(--primary) 42%, transparent);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(-24deg);
+  animation: art-ring 9s linear infinite;
+}
+.bluxq-art-ring-two {
+  width: 410px;
+  height: 178px;
+  border-color: color-mix(in oklab, var(--gold) 35%, transparent);
+  transform: translate(-50%, -50%) rotate(52deg);
+  animation-duration: 13s;
+  animation-direction: reverse;
+}
+.bluxq-art-beam {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 2;
+  width: 46%;
+  height: 1px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, var(--primary), transparent);
+  animation: art-beam 3.4s ease-in-out infinite;
+}
+.bluxq-art-beam-one {
+  transform: rotate(205deg);
+}
+.bluxq-art-beam-two {
+  transform: rotate(28deg);
+  animation-delay: 1.2s;
+  background: linear-gradient(90deg, var(--gold), transparent);
+}
+.bluxq-art-node {
+  position: absolute;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 112px;
+  border-left: 2px solid var(--primary);
+  padding: 0.65rem 0.8rem;
+  background: color-mix(in oklab, var(--card) 78%, transparent);
+  backdrop-filter: blur(8px);
+  animation: art-node 5s ease-in-out infinite;
+}
+.bluxq-art-node span {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--foreground);
+}
+.bluxq-art-node b {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--muted-foreground);
+}
+.bluxq-art-node-one {
+  top: 17%;
+  left: 8%;
+}
+.bluxq-art-node-two {
+  right: 7%;
+  bottom: 23%;
+  border-color: var(--gold);
+  animation-delay: -1.8s;
+}
+.bluxq-art-node-three {
+  bottom: 9%;
+  left: 25%;
+  border-color: var(--bull);
+  animation-delay: -3.2s;
+}
+.bluxq-art-wordmark {
+  position: absolute;
+  right: 9%;
+  bottom: 9%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.38em;
+  color: color-mix(in oklab, var(--foreground) 75%, transparent);
+}
+.bluxq-art-wordmark span {
+  margin-top: 0.35rem;
+  font-size: 0.45rem;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  color: var(--muted-foreground);
+}
+.flow-step::after {
+  position: absolute;
+  right: 1.35rem;
+  bottom: 1.35rem;
+  width: 62px;
+  height: 18px;
+  border-bottom: 1px solid color-mix(in oklab, var(--primary) 55%, transparent);
+  border-radius: 50%;
+  content: "";
+  opacity: 0.75;
+  animation: step-trace 2.8s ease-in-out infinite;
+}
+.flow-step:nth-child(2)::after {
+  width: 42px;
+  border-color: var(--primary);
+  animation-delay: -0.8s;
+}
+.flow-step:nth-child(3)::after {
+  width: 78px;
+  border-color: var(--gold);
+  animation-delay: -1.4s;
+}
+.flow-step:nth-child(4)::after {
+  width: 52px;
+  border-color: var(--bull);
+  animation-delay: -2s;
+}
+.flow-step:hover .flow-icon {
+  animation: icon-breathe 1.4s ease-in-out infinite;
+}
+@keyframes art-morph {
+  0%,
+  100% {
+    transform: rotate(0deg) scale(1);
+  }
+  50% {
+    transform: rotate(14deg) scale(1.08);
+  }
+}
+@keyframes art-core {
+  0%,
+  100% {
+    border-radius: 34% 66% 58% 42%;
+    transform: translate(-50%, -50%) rotate(8deg) scale(1);
+  }
+  50% {
+    border-radius: 62% 38% 42% 58%;
+    transform: translate(-50%, -50%) rotate(188deg) scale(1.06);
+  }
+}
+@keyframes art-ring {
+  from {
+    transform: translate(-50%, -50%) rotate(-24deg);
+  }
+  to {
+    transform: translate(-50%, -50%) rotate(336deg);
+  }
+}
+@keyframes art-beam {
+  0%,
+  100% {
+    opacity: 0.2;
+    transform-origin: left center;
+    scale: 0.76 1;
+  }
+  50% {
+    opacity: 1;
+    scale: 1.08 1;
+  }
+}
+@keyframes art-node {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -7px;
+  }
+}
+@keyframes step-trace {
+  0%,
+  100% {
+    transform: scaleX(0.45);
+    transform-origin: right;
+    opacity: 0.3;
+  }
+  50% {
+    transform: scaleX(1);
+    transform-origin: left;
+    opacity: 1;
+  }
+}
+@keyframes icon-breathe {
+  50% {
+    transform: scale(1.1) rotate(-4deg);
+  }
+}
+@media (max-width: 640px) {
+  .bluxq-art {
+    min-height: 420px;
+  }
+  .bluxq-art-ring-two {
+    width: 320px;
+  }
+  .bluxq-art-node-one {
+    top: 12%;
+  }
+  .bluxq-art-node-two {
+    right: 4%;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bluxq-art *,
+  .bluxq-art::before,
+  .bluxq-art::after,
+  .flow-step::after {
+    animation: none !important;
+  }
+}

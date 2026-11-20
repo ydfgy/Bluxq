@@ -3,7 +3,6 @@ import {
   Activity,
   ArrowRight,
   ChartNoAxesCombined,
-  Check,
   ChevronRight,
   CircleDollarSign,
   Copy,
@@ -12,7 +11,6 @@ import {
   ShieldCheck,
   Sparkles,
   WalletCards,
-  Zap,
 } from "lucide-react";
 import { BrandIcon } from "@/components/AppShell";
 
@@ -130,78 +128,31 @@ function Index() {
             </div>
           </div>
 
-          <div className="presentation-reveal presentation-reveal-delay relative mx-auto w-full max-w-xl lg:ml-auto">
-            <div className="terminal-card relative overflow-hidden rounded-2xl border border-primary/30 bg-card/80 p-4 backdrop-blur-xl sm:p-5">
-              <div className="terminal-scanline" />
-              <div className="flex items-center justify-between border-b border-border/70 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/15 p-2 ring-1 ring-primary/30">
-                    <BrandIcon />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">BTC / USDT</p>
-                    <p className="text-xs text-muted-foreground">mercado em tempo real</p>
-                  </div>
-                </div>
-                <span className="rounded-full bg-bull/10 px-2.5 py-1 text-xs font-bold text-bull">
-                  +4.82%
-                </span>
+          <div className="presentation-reveal presentation-reveal-delay mx-auto w-full max-w-xl lg:ml-auto">
+            <div className="bluxq-art" aria-label="Composição animada do fluxo Bluxq">
+              <div className="bluxq-art-noise" />
+              <div className="bluxq-art-ring bluxq-art-ring-one" />
+              <div className="bluxq-art-ring bluxq-art-ring-two" />
+              <div className="bluxq-art-core">
+                <BrandIcon />
               </div>
-              <div className="relative mt-5 h-48 overflow-hidden rounded-xl border border-border/70 bg-background/70 p-3">
-                <div className="chart-grid absolute inset-0" />
-                <svg
-                  className="relative h-full w-full"
-                  viewBox="0 0 520 190"
-                  fill="none"
-                  preserveAspectRatio="none"
-                  aria-label="Gráfico animado de preço"
-                >
-                  <path
-                    className="chart-glow"
-                    d="M0 145 C45 138 56 155 90 126 S140 114 165 125 S205 72 242 94 S290 104 315 72 S350 82 374 51 S424 65 455 30 S486 46 520 18"
-                    stroke="currentColor"
-                    strokeWidth="4"
-                  />
-                  <path
-                    d="M0 145 C45 138 56 155 90 126 S140 114 165 125 S205 72 242 94 S290 104 315 72 S350 82 374 51 S424 65 455 30 S486 46 520 18"
-                    stroke="var(--bull)"
-                    strokeWidth="2"
-                  />
-                </svg>
-                <span className="absolute right-3 top-3 rounded bg-bull/15 px-2 py-1 font-mono text-xs font-bold text-bull">
-                  $ 68,421.20
-                </span>
-                <span className="chart-dot absolute right-[7%] top-[8%] h-3 w-3 rounded-full bg-bull" />
+              <div className="bluxq-art-beam bluxq-art-beam-one" />
+              <div className="bluxq-art-beam bluxq-art-beam-two" />
+              <div className="bluxq-art-node bluxq-art-node-one">
+                <span>ROBux</span>
+                <b>saldo</b>
               </div>
-              <div className="mt-4 grid grid-cols-3 gap-2">
-                {[
-                  ["MARGEM", "$ 2,400", "text-foreground"],
-                  ["PNL", "+$ 384.20", "text-bull"],
-                  ["RISCO", "BAIXO", "text-gold"],
-                ].map(([label, value, color]) => (
-                  <div
-                    key={label}
-                    className="rounded-lg border border-border/70 bg-background/45 p-3"
-                  >
-                    <p className="text-[10px] font-bold tracking-[0.16em] text-muted-foreground">
-                      {label}
-                    </p>
-                    <p className={`mt-1 font-mono text-sm font-bold ${color}`}>{value}</p>
-                  </div>
-                ))}
+              <div className="bluxq-art-node bluxq-art-node-two">
+                <span>BTC</span>
+                <b>mercado</b>
               </div>
-              <div className="mt-4 flex items-center justify-between rounded-lg border border-bull/20 bg-bull/5 px-3 py-2.5 text-xs">
-                <span className="flex items-center gap-2 font-semibold">
-                  <span className="h-2 w-2 rounded-full bg-bull animate-pulse" /> posição protegida
-                </span>
-                <span className="font-mono text-muted-foreground">agora</span>
+              <div className="bluxq-art-node bluxq-art-node-three">
+                <span>copy</span>
+                <b>estratégia</b>
               </div>
-            </div>
-            <div className="floating-chip floating-chip-top">
-              <Zap className="h-3.5 w-3.5 text-gold" /> execução clara
-            </div>
-            <div className="floating-chip floating-chip-bottom">
-              <Check className="h-3.5 w-3.5 text-bull" /> saldo confirmado
+              <div className="bluxq-art-wordmark">
+                BLUXQ <span>MOVE WITH INTENT</span>
+              </div>
             </div>
           </div>
         </div>
